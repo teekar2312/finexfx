@@ -1,0 +1,73 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start: Next.js App",
+      "type": "shell",
+      "command": "bun run dev",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Start: MT5 Bridge (Node.js)",
+      "type": "shell",
+      "command": "bun run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/mini-services/mt5-bridge"
+      },
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Start: Price-Feed WebSocket",
+      "type": "shell",
+      "command": "bun run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/mini-services/price-feed"
+      },
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Start: SL/TP Monitor",
+      "type": "shell",
+      "command": "bun run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/mini-services/sl-tp-monitor"
+      },
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Start: All Services",
+      "dependsOn": [
+        "Start: MT5 Bridge (Node.js)",
+        "Start: Price-Feed WebSocket",
+        "Start: Next.js App",
+        "Start: SL/TP Monitor"
+      ],
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}
