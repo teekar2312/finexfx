@@ -64,3 +64,57 @@ export function isScalpingWindow(now: Date = new Date()): boolean {
   const h = now.getUTCHours()
   return h >= 7 && h < 16
 }
+
+/**
+ * Check if a session ID (as stored in risk settings) is currently active.
+ * Supported IDs: 'london', 'ny', 'tokyo', 'sydney', 'overlap'.
+ */
+export function isSessionIdActive(sessionId: string, now: Date = new Date()): boolean {
+  switch (sessionId) {
+    case 'london': {
+      const h = now.getUTCHours() + now.getUTCMinutes() / 60
+      return h >= 7 && h < 16
+    }
+    case 'ny': {
+      const h = now.getUTCHours() + now.getUTCMinutes() / 60
+      return h >= 12 && h < 21
+    }
+    case 'tokyo': {
+      const h = now.getUTCHours() + now.getUTCMinutes() / 60
+      return h >= 0 && h < 9
+    }
+    case 'sydney': {
+      const h = now.getUTCHours() + now.getUTCMinutes() / 60
+      // Sydney wraps midnight: 21:00 UTC → 06:00 UTC
+      return h >= 21 || h < 6
+    }
+    case 'overlap': {
+      const h = now.getUTCHours() + now.getUTCMinutes() / 60
+      return h >= 12 && h < 16
+    }
+    default:
+      return false
+  }
+}
+
+/**
+ * Check if ANY of the given session IDs is currently active.
+ * @param sessionIds - comma-separated string like 'london,overlap' or array of IDs
+ * @returns object with active flag and details
+ */
+export function isAnySessionActive(sessionIds: string | string[], now: Date = new Date()): {
+  active: boolean
+  activeSessions: string[]
+  allSessions: string[]
+} {
+  const ids = typeof sessionIds === 'string'
+    ? sessionIds.split(',').map(s => s.trim()).filter(Boolean)
+    : sessionIds
+
+  const activeSessions = ids.filter(id => isSessionIdActive(id, now))
+  return {
+    active: activeSessions.length > 0,
+    activeSessions,
+    allSessions: ids,
+  }
+}

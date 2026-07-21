@@ -45,9 +45,12 @@ export async function PATCH(req: NextRequest) {
       } else if (key === 'riskPerTradePct' || key === 'dailyRiskLimitPct' || key === 'dailyTargetPct' || key === 'maxRiskPerTradePct') {
         const n = parseFloat(value)
         if (Number.isFinite(n)) value = String(Math.max(0, Math.min(100, n)))
-      } else if (key === 'stopLossPipsMin' || key === 'stopLossPipsMax' || key === 'xauSlPipsMax') {
+      } else if (key === 'stopLossPipsMin' || key === 'stopLossPipsMax' || key === 'xauSlPipsMin' || key === 'xauSlPipsMax') {
         const n = parseFloat(value)
         if (Number.isFinite(n)) value = String(Math.max(1, Math.min(100, n)))
+      } else if (key === 'takeProfitPipsMin' || key === 'takeProfitPipsMax' || key === 'xauTpPipsMin' || key === 'xauTpPipsMax') {
+        const n = parseFloat(value)
+        if (Number.isFinite(n)) value = String(Math.max(1, Math.min(200, n)))
       } else if (key === 'riskRewardRatio' || key === 'xauRiskRewardRatio') {
         const n = parseFloat(value)
         if (Number.isFinite(n)) value = String(Math.max(0.5, Math.min(5.0, Math.round(n * 10) / 10)))

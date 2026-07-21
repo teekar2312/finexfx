@@ -16,6 +16,27 @@ import { sendWebhook } from './webhook'
 // Alert fatigue prevention — only send risk limit alert ONCE per day per account
 const _dailyLimitAlerted = new Map<string, boolean>()
 
+/**
+ * Check if the forex market is currently closed (weekend).
+ * Forex closes Friday ~22:00 UTC and reopens Sunday ~22:00 UTC.
+ * Saturday (UTC day 6) = fully closed.
+ * Sunday (UTC day 0) before 22:00 UTC = still closed.
+ */
+export function isMarketClosed(now: Date = new Date()): { closed: boolean; reason: string } {
+  const day = now.getUTCDay()   // 0=Sun, 6=Sat
+  const hour = now.getUTCHours()
+
+  if (day === 6) {
+    // Saturday — market fully closed
+    return { closed: true, reason: 'Market tutup (Sabtu). Forex market buka kembali Minggu ~22:00 UTC.' }
+  }
+  if (day === 0 && hour < 22) {
+    // Sunday before 22:00 UTC — market still closed
+    return { closed: true, reason: 'Market tutup (Minggu sebelum 22:00 UTC). Forex market buka ~22:00 UTC.' }
+  }
+  return { closed: false, reason: '' }
+}
+
 export interface RiskConfig {
   riskEnforcementEnabled: boolean
   maxOpenPositions: number
@@ -106,6 +127,24 @@ export async function enforceTradeOpen(params: {
 
   // ── 1. Master toggle ──────────────────────────────────────────────────────
   if (!cfg.riskEnforcementEnabled) {
+    // Even when enforcement is off, block weekend trades — market is physically closed.
+    const market = isMarketClosed()
+    if (market.closed) {
+      return {
+        allowed: false,
+        reason: market.reason,
+        violations: [market.reason],
+        context: {
+          openPositions: 0, maxPositions: cfg.maxOpenPositions,
+          totalLot: 0, maxTotalLot: cfg.maxTotalLotSize,
+          requestedLot: params.lotSize, maxLotPerTrade: cfg.maxLotSizePerTrade,
+          dailyPnlPct: 0, dailyRiskLimitPct: cfg.dailyRiskLimitPct,
+          tradeRiskPct: 0, maxRiskPerTradePct: cfg.maxRiskPerTradePct,
+          marginLevel: 0, marginCallLevel: cfg.marginCallLevel,
+          balance: 0, freeMargin: 0,
+        },
+      }
+    }
     return {
       allowed: true,
       violations: [],
@@ -119,6 +158,32 @@ export async function enforceTradeOpen(params: {
         balance: 0, freeMargin: 0,
       },
     }
+  }
+
+  // ── 1b. Weekend / market closed check ─────────────────────────────────
+  // Blocks ALL trades when the forex market is physically closed.
+  // This check runs even when risk enforcement is enabled.
+  const marketStatus = isMarketClosed()
+  if (marketStatus.closed) {
+    violations.push(marketStatus.reason)
+    const allowed = false
+    const reason = marketStatus.reason
+
+    const context = {
+      openPositions: 0, maxPositions: cfg.maxOpenPositions,
+      totalLot: 0, maxTotalLot: cfg.maxTotalLotSize,
+      requestedLot: params.lotSize, maxLotPerTrade: cfg.maxLotSizePerTrade,
+      dailyPnlPct: 0, dailyRiskLimitPct: cfg.dailyRiskLimitPct,
+      tradeRiskPct: 0, maxRiskPerTradePct: cfg.maxRiskPerTradePct,
+      marginLevel: 0, marginCallLevel: cfg.marginCallLevel,
+      balance: 0, freeMargin: 0,
+    }
+
+    await logInfo('risk', `Trade REJECTED (market closed): ${params.side} ${params.lotSize} ${params.symbol}`, {
+      violations,
+      context,
+    })
+    return { allowed, reason, violations, context }
   }
 
   // ── Fetch account ──────────────────────────────────────────────────────────

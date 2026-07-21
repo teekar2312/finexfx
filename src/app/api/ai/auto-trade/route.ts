@@ -7,8 +7,9 @@ import { sendWebhook } from '@/lib/webhook'
 import type { SupportedSymbol } from '@/lib/types'
 import { SYMBOL_BASE } from '@/lib/types'
 import { requireTrader } from '@/lib/auth-server'
-import { enforceTradeOpen } from '@/lib/risk-enforcement'
+import { enforceTradeOpen, isMarketClosed } from '@/lib/risk-enforcement'
 import { bridgeHealth, marketOrder as mt5MarketOrder } from '@/lib/mt5-client'
+import { isAnySessionActive } from '@/lib/sessions'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,6 +44,18 @@ export async function POST() {
     if (!account) {
       return NextResponse.json({ enabled: true, error: 'No default account found' }, { status: 400 })
     }
+
+    // 2b. Weekend / market closed — early fast-fail before anything else
+    const marketStatus = isMarketClosed()
+    if (marketStatus.closed) {
+      return NextResponse.json({
+        enabled: true,
+        message: marketStatus.reason,
+        executed: [],
+        marketClosed: true,
+      })
+    }
+
     if (!account.connected) {
       return NextResponse.json({
         enabled: true,
@@ -54,19 +67,36 @@ export async function POST() {
     // 3. Load risk settings (used for signal filtering + lot sizing)
     const riskPerTradeStr = (await db.riskSetting.findUnique({ where: { key: 'riskPerTradePct' } }))?.value || '0.75'
     const slPipsStr = (await db.riskSetting.findUnique({ where: { key: 'stopLossPipsMax' } }))?.value || '15'
-    const rrRatioStr = (await db.riskSetting.findUnique({ where: { key: 'riskRewardRatio' } }))?.value || '1.5'
-    const xauSlPipsStr = (await db.riskSetting.findUnique({ where: { key: 'xauSlPipsMax' } }))?.value || '30'
-    const xauRrRatioStr = (await db.riskSetting.findUnique({ where: { key: 'xauRiskRewardRatio' } }))?.value || '2.0'
+    const tpPipsStr = (await db.riskSetting.findUnique({ where: { key: 'takeProfitPipsMax' } }))?.value || '30'
+    const xauSlPipsStr = (await db.riskSetting.findUnique({ where: { key: 'xauSlPipsMax' } }))?.value || '50'
+    const xauTpPipsStr = (await db.riskSetting.findUnique({ where: { key: 'xauTpPipsMax' } }))?.value || '100'
     const confThresholdStr = (await db.riskSetting.findUnique({ where: { key: 'autoTradeConfidenceThreshold' } }))?.value || '70'
     const signalMaxAgeStr = (await db.riskSetting.findUnique({ where: { key: 'autoTradeSignalMaxAgeMin' } }))?.value || '10'
+    const tradingSessionsStr = (await db.riskSetting.findUnique({ where: { key: 'tradingSessions' } }))?.value || 'london,overlap'
 
     const riskPerTrade = parseFloat(riskPerTradeStr)
     const forexSlPips = parseFloat(slPipsStr)
-    const forexRrRatio = parseFloat(rrRatioStr)
+    const forexTpPips = parseFloat(tpPipsStr)
     const xauSlPips = parseFloat(xauSlPipsStr)
-    const xauRrRatio = parseFloat(xauRrRatioStr)
+    const xauTpPips = parseFloat(xauTpPipsStr)
     const confidenceThreshold = parseFloat(confThresholdStr)
     const signalMaxAgeMin = parseFloat(signalMaxAgeStr)
+
+    // 3b. Session gate: block auto-trading outside configured sessions
+    const sessionCheck = isAnySessionActive(tradingSessionsStr)
+    if (!sessionCheck.active) {
+      const utcNow = new Date()
+      const utcH = `${utcNow.getUTCHours().toString().padStart(2, '0')}:${utcNow.getUTCMinutes().toString().padStart(2, '0')}`
+      return NextResponse.json({
+        enabled: true,
+        message: `Di luar trading session. UTC ${utcH} — sesi aktif: ${sessionCheck.allSessions.join(', ')}. Auto-trade ditunda sampai salah satu sesi dibuka.`,
+        executed: [],
+        sessionInfo: {
+          utcTime: utcH,
+          configuredSessions: sessionCheck.allSessions,
+        },
+      })
+    }
 
     // 4. Pre-check: daily loss circuit breaker (fast fail before scanning signals)
     // The full enforceTradeOpen() is called per-trade below, but this early check
@@ -118,16 +148,16 @@ export async function POST() {
       // 6. Compute trade parameters (pair-specific SL/TP)
       const isXau = symbol === 'XAUUSD'
       const slPips = isXau ? xauSlPips : forexSlPips
-      const riskRewardRatio = isXau ? xauRrRatio : forexRrRatio
+      const tpPips = isXau ? xauTpPips : forexTpPips
       const side = latestSignal.action === 'buy' ? 'buy' : 'sell'
       const { bid, ask } = await bidAsk(symbol)
       const openPrice = side === 'buy' ? ask : bid
       const lot = calcLotSize(symbol, account.balance, riskPerTrade, slPips, openPrice)
 
-      // SL/TP from signal-aware defaults (uses riskRewardRatio from settings)
+      // SL/TP from independent pips settings (no longer derived from RR ratio)
       const symBase = SYMBOL_BASE[symbol]
       const slDist = slPips * symBase.pip
-      const tpDist = slPips * riskRewardRatio * symBase.pip
+      const tpDist = tpPips * symBase.pip
       const stopLoss = side === 'buy' ? openPrice - slDist : openPrice + slDist
       const takeProfit = side === 'buy' ? openPrice + tpDist : openPrice - tpDist
       const slRounded = Number(stopLoss.toFixed(symBase.digits))

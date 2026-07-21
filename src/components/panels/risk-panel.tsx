@@ -40,9 +40,14 @@ interface RiskForm {
   // Forex SL/TP (EURUSD, USDJPY, GBPUSD)
   stopLossPipsMin: number
   stopLossPipsMax: number
+  takeProfitPipsMin: number
+  takeProfitPipsMax: number
   riskRewardRatio: number
   // XAUUSD SL/TP (pair-specific override)
+  xauSlPipsMin: number
   xauSlPipsMax: number
+  xauTpPipsMin: number
+  xauTpPipsMax: number
   xauRiskRewardRatio: number
   maxOpenPositions: number
   dailyRiskLimitPct: number
@@ -70,8 +75,13 @@ const DEFAULT_FORM: RiskForm = {
   riskPerTradePct: 0.75,
   stopLossPipsMin: 5,
   stopLossPipsMax: 15,
+  takeProfitPipsMin: 10,
+  takeProfitPipsMax: 30,
   riskRewardRatio: 1.5,
-  xauSlPipsMax: 30,
+  xauSlPipsMin: 15,
+  xauSlPipsMax: 50,
+  xauTpPipsMin: 30,
+  xauTpPipsMax: 100,
   xauRiskRewardRatio: 2.0,
   maxOpenPositions: 3,
   dailyRiskLimitPct: 2.5,
@@ -123,8 +133,13 @@ function parseSettings(raw: Record<string, string>): RiskForm {
     riskPerTradePct: num('riskPerTradePct', 0.75),
     stopLossPipsMin: num('stopLossPipsMin', 5),
     stopLossPipsMax: num('stopLossPipsMax', 15),
+    takeProfitPipsMin: num('takeProfitPipsMin', 10),
+    takeProfitPipsMax: num('takeProfitPipsMax', 30),
     riskRewardRatio: num('riskRewardRatio', 1.5),
-    xauSlPipsMax: num('xauSlPipsMax', 30),
+    xauSlPipsMin: num('xauSlPipsMin', 15),
+    xauSlPipsMax: num('xauSlPipsMax', 50),
+    xauTpPipsMin: num('xauTpPipsMin', 30),
+    xauTpPipsMax: num('xauTpPipsMax', 100),
     xauRiskRewardRatio: num('xauRiskRewardRatio', 2.0),
     maxOpenPositions: num('maxOpenPositions', 3),
     dailyRiskLimitPct: num('dailyRiskLimitPct', 2.5),
@@ -153,8 +168,13 @@ function serializeForm(f: RiskForm): Record<string, string> {
     riskPerTradePct: String(f.riskPerTradePct),
     stopLossPipsMin: String(f.stopLossPipsMin),
     stopLossPipsMax: String(f.stopLossPipsMax),
+    takeProfitPipsMin: String(f.takeProfitPipsMin),
+    takeProfitPipsMax: String(f.takeProfitPipsMax),
     riskRewardRatio: String(f.riskRewardRatio),
+    xauSlPipsMin: String(f.xauSlPipsMin),
     xauSlPipsMax: String(f.xauSlPipsMax),
+    xauTpPipsMin: String(f.xauTpPipsMin),
+    xauTpPipsMax: String(f.xauTpPipsMax),
     xauRiskRewardRatio: String(f.xauRiskRewardRatio),
     maxOpenPositions: String(f.maxOpenPositions),
     dailyRiskLimitPct: String(f.dailyRiskLimitPct),
@@ -467,14 +487,14 @@ function RulesChecklist({ form }: { form: RiskForm }) {
       value: `${form.stopLossPipsMin} – ${form.stopLossPipsMax} pips`,
     },
     {
-      label: 'Risk : Reward ≥ 1 : 1.5 (Forex)',
-      pass: form.riskRewardRatio >= 1.5,
-      value: `1 : ${form.riskRewardRatio.toFixed(1)}`,
+      label: 'Take Profit terpisah & valid (Forex)',
+      pass: form.takeProfitPipsMin >= 5 && form.takeProfitPipsMax >= form.stopLossPipsMax,
+      value: `${form.takeProfitPipsMin} – ${form.takeProfitPipsMax} pips`,
     },
     {
-      label: 'XAUUSD SL & RR configured',
-      pass: form.xauSlPipsMax >= 10 && form.xauRiskRewardRatio >= 1.5,
-      value: `SL ${form.xauSlPipsMax} | 1 : ${form.xauRiskRewardRatio.toFixed(1)}`,
+      label: 'XAUUSD SL & TP terpisah',
+      pass: form.xauSlPipsMax >= 10 && form.xauTpPipsMax >= form.xauSlPipsMax,
+      value: `SL ${form.xauSlPipsMin}–${form.xauSlPipsMax} | TP ${form.xauTpPipsMin}–${form.xauTpPipsMax}`,
     },
     {
       label: 'Maksimal 1 – 3 Open Positions',
@@ -812,19 +832,19 @@ export function RiskPanel() {
                 />
                 <Separator />
 
+                {/* ─── Forex SL/TP — EURUSD, USDJPY, GBPUSD ─── */}
                 <div className="py-3">
-                  <div className="mb-2 flex items-center justify-between">
+                  <div className="mb-3 flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium text-foreground">Stop Loss — Forex <span className="text-[10px] font-normal text-muted-foreground">(EURUSD, USDJPY, GBPUSD)</span></div>
-                      <div className="text-[11px] text-muted-foreground">{form.stopLossPipsMin} – {form.stopLossPipsMax} pips (TP = SL × RR ratio)</div>
                     </div>
                     <Badge variant="outline" className="tabular border-warn/40 text-warn">
-                      {form.stopLossPipsMin} – {form.stopLossPipsMax} pips
+                      SL {form.stopLossPipsMin} – {form.stopLossPipsMax} pips
                     </Badge>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] text-muted-foreground">Min</Label>
+                      <Label className="text-[11px] text-muted-foreground">Min (pips)</Label>
                       <Input
                         type="number"
                         min={1}
@@ -836,7 +856,7 @@ export function RiskPanel() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] text-muted-foreground">Max</Label>
+                      <Label className="text-[11px] text-muted-foreground">Max (pips)</Label>
                       <Input
                         type="number"
                         min={form.stopLossPipsMin}
@@ -851,40 +871,38 @@ export function RiskPanel() {
                 </div>
                 <Separator />
 
-                {/* XAUUSD SL/TP — pair-specific override */}
                 <div className="py-3">
-                  <div className="mb-2 flex items-center justify-between">
+                  <div className="mb-3 flex items-center justify-between">
                     <div>
-                      <div className="text-sm font-medium text-foreground">Stop Loss — XAUUSD <span className="text-[10px] font-normal text-muted-foreground">(Gold)</span></div>
-                      <div className="text-[11px] text-muted-foreground">{form.xauSlPipsMax} pips (TP = SL × RR ratio)</div>
+                      <div className="text-sm font-medium text-foreground">Take Profit — Forex <span className="text-[10px] font-normal text-muted-foreground">(EURUSD, USDJPY, GBPUSD)</span></div>
+                      <div className="text-[11px] text-muted-foreground">RR estimasi: 1 : {form.stopLossPipsMax > 0 ? (form.takeProfitPipsMax / form.stopLossPipsMax).toFixed(1) : '—'} (TP max / SL max)</div>
                     </div>
-                    <Badge variant="outline" className="tabular border-amber-500/40 text-amber-500">
-                      {form.xauSlPipsMax} pips → TP {Math.round(form.xauSlPipsMax * form.xauRiskRewardRatio)} pips
+                    <Badge variant="outline" className="tabular border-bull/40 text-bull">
+                      TP {form.takeProfitPipsMin} – {form.takeProfitPipsMax} pips
                     </Badge>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] text-muted-foreground">SL (pips)</Label>
+                      <Label className="text-[11px] text-muted-foreground">Min (pips)</Label>
                       <Input
                         type="number"
-                        min={5}
-                        max={100}
-                        value={form.xauSlPipsMax}
+                        min={1}
+                        max={form.takeProfitPipsMax}
+                        value={form.takeProfitPipsMin}
                         onChange={(e) =>
-                          update('xauSlPipsMax', Math.max(Number(e.target.value) || 5, 5))
+                          update('takeProfitPipsMin', Math.min(Number(e.target.value) || 0, form.takeProfitPipsMax))
                         }
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] text-muted-foreground">RR Ratio</Label>
+                      <Label className="text-[11px] text-muted-foreground">Max (pips)</Label>
                       <Input
                         type="number"
-                        min={0.5}
-                        max={5.0}
-                        step={0.1}
-                        value={form.xauRiskRewardRatio}
+                        min={form.takeProfitPipsMin}
+                        max={100}
+                        value={form.takeProfitPipsMax}
                         onChange={(e) =>
-                          update('xauRiskRewardRatio', Math.min(Number(e.target.value) || 0.5, 5.0))
+                          update('takeProfitPipsMax', Math.max(Number(e.target.value) || 0, form.takeProfitPipsMin))
                         }
                       />
                     </div>
@@ -892,28 +910,82 @@ export function RiskPanel() {
                 </div>
                 <Separator />
 
-                <SliderRow
-                  label="Risk : Reward — Forex"
-                  helper={`SL ${form.stopLossPipsMax} pips → TP ${Math.round(form.stopLossPipsMax * form.riskRewardRatio)} pips`}
-                  value={form.riskRewardRatio}
-                  min={0.5}
-                  max={5.0}
-                  step={0.1}
-                  onChange={(v) => update('riskRewardRatio', v)}
-                  display={`1 : ${form.riskRewardRatio.toFixed(1)}`}
-                />
+                {/* ─── XAUUSD SL/TP — pair-specific override ─── */}
+                <div className="py-3">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-foreground">Stop Loss — XAUUSD <span className="text-[10px] font-normal text-muted-foreground">(Gold)</span></div>
+                    </div>
+                    <Badge variant="outline" className="tabular border-amber-500/40 text-amber-500">
+                      SL {form.xauSlPipsMin} – {form.xauSlPipsMax} pips
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] text-muted-foreground">Min (pips)</Label>
+                      <Input
+                        type="number"
+                        min={5}
+                        max={form.xauSlPipsMax}
+                        value={form.xauSlPipsMin}
+                        onChange={(e) =>
+                          update('xauSlPipsMin', Math.min(Number(e.target.value) || 5, form.xauSlPipsMax))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] text-muted-foreground">Max (pips)</Label>
+                      <Input
+                        type="number"
+                        min={form.xauSlPipsMin}
+                        max={100}
+                        value={form.xauSlPipsMax}
+                        onChange={(e) =>
+                          update('xauSlPipsMax', Math.max(Number(e.target.value) || 0, form.xauSlPipsMin))
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
                 <Separator />
 
-                <SliderRow
-                  label="Risk : Reward — XAUUSD"
-                  helper={`SL ${form.xauSlPipsMax} pips → TP ${Math.round(form.xauSlPipsMax * form.xauRiskRewardRatio)} pips`}
-                  value={form.xauRiskRewardRatio}
-                  min={0.5}
-                  max={5.0}
-                  step={0.1}
-                  onChange={(v) => update('xauRiskRewardRatio', v)}
-                  display={`1 : ${form.xauRiskRewardRatio.toFixed(1)}`}
-                />
+                <div className="py-3">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-foreground">Take Profit — XAUUSD <span className="text-[10px] font-normal text-muted-foreground">(Gold)</span></div>
+                      <div className="text-[11px] text-muted-foreground">RR estimasi: 1 : {form.xauSlPipsMax > 0 ? (form.xauTpPipsMax / form.xauSlPipsMax).toFixed(1) : '—'} (TP max / SL max)</div>
+                    </div>
+                    <Badge variant="outline" className="tabular border-bull/40 text-bull">
+                      TP {form.xauTpPipsMin} – {form.xauTpPipsMax} pips
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] text-muted-foreground">Min (pips)</Label>
+                      <Input
+                        type="number"
+                        min={5}
+                        max={form.xauTpPipsMax}
+                        value={form.xauTpPipsMin}
+                        onChange={(e) =>
+                          update('xauTpPipsMin', Math.min(Number(e.target.value) || 5, form.xauTpPipsMax))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] text-muted-foreground">Max (pips)</Label>
+                      <Input
+                        type="number"
+                        min={form.xauTpPipsMin}
+                        max={200}
+                        value={form.xauTpPipsMax}
+                        onChange={(e) =>
+                          update('xauTpPipsMax', Math.max(Number(e.target.value) || 0, form.xauTpPipsMin))
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
                 <Separator />
 
                 <SliderRow

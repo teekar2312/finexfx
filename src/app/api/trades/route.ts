@@ -93,22 +93,20 @@ export async function POST(req: NextRequest) {
     const isXau = symbol === 'XAUUSD'
     const defaultSlPips = parseFloat(
       (await db.riskSetting.findUnique({ where: { key: isXau ? 'xauSlPipsMax' : 'stopLossPipsMax' } }))?.value
-      || (isXau ? '30' : '15')
+      || (isXau ? '50' : '15')
     )
-    const defaultRrRatio = parseFloat(
-      (await db.riskSetting.findUnique({ where: { key: isXau ? 'xauRiskRewardRatio' : 'riskRewardRatio' } }))?.value
-      || (isXau ? '2.0' : '1.5')
+    const defaultTpPips = parseFloat(
+      (await db.riskSetting.findUnique({ where: { key: isXau ? 'xauTpPipsMax' : 'takeProfitPipsMax' } }))?.value
+      || (isXau ? '100' : '30')
     )
-    const slPipsDefault = defaultSlPips
-    const tpPipsDefault = Math.round(defaultSlPips * defaultRrRatio)
 
     // Get a preliminary price for SL/TP defaults (will be refined after bridge order)
     const { bid: preBid, ask: preAsk } = await bidAsk(symbol)
     const prePrice = side === 'buy' ? preAsk : preBid
     const effectiveSl = stopLoss != null ? Number(stopLoss)
-      : Number((side === 'buy' ? prePrice - slPipsDefault * base.pip : prePrice + slPipsDefault * base.pip).toFixed(base.digits))
+      : Number((side === 'buy' ? prePrice - defaultSlPips * base.pip : prePrice + defaultSlPips * base.pip).toFixed(base.digits))
     const effectiveTp = takeProfit != null ? Number(takeProfit)
-      : Number((side === 'buy' ? prePrice + tpPipsDefault * base.pip : prePrice - tpPipsDefault * base.pip).toFixed(base.digits))
+      : Number((side === 'buy' ? prePrice + defaultTpPips * base.pip : prePrice - defaultTpPips * base.pip).toFixed(base.digits))
 
     // ─── Risk Enforcement ────────────────────────────────────────────────────
     // Server-side hard checks: max positions, lot size, daily loss, margin, etc.
@@ -130,8 +128,6 @@ export async function POST(req: NextRequest) {
         { status: 422 },
       )
     }
-
-    const base = SYMBOL_BASE[symbol]
 
     // ─── MT5 Bridge integration ────────────────────────────────────────────────
     // Try to route the order through the MT5 bridge. If the bridge is online
@@ -197,10 +193,10 @@ export async function POST(req: NextRequest) {
     // Recompute SL/TP using the actual open price (bridge may have slipped)
     const sl = stopLoss != null
       ? Number(stopLoss)
-      : Number((side === 'buy' ? openPrice - slPipsDefault * base.pip : openPrice + slPipsDefault * base.pip).toFixed(base.digits))
+      : Number((side === 'buy' ? openPrice - defaultSlPips * base.pip : openPrice + defaultSlPips * base.pip).toFixed(base.digits))
     const tp = takeProfit != null
       ? Number(takeProfit)
-      : Number((side === 'buy' ? openPrice + tpPipsDefault * base.pip : openPrice - tpPipsDefault * base.pip).toFixed(base.digits))
+      : Number((side === 'buy' ? openPrice + defaultTpPips * base.pip : openPrice - defaultTpPips * base.pip).toFixed(base.digits))
 
     // If bridge order succeeded but didn't set SL/TP, modify the MT5 position now.
     if (bridgeUsed && mt5Ticket && (sl !== null || tp !== null)) {

@@ -427,8 +427,21 @@ function OrderTicket({
   const connected = useFeed((s) => s.connected)
 
   const riskPct = Number(riskSettings.riskPerTradePct ?? 0.75)
-  const rr = Number(riskSettings.riskRewardRatio ?? 1.5)
-  const tpPips = Number((slPips * rr).toFixed(1))
+  const isXau = symbol === 'XAUUSD'
+  const defaultTpPips = Number(isXau
+    ? (riskSettings.xauTpPipsMax ?? 100)
+    : (riskSettings.takeProfitPipsMax ?? 30))
+  const [tpPips, setTpPips] = useState(defaultTpPips)
+
+  // Sync TP default when symbol changes
+  const [prevSymbolTp, setPrevSymbolTp] = useState(symbol)
+  if (symbol !== prevSymbolTp) {
+    setPrevSymbolTp(symbol)
+    const newTp = Number(isXau
+      ? (riskSettings.xauTpPipsMax ?? 100)
+      : (riskSettings.takeProfitPipsMax ?? 30))
+    setTpPips(newTp)
+  }
 
   // Reset pending price when symbol changes (render-time prop-change pattern)
   const [prevSymbol, setPrevSymbol] = useState(symbol)
@@ -635,27 +648,42 @@ function OrderTicket({
           <span className="text-xs font-mono tabular text-bear">{slPips}p</span>
         </div>
         <Slider
-          value={[slPips]} min={5} max={15} step={1}
+          value={[slPips]} min={isXau ? 15 : 5} max={isXau ? 100 : 50} step={isXau ? 5 : 1}
           onValueChange={(v) => setSlPips(v[0])}
         />
         <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono tabular">
-          <span>5p</span><span>10p</span><span>15p</span>
+          <span>{isXau ? '15p' : '5p'}</span><span>{isXau ? '50p' : '25p'}</span><span>{isXau ? '100p' : '50p'}</span>
         </div>
       </div>
 
-      {/* Take profit (auto from RR) */}
-      <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2">
-        <div className="flex flex-col">
-          <span className="text-[11px] text-muted-foreground">Take Profit (RR {rr}:1)</span>
+      {/* Take profit (independent from SL) */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between">
+          <Label className="text-[11px] text-muted-foreground">Take Profit (pips)</Label>
           <span className="text-xs font-mono tabular text-bull">{tpPips}p</span>
         </div>
-        <div className="flex flex-col items-end">
+        <Slider
+          value={[tpPips]} min={5} max={isXau ? 200 : 100} step={isXau ? 5 : 1}
+          onValueChange={(v) => setTpPips(v[0])}
+        />
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono tabular">
+          <span>5p</span><span>{isXau ? '100p' : '50p'}</span><span>{isXau ? '200p' : '100p'}</span>
+        </div>
+      </div>
+
+      {/* SL / TP Price display */}
+      <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2">
+        <div className="flex flex-col">
           <span className="text-[11px] text-muted-foreground">SL / TP Price</span>
           <span className="text-xs font-mono tabular">
             <span className="text-bear">{sl > 0 ? fmtPrice(symbol, sl) : '—'}</span>
             <span className="text-muted-foreground mx-1">/</span>
             <span className="text-bull">{tp > 0 ? fmtPrice(symbol, tp) : '—'}</span>
           </span>
+        </div>
+        <div className="flex flex-col items-end">
+          <span className="text-[11px] text-muted-foreground">RR</span>
+          <span className="text-xs font-mono tabular text-foreground">1 : {slPips > 0 ? (tpPips / slPips).toFixed(1) : '—'}</span>
         </div>
       </div>
 
@@ -702,7 +730,7 @@ function OrderTicket({
         <div className="flex items-center justify-between text-[11px]">
           <span className="text-muted-foreground">Potential Profit</span>
           <span className="font-mono tabular text-bull">
-            {fmtMoney(potentialProfit)} <span className="text-muted-foreground">(RR 1:{rr})</span>
+            {fmtMoney(potentialProfit)} <span className="text-muted-foreground">(RR 1:{slPips > 0 ? (tpPips / slPips).toFixed(1) : '—'})</span>
           </span>
         </div>
         <div className="flex items-center justify-between text-[11px]">

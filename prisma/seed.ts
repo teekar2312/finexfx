@@ -40,7 +40,14 @@ const RISK_DEFAULTS: Record<string, string> = {
   riskPerTradePct: '0.75',        // 0.5 - 1
   stopLossPipsMin: '5',
   stopLossPipsMax: '15',
-  riskRewardRatio: '1.5',          // 1:1.5
+  takeProfitPipsMin: '10',
+  takeProfitPipsMax: '30',
+  riskRewardRatio: '1.5',          // 1:1.5 (computed display only)
+  xauSlPipsMin: '15',
+  xauSlPipsMax: '50',
+  xauTpPipsMin: '30',
+  xauTpPipsMax: '100',
+  xauRiskRewardRatio: '2.0',       // computed display only
   maxOpenPositions: '3',
   dailyRiskLimitPct: '2.5',        // 2 - 3
   dailyTargetPct: '2',             // 1 - 3
