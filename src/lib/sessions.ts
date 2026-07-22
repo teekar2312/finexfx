@@ -17,8 +17,13 @@ const SESSIONS = [
   { name: 'New York', city: 'New York', openUtc: 12, closeUtc: 21 },
 ]
 
+/** Fractional UTC hour including minutes and seconds for smooth progress. */
+function utcFracHour(now: Date): number {
+  return now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600
+}
+
 export function getSessions(now: Date = new Date()): SessionState[] {
-  const h = now.getUTCHours() + now.getUTCMinutes() / 60
+  const h = utcFracHour(now)
   return SESSIONS.map((s) => {
     let active: boolean
     let progress = 0
@@ -42,12 +47,12 @@ export function getSessions(now: Date = new Date()): SessionState[] {
       if (h > s.openUtc) nextOpen.setUTCDate(nextOpen.getUTCDate() + 1)
       nextOpen.setUTCHours(s.openUtc, 0, 0, 0)
     }
-    return { ...s, active, progress: Number(progress.toFixed(3)), nextOpen: nextOpen.toISOString() }
+    return { ...s, active, progress: Number(progress.toFixed(4)), nextOpen: nextOpen.toISOString() }
   })
 }
 
 export function getOverlap(now: Date = new Date()): SessionState {
-  const h = now.getUTCHours() + now.getUTCMinutes() / 60
+  const h = utcFracHour(now)
   // London 7-16, NY 12-21 → overlap 12-16
   const open = 12
   const close = 16
@@ -56,12 +61,12 @@ export function getOverlap(now: Date = new Date()): SessionState {
   const nextOpen = new Date(now)
   if (h >= open) nextOpen.setUTCDate(nextOpen.getUTCDate() + 1)
   nextOpen.setUTCHours(open, 0, 0, 0)
-  return { name: 'Overlap', city: 'London-NY', openUtc: open, closeUtc: close, active, progress: Number(progress.toFixed(3)), nextOpen: nextOpen.toISOString() }
+  return { name: 'Overlap', city: 'London-NY', openUtc: open, closeUtc: close, active, progress: Number(progress.toFixed(4)), nextOpen: nextOpen.toISOString() }
 }
 
 export function isScalpingWindow(now: Date = new Date()): boolean {
-  // London + Overlap = 7-16 UTC
-  const h = now.getUTCHours()
+  // London + Overlap = 7-16 UTC (minute-level precision for smooth transitions)
+  const h = now.getUTCHours() + now.getUTCMinutes() / 60
   return h >= 7 && h < 16
 }
 

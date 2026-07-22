@@ -62,7 +62,7 @@ export default function Home() {
     return hash && PANELS[hash] ? hash : 'dashboard'
   })
   usePriceFeed()
-  const { autoEnabled: autoPilotOn } = useAutoPilot()
+  const { autoEnabled: autoPilotOn, status: autoPilotStatus } = useAutoPilot()
 
   // Listen for hashchange (direct URL navigation / back-forward)
   useEffect(() => {
@@ -100,7 +100,7 @@ export default function Home() {
     <div className="flex min-h-screen bg-background text-foreground">
       <AppSidebar active={section} onNavigate={setSection} />
       <div className="flex min-h-screen flex-1 flex-col">
-        <AppTopbar active={section} onNavigate={setSection} autoPilotOn={autoPilotOn} />
+        <AppTopbar active={section} onNavigate={setSection} autoPilotOn={autoPilotOn} autoPilotStatus={autoPilotStatus} />
         <main className="flex-1">
           <Suspense fallback={<PanelSkeleton />}>
             <Panel />

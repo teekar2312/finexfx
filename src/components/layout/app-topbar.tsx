@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useFeed } from '@/hooks/use-price-feed'
 import { useActiveAccount, resolveAccount } from '@/hooks/use-active-account'
+import { useRealtimeSessions } from '@/hooks/use-realtime-sessions'
 import { useClock, formatJakartaTime, formatJakartaDate, formatUtcTime, fmtMoney } from '@/lib/format'
 import { NAV_ITEMS, SectionId } from './nav-config'
 import { cn } from '@/lib/utils'
@@ -31,15 +32,18 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ThemeToggle } from '@/components/theme-toggle'
 
+import type { AutoPilotStatus } from '@/hooks/use-auto-pilot'
+
 interface TopbarProps {
   active: SectionId
   onNavigate: (id: SectionId) => void
   autoPilotOn?: boolean
+  autoPilotStatus?: AutoPilotStatus
 }
 
-export function AppTopbar({ active, onNavigate, autoPilotOn = false }: TopbarProps) {
+export function AppTopbar({ active, onNavigate, autoPilotOn = false, autoPilotStatus }: TopbarProps) {
   const connected = useFeed((s) => s.connected)
-  const systemStatus = useFeed((s) => s.systemStatus)
+  const { scalpingWindow } = useRealtimeSessions()
   const now = useClock()
   const [mobileOpen, setMobileOpen] = useState(false)
   const { data: session } = useSession()
@@ -58,7 +62,7 @@ export function AppTopbar({ active, onNavigate, autoPilotOn = false }: TopbarPro
 
   const currentItem = NAV_ITEMS.find((i) => i.id === active)
 
-  const scalpingWindow = systemStatus?.scalpingWindow ?? false
+  // scalpingWindow now comes from useRealtimeSessions (1s precision, no WebSocket dependency)
 
   const handleSelectAccount = (id: string) => {
     setActiveAccountId(id)
@@ -184,10 +188,26 @@ export function AppTopbar({ active, onNavigate, autoPilotOn = false }: TopbarPro
 
       {/* Auto-pilot indicator */}
       {autoPilotOn && (
-        <div className="hidden sm:flex items-center gap-1.5 rounded-full border border-violet-500/40 bg-violet-500/10 px-2.5 py-1 text-[11px] font-medium text-violet-400">
+        <div className={cn(
+          'hidden sm:flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium',
+          autoPilotStatus?.lastBlockedReason
+            ? 'border-amber-500/40 bg-amber-500/10 text-amber-400'
+            : 'border-violet-500/40 bg-violet-500/10 text-violet-400',
+        )}>
           <Bot className="h-3 w-3" />
-          <span className="h-1.5 w-1.5 rounded-full bg-violet-400 live-dot" />
-          Auto-Pilot
+          <span className={cn(
+            'h-1.5 w-1.5 rounded-full',
+            autoPilotStatus?.lastBlockedReason
+              ? 'bg-amber-400'
+              : 'bg-violet-400 live-dot',
+          )} />
+          {autoPilotStatus?.lastBlockedReason === 'session'
+            ? 'Off-Session'
+            : autoPilotStatus?.lastBlockedReason === 'market'
+              ? 'Market Tutup'
+              : autoPilotStatus?.lastBlockedReason === 'circuit-breaker'
+                ? 'Circuit Breaker'
+                : 'Auto-Pilot'}
         </div>
       )}
 

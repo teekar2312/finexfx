@@ -1,6 +1,6 @@
-// Server-side SL/TP monitoring mini-service for FinexFX AI Trading System.
+// Server-side monitoring mini-service for FinexFX AI Trading System.
 //
-// This service runs INDEPENDENTLY of the browser. It performs 4 jobs:
+// This service runs INDEPENDENTLY of the browser. It performs 5 jobs:
 //
 //   1. SL/TP Check (every 5s) — polls POST /api/trades/check-sl-tp to auto-close
 //      trades that hit stop-loss or take-profit, and apply trailing stop adjustments.
@@ -9,13 +9,17 @@
 //      local Trade records with MT5 bridge positions. Detects trades that were
 //      closed externally on MT5 (e.g., SL hit on broker side) and updates local DB.
 //
-//   3. AI Signal Evaluation (every 5 min) — polls POST /api/ai/evaluate to evaluate
+//   3. AI Auto-Trade (every 30s) — polls POST /api/ai/auto-trade to automatically
+//      execute high-confidence AI signals. This makes auto-trading truly server-side
+//      and independent of the browser being open.
+//
+//   4. AI Signal Evaluation (every 5 min) — polls POST /api/ai/evaluate to evaluate
 //      pending AI signals (compare predicted direction with actual price movement).
 //
-//   4. Database Backup (every 1 hour) — polls POST /api/system/backup to create
+//   5. Database Backup (every 1 hour) — polls POST /api/system/backup to create
 //      a timestamped copy of the SQLite database. Keeps last 24 backups.
 //
-// This ensures monitoring continues even when:
+// This ensures monitoring AND auto-trading continue even when:
 //   - The browser/dashboard tab is closed
 //   - The user's machine is asleep
 //   - The client-side useAutoPilot hook is not running
@@ -26,6 +30,7 @@
 const API_BASE = 'http://localhost:3000'
 const POLL_INTERVAL_MS = 5000 // 5 seconds — SL/TP check cadence
 const RECONCILE_INTERVAL_MS = 30_000 // 30 seconds — reconciliation cadence
+const AUTO_TRADE_INTERVAL_MS = 30_000 // 30 seconds — auto-trade execution cadence
 const EVALUATE_INTERVAL_MS = 5 * 60_000 // 5 minutes — AI signal evaluation
 const BACKUP_INTERVAL_MS = 60 * 60_000 // 1 hour — database backup
 const API_TIMEOUT_MS = 8000
@@ -53,6 +58,16 @@ interface ReconcileResult {
     orphaned: number
     errors: number
   }
+}
+
+interface AutoTradeResult {
+  enabled: boolean
+  message?: string
+  executed?: Array<{ symbol: string; side: string; lot: number }>
+  rejected?: Array<{ symbol: string; violations: string[] }>
+  openPositions?: number
+  marketClosed?: boolean
+  sessionInfo?: { utcTime: string; configuredSessions: string[] }
 }
 
 interface EvaluateResult {
@@ -140,6 +155,41 @@ async function reconcilePositions(): Promise<ReconcileResult | null> {
   }
 }
 
+/**
+ * Auto-trade executor — calls POST /api/ai/auto-trade which:
+ * 1. Checks autoTradingEnabled in DB
+ * 2. Checks market open / session gate / circuit breaker
+ * 3. Scans AI signals and executes trades for qualifying signals
+ *
+ * This makes auto-trading truly server-side, independent of the browser.
+ */
+async function executeAutoTrade(): Promise<AutoTradeResult | null> {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/api/ai/auto-trade`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: 'server-cron' }),
+    }, 15_000) // 15s timeout — trade execution can take longer
+
+    if (!res.ok) {
+      // 401 = not authenticated (expected if SERVICE_API_KEY not configured)
+      if (res.status === 401) return null
+      console.error(`[${new Date().toISOString()}] auto-trade returned ${res.status} ${res.statusText}`)
+      return null
+    }
+
+    const data = (await res.json()) as AutoTradeResult
+    return data
+  } catch (e: any) {
+    if (e?.name === 'AbortError') {
+      console.warn(`[${new Date().toISOString()}] auto-trade timeout (15s)`)
+    } else if (e?.code !== 'ECONNREFUSED') {
+      console.error(`[${new Date().toISOString()}] auto-trade error:`, e?.message || e)
+    }
+    return null
+  }
+}
+
 async function evaluateSignals(): Promise<EvaluateResult | null> {
   try {
     const res = await fetchWithTimeout(`${API_BASE}/api/ai/evaluate`, {
@@ -222,6 +272,38 @@ function logReconcileResult(result: ReconcileResult): void {
   console.log('')
 }
 
+function logAutoTradeResult(result: AutoTradeResult): void {
+  if (!result.enabled) return // auto-trading is disabled in DB
+
+  const ts = new Date().toISOString()
+
+  if (result.executed?.length) {
+    console.log(`[${ts}] 🤖 Auto-Trade: ${result.executed.length} trade(s) executed`)
+    for (const t of result.executed) {
+      console.log(`  ✅ ${t.side.toUpperCase()} ${t.lot} ${t.symbol}`)
+    }
+    return
+  }
+
+  if (result.rejected?.length) {
+    console.log(`[${ts}] 🤖 Auto-Trade: ${result.rejected.length} signal(s) rejected`)
+    for (const r of result.rejected) {
+      console.log(`  ❌ ${r.symbol}: ${r.violations.join('; ')}`)
+    }
+    return
+  }
+
+  // Log idle reason (but only occasionally to avoid spam)
+  if (result.message) {
+    const msg = result.message.toLowerCase()
+    // Only log session/market blocked once per 5 minutes (not every 30s)
+    if (msg.includes('session') || msg.includes('tutup') || msg.includes('market')) {
+      console.log(`[${ts}] 🤖 Auto-Trade: idle — ${result.message.slice(0, 100)}`)
+    }
+    // Don't spam "no qualifying signals" — too frequent
+  }
+}
+
 function logEvaluateResult(result: EvaluateResult): void {
   if (result.evaluated === 0) return // Nothing to report
 
@@ -243,9 +325,10 @@ function logBackupResult(result: BackupResult): void {
 }
 
 async function runMonitorLoop(): Promise<void> {
-  console.log(`[${new Date().toISOString()}] 🤖 FinexFX SL/TP Monitor started`)
+  console.log(`[${new Date().toISOString()}] 🤖 FinexFX Monitor started (with auto-trade)`)
   console.log(`[${new Date().toISOString()}]    SL/TP check: every ${POLL_INTERVAL_MS / 1000}s`)
   console.log(`[${new Date().toISOString()}]    Reconciliation: every ${RECONCILE_INTERVAL_MS / 1000}s`)
+  console.log(`[${new Date().toISOString()}]    Auto-trade: every ${AUTO_TRADE_INTERVAL_MS / 1000}s`)
   console.log(`[${new Date().toISOString()}]    AI evaluation: every ${EVALUATE_INTERVAL_MS / 60_000} min`)
   console.log(`[${new Date().toISOString()}]    DB backup: every ${BACKUP_INTERVAL_MS / 60_000} min`)
   console.log(`[${new Date().toISOString()}]    Target: ${API_BASE}`)
@@ -253,6 +336,7 @@ async function runMonitorLoop(): Promise<void> {
 
   let pollCount = 0
   let lastReconcile = 0
+  let lastAutoTrade = 0
   let lastEvaluate = 0
   let lastBackup = 0
   let lastHeartbeat = Date.now()
@@ -275,7 +359,23 @@ async function runMonitorLoop(): Promise<void> {
       lastReconcile = now
     }
 
-    // ── 3. AI signal evaluation (every 5 min) ──────────────────────────────────
+    // ── 3. Auto-trade execution (every 30s) ──────────────────────────────────
+    // Server-side auto-trade: works even when browser is closed.
+    // The /api/ai/auto-trade endpoint checks:
+    //   - autoTradingEnabled in DB
+    //   - Market open (weekend check)
+    //   - Session gate (London/Overlap/Tokyo etc.)
+    //   - Daily circuit breaker
+    //   - Risk enforcement per trade
+    if (now - lastAutoTrade >= AUTO_TRADE_INTERVAL_MS) {
+      const tradeResult = await executeAutoTrade()
+      if (tradeResult) {
+        logAutoTradeResult(tradeResult)
+      }
+      lastAutoTrade = now
+    }
+
+    // ── 4. AI signal evaluation (every 5 min) ──────────────────────────────────
     if (now - lastEvaluate >= EVALUATE_INTERVAL_MS) {
       const evalResult = await evaluateSignals()
       if (evalResult) {
@@ -284,7 +384,7 @@ async function runMonitorLoop(): Promise<void> {
       lastEvaluate = now
     }
 
-    // ── 4. Database backup (every 1 hour) ──────────────────────────────────────
+    // ── 5. Database backup (every 1 hour) ──────────────────────────────────────
     if (now - lastBackup >= BACKUP_INTERVAL_MS) {
       const backupResult = await backupDatabase()
       if (backupResult) {

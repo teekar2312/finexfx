@@ -59,6 +59,7 @@ import type {
 } from '@/lib/types'
 import { useTicker } from '@/hooks/use-price-feed'
 import { useActiveAccount } from '@/hooks/use-active-account'
+import { useRealtimeSessions } from '@/hooks/use-realtime-sessions'
 import { fmtMoney, fmtPrice, fmtPct, relativeTime, useClock } from '@/lib/format'
 import { Sparkline } from '@/components/trading/sparkline'
 import {
@@ -746,7 +747,10 @@ function EquityCurveCard({
 // ─── Sessions Card ───────────────────────────────────────────────────────────
 const SESSION_ORDER = ['London', 'New York', 'Overlap', 'Tokyo', 'Sydney']
 
-function SessionsCard({ sessions }: { sessions: TradingSession[] }) {
+function SessionsCard({ fallbackSessions }: { fallbackSessions?: TradingSession[] }) {
+  // Use realtime client-side sessions (1s precision) instead of polled API data
+  const { sessions: rtSessions } = useRealtimeSessions()
+  const sessions = rtSessions
   const ordered = useMemo(() => {
     const m = new Map(sessions.map((s) => [s.name, s]))
     return SESSION_ORDER.map((n) => m.get(n)).filter(Boolean) as TradingSession[]
@@ -804,6 +808,7 @@ function SessionsCard({ sessions }: { sessions: TradingSession[] }) {
 
 function SessionRow({ session }: { session: TradingSession }) {
   const pct = Math.round(session.progress * 100)
+  const rawPct = session.progress * 100
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs">
@@ -834,10 +839,10 @@ function SessionRow({ session }: { session: TradingSession }) {
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div
           className={cn(
-            'h-full rounded-full transition-all duration-500',
+            'h-full rounded-full transition-[width] duration-1000 ease-linear',
             session.active ? 'bg-bull' : 'bg-muted-foreground/30',
           )}
-          style={{ width: `${pct}%` }}
+          style={{ width: `${rawPct}%` }}
         />
       </div>
     </div>
@@ -1916,7 +1921,7 @@ function AggregateOverview({ aggregate }: { aggregate: AggregatePayload }) {
           />
         </motion.div>
         <motion.div variants={itemVariants} className="lg:col-span-4">
-          <SessionsCard sessions={aggregate.sessions} />
+          <SessionsCard />
         </motion.div>
       </div>
 
@@ -2089,7 +2094,7 @@ export function DashboardPanel() {
             />
           </motion.div>
           <motion.div variants={itemVariants} className="lg:col-span-4">
-            <SessionsCard sessions={data.sessions} />
+            <SessionsCard />
           </motion.div>
         </div>
 
