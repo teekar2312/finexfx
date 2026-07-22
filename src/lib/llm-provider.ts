@@ -66,14 +66,10 @@ function providerAvailable(provider: LLMProvider): boolean {
     case 'groq':
       return !!process.env.GROQ_API_KEY?.trim()
     case 'z-ai':
-      // z-ai SDK is always available in the sandbox
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('z-ai-web-dev-sdk')
-        return true
-      } catch {
-        return false
-      }
+      // z-ai SDK only exists in the Z.ai sandbox environment.
+      // Outside the sandbox, this provider is never available.
+      // Set ZAI_SDK_AVAILABLE=true to enable (sandbox only).
+      return process.env.ZAI_SDK_AVAILABLE === 'true'
   }
 }
 
@@ -176,8 +172,11 @@ async function callZAI(
   messages: ChatMessage[],
   options: CallLLMOptions,
 ): Promise<LLMResponse> {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const ZAI = require('z-ai-web-dev-sdk').default
+  // Indirect require — prevents Turbopack/webpack from resolving
+  // 'z-ai-web-dev-sdk' at build time (package only exists in Z.ai sandbox).
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval
+  const sdk = await new Function('return require("z-ai-web-dev-sdk")')()
+  const ZAI = sdk.default
   const zai = await ZAI.create()
 
   const timeout = options.timeout ?? DEFAULT_TIMEOUTS['z-ai']
