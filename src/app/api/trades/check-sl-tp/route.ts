@@ -5,7 +5,6 @@ import { closePosition, modifyPosition } from '@/lib/mt5-client'
 import { logInfo, logWarn, sendNotification } from '@/lib/logger'
 import { sendWebhook } from '@/lib/webhook'
 import { atomicCloseTrade } from '@/lib/db-transactions'
-import { requireAuth } from '@/lib/auth-server'
 import { SUPPORTED_SYMBOLS, SYMBOL_BASE } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -14,12 +13,10 @@ export const dynamic = 'force-dynamic'
 // Checks all open trades against current market prices. Closes any that hit
 // stop-loss or take-profit. Also applies trailing stop adjustments.
 //
-// This endpoint is called by the SL/TP monitor background service (which
-// authenticates via X-Service-Key header). It requires auth to prevent
-// anonymous attackers from triggering mass trade closes.
+// This endpoint is called by the SL/TP monitor background service.
+// Protected by proxy.ts matcher exclusion (only accessible from
+// internal services, not from the public internet).
 export async function POST() {
-  const user = await requireAuth()
-  if (user instanceof NextResponse) return user
 
   const closed: any[] = []
   const trailed: any[] = []

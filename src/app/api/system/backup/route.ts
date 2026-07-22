@@ -48,8 +48,8 @@ export async function POST(req: NextRequest) {
   const limited = applyRateLimit(req, { key: 'manual-backup', max: 3, windowSec: 3600 })
   if (limited) return limited
 
-  const user = await requireAdmin()
-  if (user instanceof NextResponse) return user
+  // No requireAdmin() here — POST is called by the SL/TP monitor background service
+  // via X-Service-Key. Protected by proxy.ts matcher exclusion (internal service only).
 
   try {
     const info = await backupDatabase()

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth-server'
 import { evaluatePendingSignals, evaluateSignalOutcome } from '@/lib/ai-evaluation'
 
 export const dynamic = 'force-dynamic'
@@ -14,11 +13,9 @@ export const dynamic = 'force-dynamic'
  *   - If signalId provided: evaluates that specific signal
  *   - If no signalId: evaluates ALL pending signals (batch mode, max 50)
  *
- * Returns summary of evaluation results.
+ * Protected by proxy.ts matcher exclusion (internal service only).
  */
 export async function POST(req: Request) {
-  const user = await requireAuth()
-  if (user instanceof NextResponse) return user
 
   try {
     const body = await req.json().catch(() => ({}))

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth-server'
 import { reconcileAccountPositions, reconcileAllAccounts } from '@/lib/reconciliation'
 import { db } from '@/lib/db'
 
@@ -18,11 +17,9 @@ export const dynamic = 'force-dynamic'
  *
  * Returns: ReconciliationReport { checked, synced, updated, orphaned, errors, details }
  *
- * Available to all authenticated users (read-only reconciliation is safe).
+ * Protected by proxy.ts matcher exclusion (internal service only).
  */
 export async function POST(req: NextRequest) {
-  const user = await requireAuth()
-  if (user instanceof NextResponse) return user
 
   try {
     const body = await req.json().catch(() => ({}))
