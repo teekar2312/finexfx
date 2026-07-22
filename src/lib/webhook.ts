@@ -232,7 +232,7 @@ export async function sendWebhook(event: WebhookEvent): Promise<void> {
 
 /** Escape Markdown special characters for Telegram Markdown parse mode. */
 function escapeTelegramMarkdown(s: string): string {
-  return s.replace(/([_*`\[])/g, '\\$1')
+  return s.replace(/([_*\[\]()\\`~#>|+\-={}.!])/g, '\\$1')
 }
 
 /**

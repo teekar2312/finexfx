@@ -6,6 +6,7 @@ import { logInfo, logWarn, sendNotification } from '@/lib/logger'
 import { sendWebhook } from '@/lib/webhook'
 import { atomicCloseTrade } from '@/lib/db-transactions'
 import { requireAuth } from '@/lib/auth-server'
+import { SUPPORTED_SYMBOLS, SYMBOL_BASE } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,7 +41,9 @@ export async function POST() {
 
       // ── Trailing stop: move SL as price moves favorably ──
       if (trade.trailingStop && trade.stopLoss) {
-        const pip = trade.symbol === 'USDJPY' ? 0.01 : trade.symbol === 'XAUUSD' ? 0.1 : 0.0001
+        const base = SYMBOL_BASE[trade.symbol]
+        const pip = base?.pip || 0.0001
+        const digits = base?.digits || 5
         const trailDist = trade.trailingPips * pip
         let newSl: number | null = null
 
@@ -48,7 +51,7 @@ export async function POST() {
           newSl = currentPrice - trailDist
           // Only move SL up (never down)
           if (newSl > trade.stopLoss) {
-            const roundedSl = Number(newSl.toFixed(5))
+            const roundedSl = Number(newSl.toFixed(digits))
             await db.trade.update({ where: { id: trade.id }, data: { stopLoss: roundedSl } })
             trailed.push({ id: trade.id, symbol: trade.symbol, side: trade.side, oldSl: trade.stopLoss, newSl: roundedSl })
             // Sync trailing stop to MT5
@@ -64,7 +67,7 @@ export async function POST() {
           newSl = currentPrice + trailDist
           // Only move SL down (never up) for sells
           if (newSl < trade.stopLoss) {
-            const roundedSl = Number(newSl.toFixed(5))
+            const roundedSl = Number(newSl.toFixed(digits))
             await db.trade.update({ where: { id: trade.id }, data: { stopLoss: roundedSl } })
             trailed.push({ id: trade.id, symbol: trade.symbol, side: trade.side, oldSl: trade.stopLoss, newSl: roundedSl })
             // Sync trailing stop to MT5
@@ -151,11 +154,15 @@ export async function POST() {
           await logInfo('mt5', `Trade closed (${reason}): ${trade.symbol} ${trade.side} ${trade.lotSize} @ ${closePrice} | P&L ${netPnl.toFixed(2)}`)
         }
 
+        // Get email recipient from system config
+        const emailCfg = await db.systemConfig.findUnique({ where: { key: 'emailRecipient' } })
+        const recipient = emailCfg?.value || 'trader@example.com'
+
         await sendNotification(
           'trade_close',
           `${hitSl ? '🛑 SL Hit' : '🎯 TP Hit'}: ${trade.symbol} ${trade.side.toUpperCase()}`,
           `Trade ${trade.symbol} ${trade.side.toUpperCase()} ${trade.lotSize} lots ditutup di ${reason}.\nOpen: ${trade.openPrice}\nClose: ${closePrice}\nPips: ${pips}\nP&L: $${netPnl.toFixed(2)}\n\nReason: ${reason}`,
-          'trader@example.com',
+          recipient,
         )
 
         // Webhook notification (Discord/Telegram/Slack)

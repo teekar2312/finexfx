@@ -7,6 +7,7 @@ import { sendWebhook } from '@/lib/webhook'
 import type { SupportedSymbol } from '@/lib/types'
 import { SYMBOL_BASE } from '@/lib/types'
 import { requireTrader } from '@/lib/auth-server'
+import { auditLog } from '@/lib/audit'
 import { enforceTradeOpen, isMarketClosed } from '@/lib/risk-enforcement'
 import { bridgeHealth, marketOrder as mt5MarketOrder } from '@/lib/mt5-client'
 import { isAnySessionActive } from '@/lib/sessions'
@@ -290,6 +291,12 @@ export async function POST() {
         ? `${rejected.length} signal ditolak oleh risk management. Lihat rejected list.`
         : `Tidak ada sinyal yang memenuhi kriteria auto-trade (confidence ≥ ${confidenceThreshold}%, action buy/sell, no news conflict).`
       : `${executed.length} auto-trade dieksekusi.${rejected.length > 0 ? ` ${rejected.length} ditolak risk.` : ''}`
+
+    await auditLog(user, {
+      action: 'auto-trade.execute',
+      entityType: 'system',
+      metadata: JSON.stringify({ executedCount: executed.length, rejectedCount: rejected.length }),
+    })
 
     return NextResponse.json({
       enabled: true,

@@ -34,7 +34,9 @@ export async function PATCH(req: NextRequest) {
         create: { key, value: String(value) },
       }),
     )
-    await Promise.all(ops)
+    for (const op of ops) {
+      await op
+    }
 
     const rows = await db.systemConfig.findMany()
     const config: Record<string, string> = {}

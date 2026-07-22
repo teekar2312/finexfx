@@ -35,8 +35,8 @@ export interface DailySummaryData {
  * Returns the summary data object for programmatic use.
  */
 export async function generateDailySummary(): Promise<DailySummaryData> {
-  const today = new Date()
-  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const now = new Date()
+  const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0))
   const dateLabel = startOfDay.toISOString().slice(0, 10)
 
   // Default empty summary

@@ -1,7 +1,7 @@
 'use client'
 
 import { useFeed } from '@/hooks/use-price-feed'
-import { useClock, formatJakartaTime } from '@/lib/format'
+import { useClock, formatJakartaTime, fmtPrice } from '@/lib/format'
 import { SUPPORTED_SYMBOLS } from '@/lib/types'
 import { ShieldCheck } from 'lucide-react'
 
@@ -22,7 +22,7 @@ export function AppFooter() {
               <span key={sym} className="flex items-center gap-1.5">
                 <span className="text-muted-foreground font-semibold">{sym}</span>
                 <span className={dir === 'up' ? 'text-bull' : dir === 'down' ? 'text-bear' : 'text-foreground'}>
-                  {t ? t.price : '—'}
+                  {t ? fmtPrice(sym, t.price) : '—'}
                 </span>
                 {t && (
                   <span className={t.changePct >= 0 ? 'text-bull' : 'text-bear'}>

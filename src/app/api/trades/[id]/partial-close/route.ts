@@ -6,6 +6,7 @@ import { logInfo, logWarn, sendNotification } from '@/lib/logger'
 import { sendWebhook } from '@/lib/webhook'
 import { atomicPartialCloseTrade } from '@/lib/db-transactions'
 import { requireTrader } from '@/lib/auth-server'
+import { canAccessTrade } from '@/lib/ownership'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,6 +37,9 @@ export async function POST(
     const trade = await db.trade.findUnique({ where: { id }, include: { account: true } })
     if (!trade) {
       return NextResponse.json({ error: 'Trade not found' }, { status: 404 })
+    }
+    if (!canAccessTrade(user, trade.account?.userId ?? null)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     if (trade.status !== 'open') {
       return NextResponse.json({ error: 'Trade is not open' }, { status: 400 })
@@ -115,11 +119,16 @@ export async function POST(
     }
 
     await logInfo('mt5', `Partial close ${percent}%: ${trade.symbol} ${trade.side} ${closeLot} lots @ ${closePrice} | P&L ${netPnl.toFixed(2)} | remaining ${remainingLot} lots`)
+
+    // Get email recipient from system config
+    const emailCfg = await db.systemConfig.findUnique({ where: { key: 'emailRecipient' } })
+    const recipient = emailCfg?.value || 'trader@example.com'
+
     await sendNotification(
       'trade_close',
       `Partial Close ${percent}%: ${trade.symbol} ${trade.side.toUpperCase()}`,
       `Partial close ${percent}% of ${trade.symbol} ${trade.side.toUpperCase()} position.\nClosed: ${closeLot} lots @ ${closePrice}\nPips: ${pips}\nP&L: $${netPnl.toFixed(2)}\nRemaining: ${remainingLot} lots (still open)`,
-      'trader@example.com',
+      recipient,
     )
 
     // r15-INTEGRATION: webhook notification for partial close

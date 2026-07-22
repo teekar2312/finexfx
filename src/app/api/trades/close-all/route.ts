@@ -6,6 +6,7 @@ import { sendWebhook } from '@/lib/webhook'
 import { atomicCloseTrade } from '@/lib/db-transactions'
 import { closePosition as mt5ClosePosition } from '@/lib/mt5-client'
 import { requireTrader } from '@/lib/auth-server'
+import { canAccessAccount } from '@/lib/ownership'
 import { applyRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
@@ -47,6 +48,9 @@ export async function POST(req: NextRequest) {
     }
     if (!account) {
       return NextResponse.json({ error: 'Account not found' }, { status: 404 })
+    }
+    if (!canAccessAccount(user, account.userId ?? null)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Fetch all open trades for this account

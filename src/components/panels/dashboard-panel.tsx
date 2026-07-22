@@ -1948,9 +1948,12 @@ export function DashboardPanel() {
   const aggregateQuery = useQuery({
     queryKey: ['dashboard-aggregate'],
     queryFn: () =>
-      fetch('/api/dashboard/aggregate').then((r) => r.json()) as Promise<{
-        aggregate: AggregatePayload
-      }>,
+      (async () => {
+        const res = await fetch('/api/dashboard/aggregate')
+        if (!res.ok) throw new Error('Failed to fetch aggregate data')
+        const data = await res.json()
+        return data as { aggregate: AggregatePayload }
+      })(),
     refetchInterval: 15_000,
     enabled: viewMode === 'all',
   })

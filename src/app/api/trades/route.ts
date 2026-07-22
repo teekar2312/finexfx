@@ -6,7 +6,7 @@ import { sendWebhook } from '@/lib/webhook'
 import { bidAsk } from '@/lib/market'
 import { SUPPORTED_SYMBOLS, SYMBOL_BASE } from '@/lib/types'
 import { bridgeHealth, marketOrder as mt5MarketOrder } from '@/lib/mt5-client'
-import { requireTrader } from '@/lib/auth-server'
+import { requireAuth, requireTrader } from '@/lib/auth-server'
 import { auditLog } from '@/lib/audit'
 import { enforceTradeOpen } from '@/lib/risk-enforcement'
 import { applyRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
@@ -14,6 +14,9 @@ import { applyRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
+  const user = await requireAuth()
+  if (user instanceof NextResponse) return user
+
   try {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
@@ -185,7 +188,7 @@ export async function POST(req: NextRequest) {
         openPrice = side === 'buy' ? ask : bid
       }
     } else {
-      // Bridge online — fetch live price.
+      // Bridge offline — fetch live price from bridge.
       const { bid, ask } = await bidAsk(symbol)
       openPrice = side === 'buy' ? ask : bid
     }

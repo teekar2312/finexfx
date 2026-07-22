@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logInfo } from '@/lib/logger'
-import { requireAdmin } from '@/lib/auth-server'
+import { requireAuth, requireAdmin } from '@/lib/auth-server'
 import { auditLog } from '@/lib/audit'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
+  const user = await requireAuth()
+  if (user instanceof NextResponse) return user
+
   try {
     const rows = await db.riskSetting.findMany()
     const settings: Record<string, string> = {}

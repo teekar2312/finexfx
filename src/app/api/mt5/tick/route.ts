@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTick } from '@/lib/mt5-client'
 import { SUPPORTED_SYMBOLS } from '@/lib/types'
+import { requireAuth } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +12,9 @@ export const dynamic = 'force-dynamic'
  * Returns 503 if the bridge is offline (no synthetic fallback in real trading mode).
  */
 export async function GET(req: NextRequest) {
+  const user = await requireAuth()
+  if (user instanceof NextResponse) return user
+
   try {
     const { searchParams } = new URL(req.url)
     const symbol = searchParams.get('symbol')

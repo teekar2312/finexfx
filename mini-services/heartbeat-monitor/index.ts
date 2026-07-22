@@ -34,48 +34,23 @@ async function pingMt5(): Promise<boolean> {
 }
 
 async function triggerDisconnectActions() {
-  // 1. Tell Next.js to auto-close all open positions
+  // Call the existing mt5-disconnect endpoint which handles auto-close + logging + webhooks
   try {
-    const res = await fetch(`${NEXTJS_BASE}/api/health/mt5-disconnect`, {
-      method: "POST",
+    const disconnectRes = await fetch(`${NEXTJS_BASE}/api/health/mt5-disconnect`, {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        ...(SERVICE_API_KEY ? { Authorization: `Bearer ${SERVICE_API_KEY}` } : {}),
+        'Content-Type': 'application/json',
+        ...(SERVICE_API_KEY ? { 'X-Service-Key': SERVICE_API_KEY } : {}),
       },
-    });
-    if (res.ok) {
-      console.log(`[${isoNow()}] ✅ mt5-disconnect endpoint called successfully`);
+      body: JSON.stringify({ reason: `Heartbeat: bridge offline for ${FAILURE_THRESHOLD * CHECK_INTERVAL_MS / 1000}s` }),
+    })
+    if (!disconnectRes.ok) {
+      console.error(`[heartbeat] mt5-disconnect returned ${disconnectRes.status}`)
     } else {
-      console.error(`[${isoNow()}] ⚠️ mt5-disconnect returned ${res.status}`);
+      console.log('[heartbeat] ✅ Triggered mt5-disconnect (auto-close + notifications)')
     }
   } catch (err) {
-    console.error(`[${isoNow()}] ❌ Failed to call mt5-disconnect:`, err);
-  }
-
-  // 2. Send webhook notification
-  try {
-    const res = await fetch(`${NEXTJS_BASE}/api/notifications/webhook`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(SERVICE_API_KEY ? { Authorization: `Bearer ${SERVICE_API_KEY}` } : {}),
-      },
-      body: JSON.stringify({
-        type: "system",
-        title: "MT5 Bridge Disconnected",
-        message:
-          `MT5 bridge has been offline for >30 seconds (${consecutiveFailures} consecutive failures). ` +
-          `Auto-close of all open positions has been triggered. ` +
-          `Last successful check: ${lastDisconnectAt ?? "unknown"}.`,
-      }),
-    });
-    if (res.ok) {
-      console.log(`[${isoNow()}] ✅ Webhook notification sent`);
-    } else {
-      console.error(`[${isoNow()}] ⚠️ Webhook returned ${res.status}`);
-    }
-  } catch (err) {
-    console.error(`[${isoNow()}] ❌ Failed to send webhook:`, err);
+    console.error('[heartbeat] Failed to call mt5-disconnect:', err)
   }
 }
 

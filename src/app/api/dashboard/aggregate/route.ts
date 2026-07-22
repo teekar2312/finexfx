@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import {
   SUPPORTED_SYMBOLS,
@@ -10,6 +10,7 @@ import {
 import { bidAsk, sparkline, dayHighLow, changePct24h, priceAt } from '@/lib/market'
 import { getSessions, getOverlap } from '@/lib/sessions'
 import { computeRiskUsage } from '@/lib/risk-usage'
+import { requireAuth } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -102,6 +103,9 @@ function buildEquitySpark(balance: number, todayPnl: number): number[] {
 }
 
 export async function GET() {
+  const user = await requireAuth()
+  if (user instanceof NextResponse) return user
+
   try {
     const accounts = await db.account.findMany({
       orderBy: { createdAt: 'asc' },

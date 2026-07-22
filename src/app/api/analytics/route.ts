@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSessions } from '@/lib/sessions'
 import type { TradeAnalytics } from '@/lib/types'
+import { requireAuth } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/analytics?accountId=&days=30
 export async function GET(req: NextRequest) {
+  const user = await requireAuth()
+  if (user instanceof NextResponse) return user
+
   try {
     const { searchParams } = new URL(req.url)
     const accountId = searchParams.get('accountId') || undefined

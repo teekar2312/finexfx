@@ -17,6 +17,7 @@ import type { MT5Adapter } from './adapters/types'
 import { RealPythonMT5Adapter } from './adapters/real-python'
 
 const PORT = 3050
+const API_KEY = process.env.BRIDGE_API_KEY || ''
 
 // Real trading only — always use the real-python adapter.
 const adapter: MT5Adapter = new RealPythonMT5Adapter()
@@ -44,6 +45,14 @@ async function handle(req: Request): Promise<Response> {
   const method = req.method
 
   if (method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders })
+
+  // Skip auth for /health endpoint (needed by monitoring)
+  if (API_KEY && path !== '/health') {
+    const provided = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || ''
+    if (provided !== API_KEY) {
+      return json({ error: 'Unauthorized' }, 401)
+    }
+  }
 
   try {
     // ── Health ──────────────────────────────────────────────────────────────

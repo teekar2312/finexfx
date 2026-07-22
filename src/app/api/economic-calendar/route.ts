@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/economic-calendar?days=7&impact=&country=&status=&limit=50
 export async function GET(req: NextRequest) {
+  const user = await requireAuth()
+  if (user instanceof NextResponse) return user
+
   try {
     const { searchParams } = new URL(req.url)
     const days = parseInt(searchParams.get('days') || '7')

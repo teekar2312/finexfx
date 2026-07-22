@@ -30,6 +30,9 @@ export function isMarketClosed(now: Date = new Date()): { closed: boolean; reaso
     // Saturday — market fully closed
     return { closed: true, reason: 'Market tutup (Sabtu). Forex market buka kembali Minggu ~22:00 UTC.' }
   }
+  if (day === 5 && hour >= 22) {
+    return { closed: true, reason: 'Market tutup (Jumat setelah 22:00 UTC). Forex market buka Minggu ~22:00 UTC.' }
+  }
   if (day === 0 && hour < 22) {
     // Sunday before 22:00 UTC — market still closed
     return { closed: true, reason: 'Market tutup (Minggu sebelum 22:00 UTC). Forex market buka ~22:00 UTC.' }
@@ -324,7 +327,21 @@ export async function enforceTradeOpen(params: {
     // Leverage is stored as "1:100" — extract the numeric part after ':'
     const levStr = String(account.leverage || '1:100')
     const levNum = levStr.includes(':') ? parseInt(levStr.split(':')[1]) || 100 : parseInt(levStr) || 100
-    const requiredMargin = (params.lotSize * base.contractSize) / levNum
+    // Calculate notional in USD
+    let notionalUsd: number
+    if (params.symbol === 'USDJPY') {
+      // For USD/JPY, 1 lot = 100,000 JPY, need to convert to USD
+      const { ask } = await bidAsk(params.symbol)
+      notionalUsd = (params.lotSize * base.contractSize) / (ask || 150)
+    } else if (params.symbol === 'XAUUSD') {
+      // For XAU/USD, 1 lot = 100 oz * gold price in USD
+      const { ask } = await bidAsk(params.symbol)
+      notionalUsd = params.lotSize * base.contractSize * (ask || 2300)
+    } else {
+      // For EUR/USD, GBP/USD: 1 lot = 100,000 USD notional
+      notionalUsd = params.lotSize * base.contractSize
+    }
+    const requiredMargin = notionalUsd / levNum
     if (requiredMargin > freeMargin) {
       violations.push(
         `Insufficient free margin: required $${requiredMargin.toFixed(2)}, available $${freeMargin.toFixed(2)}.`,

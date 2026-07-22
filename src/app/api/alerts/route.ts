@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logInfo } from '@/lib/logger'
+import { requireAuth } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
+  const user = await requireAuth()
+  if (user instanceof NextResponse) return user
+
   try {
     const alerts = await db.alert.findMany({
       orderBy: { createdAt: 'desc' },
@@ -16,6 +20,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await requireAuth()
+  if (user instanceof NextResponse) return user
+
   try {
     const body = await req.json().catch(() => ({}))
     const { symbol, condition, price, notifyEmail, message } = body || {}

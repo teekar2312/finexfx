@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/trades/export?status=closed&accountId=&format=csv
 // Exports closed trades as CSV for journal/analytics use.
 export async function GET(req: NextRequest) {
+  const user = await requireAuth()
+  if (user instanceof NextResponse) return user
+
   try {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status') || 'closed'

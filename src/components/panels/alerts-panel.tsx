@@ -706,7 +706,7 @@ export function AlertsPanel() {
     for (const sym of SUPPORTED_SYMBOLS) {
       prevPriceRef.current[sym] = tickers[sym]?.price ?? prevPriceRef.current[sym]
     }
-  }, [tickers, active, triggerAlert])
+  }, [tickers, active, triggerAlert.isPending])
 
   // Clean up fired set when alerts get removed
   useEffect(() => {

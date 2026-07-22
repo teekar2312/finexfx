@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,9 @@ export const dynamic = 'force-dynamic'
 //   7. Trade Journal (last 20 closed trades)
 //   8. Footer (timestamp + disclaimer)
 export async function GET(req: NextRequest) {
+  const user = await requireAuth()
+  if (user instanceof NextResponse) return user
+
   try {
     const { searchParams } = new URL(req.url)
     const accountId = searchParams.get('accountId') || undefined

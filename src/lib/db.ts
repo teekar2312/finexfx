@@ -191,7 +191,8 @@ type AnyTable = typeof accounts | typeof trades | typeof orders | typeof indicat
   typeof newsItems | typeof alerts | typeof logs | typeof backtests |
   typeof aiSignals | typeof aiSignalOutcomes | typeof riskSettings |
   typeof notifications | typeof systemConfigs | typeof users |
-  typeof userSessions | typeof economicEvents
+  typeof userSessions | typeof economicEvents |
+  typeof auditLogs | typeof metrics
 
 type Row<T extends AnyTable> = T['$inferSelect']
 type InsertRow<T extends AnyTable> = T['$inferInsert']
@@ -245,8 +246,8 @@ const tableConfigs: Record<string, { table: AnyTable; columns: Record<string, an
   users: { table: users, columns: users as any },
   userSessions: { table: userSessions, columns: userSessions as any },
   economicEvents: { table: economicEvents, columns: economicEvents as any },
-  auditLogs: { table: auditLogs as any, columns: auditLogs as any },
-  metrics: { table: metrics as any, columns: metrics as any },
+  auditLogs: { table: auditLogs, columns: auditLogs as any },
+  metrics: { table: metrics, columns: metrics as any },
 }
 
 // Map camelCase field name (Prisma convention) → snake_case column key (Drizzle).
@@ -255,6 +256,7 @@ const tableConfigs: Record<string, { table: AnyTable; columns: Record<string, an
 function buildWhere<T extends AnyTable>(
   table: T,
   where: WhereClause<T> | undefined,
+  tableName?: string,
 ): SQL | undefined {
   if (!where) return undefined
   const conditions: SQL[] = []
@@ -263,20 +265,25 @@ function buildWhere<T extends AnyTable>(
     if (key === 'AND' || key === 'OR' || key === 'NOT') {
       const arr = rawValue as any
       if (key === 'AND' && Array.isArray(arr)) {
-        const subs = arr.map((w: any) => buildWhere(table, w)).filter(Boolean) as SQL[]
+        const subs = arr.map((w: any) => buildWhere(table, w, tableName)).filter(Boolean) as SQL[]
         if (subs.length) conditions.push(and(...subs)!)
       } else if (key === 'OR' && Array.isArray(arr)) {
-        const subs = arr.map((w: any) => buildWhere(table, w)).filter(Boolean) as SQL[]
+        const subs = arr.map((w: any) => buildWhere(table, w, tableName)).filter(Boolean) as SQL[]
         if (subs.length) conditions.push(or(...subs)!)
       } else if (key === 'NOT' && arr) {
-        const sub = buildWhere(table, arr)
+        const sub = buildWhere(table, arr, tableName)
         if (sub) conditions.push(sql`NOT (${sub})`)
       }
       continue
     }
 
     const col = (table as any)[key]
-    if (!col) continue // unknown field — skip silently
+    if (!col) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`[db] Unknown field "${key}" in where clause for table "${tableName ?? '?'}"`)
+      }
+      continue
+    }
 
     if (rawValue === null || rawValue === undefined) {
       conditions.push(isNull(col))
@@ -459,7 +466,7 @@ function makeModelWrapper<T extends AnyTable>(name: string, table: T, dbInstance
       let q = selectCols
         ? dbInstance.select(selectCols).from(table as any) as any
         : dbInstance.select().from(table as any) as any
-      const w = buildWhere(table, where)
+      const w = buildWhere(table, where, name)
       if (w) q = q.where(w)
       const ords = buildOrderBy(table, orderBy)
       if (ords.length > 0) q = q.orderBy(...ords)
@@ -475,7 +482,7 @@ function makeModelWrapper<T extends AnyTable>(name: string, table: T, dbInstance
     async findUnique(args: FindUniqueArgs<T>): Promise<Row<T> | null> {
       const { where, include, select } = args
       const selectCols = buildSelect(table, select)
-      const w = buildWhere(table, where as any)
+      const w = buildWhere(table, where as any, name)
       let q = selectCols
         ? dbInstance.select(selectCols).from(table as any) as any
         : dbInstance.select().from(table as any) as any
@@ -492,7 +499,7 @@ function makeModelWrapper<T extends AnyTable>(name: string, table: T, dbInstance
       let q = selectCols
         ? dbInstance.select(selectCols).from(table as any) as any
         : dbInstance.select().from(table as any) as any
-      const w = buildWhere(table, where)
+      const w = buildWhere(table, where, name)
       if (w) q = q.where(w)
       const ords = buildOrderBy(table, orderBy)
       if (ords.length > 0) q = q.orderBy(...ords)
@@ -512,7 +519,7 @@ function makeModelWrapper<T extends AnyTable>(name: string, table: T, dbInstance
       const { where, data } = args
       const setData = applyNumericOps(data, table)
       // Build a where clause that includes id + any extra conditions
-      const w = buildWhere(table, where as any)
+      const w = buildWhere(table, where as any, name)
       const rows = await (dbInstance.update(table as any).set(setData as any).where(w!).returning() as any)
       if (rows.length === 0) {
         throw new Error(`Record not found for update: ${JSON.stringify(where)}`)
@@ -523,14 +530,14 @@ function makeModelWrapper<T extends AnyTable>(name: string, table: T, dbInstance
     async updateMany(args: UpdateManyArgs<T>): Promise<{ count: number }> {
       const { where, data } = args
       const setData = applyNumericOps(data, table)
-      const w = buildWhere(table, where)
-      const rows = await (dbInstance.update(table as any).set(setData as any).where(w ?? sql`1=1`).returning() as any)
-      return { count: rows.length }
+      const w = buildWhere(table, where, name)
+      const result = await dbInstance.update(table as any).set(setData as any).where(w ?? sql`1=1`).run()
+      return { count: result.changes }
     },
 
     async delete(args: DeleteArgs): Promise<Row<T>> {
       const { where } = args
-      const w = buildWhere(table, where as any)
+      const w = buildWhere(table, where as any, name)
       const rows = await (dbInstance.delete(table as any).where(w!).returning() as any)
       if (rows.length === 0) {
         throw new Error(`Record not found for delete: ${JSON.stringify(where)}`)
@@ -540,14 +547,14 @@ function makeModelWrapper<T extends AnyTable>(name: string, table: T, dbInstance
 
     async deleteMany(args: DeleteManyArgs<T> = {}): Promise<{ count: number }> {
       const { where } = args
-      const w = buildWhere(table, where)
-      const rows = await (dbInstance.delete(table as any).where(w ?? sql`1=1`).returning() as any)
-      return { count: rows.length }
+      const w = buildWhere(table, where, name)
+      const result = await dbInstance.delete(table as any).where(w ?? sql`1=1`).run()
+      return { count: result.changes }
     },
 
     async count(args: CountArgs<T> = {}): Promise<number> {
       const { where } = args
-      const w = buildWhere(table, where)
+      const w = buildWhere(table, where, name)
       let q = dbInstance.select({ count: sql<number>`count(*)` }).from(table as any) as any
       if (w) q = q.where(w)
       const result = await q
@@ -567,19 +574,43 @@ function makeModelWrapper<T extends AnyTable>(name: string, table: T, dbInstance
       update: Partial<InsertRow<T>>
     }): Promise<Row<T>> {
       const { where, create, update } = args
-      const w = buildWhere(table, where as any)
-      // Try find first
-      let q = dbInstance.select().from(table as any) as any
-      if (w) q = q.where(w)
-      q = q.limit(1)
-      const existing = await q
-      if (existing.length > 0) {
+
+      // Tables with a unique `key` column — use native ON CONFLICT DO UPDATE (atomic)
+      if (name === 'riskSettings' || name === 'systemConfigs') {
+        const keyCol = (table as any).key
         const setData = applyNumericOps(update as any, table)
-        const rows = await (dbInstance.update(table as any).set(setData as any).where(w!).returning() as any)
-        return rows[0]
+        const [row] = await (dbInstance.insert(table as any)
+          .values(create as any)
+          .onConflictDoUpdate({ target: keyCol, set: setData })
+          .returning() as any)
+        return row
       }
-      const [row] = await (dbInstance.insert(table as any).values(create as any).returning() as any)
-      return row
+
+      // Other tables — wrap SELECT+INSERT/UPDATE in a transaction for atomicity
+      const client = (dbInstance as any).$client ?? rawSqlite
+      const alreadyInTx = client.inTransaction
+      if (!alreadyInTx) client.exec('BEGIN IMMEDIATE TRANSACTION;')
+      try {
+        const w = buildWhere(table, where as any, name)
+        let q = dbInstance.select().from(table as any) as any
+        if (w) q = q.where(w)
+        q = q.limit(1)
+        const existing = await q
+        let result: Row<T>
+        if (existing.length > 0) {
+          const setData = applyNumericOps(update as any, table)
+          const rows = await (dbInstance.update(table as any).set(setData as any).where(w!).returning() as any)
+          result = rows[0]
+        } else {
+          const [row] = await (dbInstance.insert(table as any).values(create as any).returning() as any)
+          result = row
+        }
+        if (!alreadyInTx) client.exec('COMMIT;')
+        return result
+      } catch (err) {
+        if (!alreadyInTx) { try { client.exec('ROLLBACK;') } catch {} }
+        throw err
+      }
     },
 
     async aggregate(args: {
@@ -591,7 +622,7 @@ function makeModelWrapper<T extends AnyTable>(name: string, table: T, dbInstance
       _max?: { [K in keyof Row<T>]?: true }
     }): Promise<any> {
       const { where, _count, _sum, _avg, _min, _max } = args
-      const w = buildWhere(table, where)
+      const w = buildWhere(table, where, name)
       const select: Record<string, any> = {}
       if (_count) {
         if (_count === true) {
@@ -634,7 +665,7 @@ function makeModelWrapper<T extends AnyTable>(name: string, table: T, dbInstance
       take?: number
     }): Promise<any[]> {
       const { by, where, _count, _sum, orderBy, take } = args
-      const w = buildWhere(table, where)
+      const w = buildWhere(table, where, name)
       const select: Record<string, any> = {}
       for (const k of by) {
         const col = (table as any)[k]
@@ -715,10 +746,10 @@ function buildFacade(instance: BetterSQLite3Database<typeof schema>) {
     userSessions: makeModelWrapper('userSessions', userSessions, instance),
     economicEvent: makeModelWrapper('economicEvents', economicEvents, instance),
     economicEvents: makeModelWrapper('economicEvents', economicEvents, instance),
-    auditLog: makeModelWrapper('auditLogs', auditLogs as any, instance),
-    auditLogs: makeModelWrapper('auditLogs', auditLogs as any, instance),
-    metric: makeModelWrapper('metrics', metrics as any, instance),
-    metrics: makeModelWrapper('metrics', metrics as any, instance),
+    auditLog: makeModelWrapper('auditLogs', auditLogs, instance),
+    auditLogs: makeModelWrapper('auditLogs', auditLogs, instance),
+    metric: makeModelWrapper('metrics', metrics, instance),
+    metrics: makeModelWrapper('metrics', metrics, instance),
 
     // Prisma's $transaction(async (tx) => { ... }) — interactive async transaction.
     //

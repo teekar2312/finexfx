@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 }
 
 /**
- * GET /api/health
+ * GET /api/health/mt5-disconnect
  * Basic health check endpoint.
  */
 export async function GET() {

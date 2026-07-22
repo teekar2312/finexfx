@@ -12,8 +12,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
-export const dynamic = 'force-dynamic'
-
 function isSafeCallbackUrl(url: string | null): url is string {
   return typeof url === 'string' && /^\/(?!\/)/.test(url)
 }

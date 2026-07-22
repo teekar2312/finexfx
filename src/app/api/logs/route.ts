@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { requireAdmin } from '@/lib/auth-server'
+import { requireAuth, requireAdmin } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
+  const user = await requireAuth()
+  if (user instanceof NextResponse) return user
+
   try {
     const { searchParams } = new URL(req.url)
     const level = searchParams.get('level') || undefined
@@ -27,6 +30,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await requireAuth()
+  if (user instanceof NextResponse) return user
+
   try {
     const body = await req.json().catch(() => ({}))
     const { level, source, message, stack, context } = body || {}

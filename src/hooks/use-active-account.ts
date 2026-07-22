@@ -40,6 +40,10 @@ export const useActiveAccount = create<ActiveAccountState>()(
       name: 'finexfx-active-account',
       storage: createJSONStorage(() => localStorage),
       version: 2,
+      migrate: (persisted: any, version: number) => {
+        if (version === 1) return { ...persisted, viewMode: 'single' as const }
+        return persisted as any
+      },
     },
   ),
 )

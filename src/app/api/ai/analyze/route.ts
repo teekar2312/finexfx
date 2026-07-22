@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { analyzeSymbol } from '@/lib/ai'
+import { requireTrader } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,6 +9,9 @@ const VALID_TIMEFRAMES = ['M1', 'M5', 'M15', 'H1'] as const
 type Timeframe = (typeof VALID_TIMEFRAMES)[number]
 
 export async function POST(req: NextRequest) {
+  const user = await requireTrader()
+  if (user instanceof NextResponse) return user
+
   try {
     const body = await req.json().catch(() => ({}))
     const symbol = body?.symbol

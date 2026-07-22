@@ -305,7 +305,6 @@ export const aiSignalOutcomes = sqliteTable(
     evaluatedAt: integer('evaluated_at', { mode: 'timestamp' }),
   },
   (t) => ({
-    signalIdIdx: uniqueIndex('ai_signal_outcomes_signal_id_idx').on(t.signalId),
     symbolIdx: index('ai_signal_outcomes_symbol_idx').on(t.symbol),
     correctIdx: index('ai_signal_outcomes_correct_idx').on(t.correct),
     evaluatedAtIdx: index('ai_signal_outcomes_evaluated_at_idx').on(t.evaluatedAt),
@@ -378,7 +377,6 @@ export const users = sqliteTable(
     updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()).$onUpdate(() => new Date()).notNull(),
   },
   (t) => ({
-    emailIdx: uniqueIndex('users_email_idx').on(t.email),
     roleIdx: index('users_role_idx').on(t.role),
   }),
 )

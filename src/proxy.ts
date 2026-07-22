@@ -128,7 +128,7 @@ export async function proxy(req: NextRequest) {
 export const config = {
   // Protect everything EXCEPT:
   // - /api/mt5/health (MT5 bridge status — public)
-  // - /api/health (system health check — public for monitoring)
+  // - /api/health/mt5-disconnect (called by heartbeat monitor, has own X-Service-Key auth)
   // - /api/trades/check-sl-tp (called by SL/TP monitor background service)
   // - /api/ai/auto-trade (called by background service, has own role guard)
   // - /api/mt5/reconcile (called by background service, has own auth)
@@ -143,6 +143,6 @@ export const config = {
   // /api/auth/me/password (password change), then passes them through to the
   // NextAuth handler (see step 3 in proxy()).
   matcher: [
-    '/((?!api/mt5/health|api/health|api/trades/check-sl-tp|api/ai/auto-trade|api/mt5/reconcile|api/ai/evaluate|api/system/backup|login|_next/static|_next/image|favicon.ico|logo.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!api/mt5/health|api/health/mt5-disconnect|api/trades/check-sl-tp|api/ai/auto-trade|api/mt5/reconcile|api/ai/evaluate|api/system/backup|login|_next/static|_next/image|favicon.ico|logo.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }

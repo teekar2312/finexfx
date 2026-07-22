@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { runBacktest } from '@/lib/backtest'
 import { STRATEGIES, findStrategy } from '@/lib/strategies'
 import { SUPPORTED_SYMBOLS } from '@/lib/types'
+import { requireAuth } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,9 @@ export const dynamic = 'force-dynamic'
 // Body: { periodFrom?, periodTo?, initialCapital? }
 // Returns: { results: Array<{ strategy, symbol, ...metrics }>, best: { ... } }
 export async function POST(req: NextRequest) {
+  const user = await requireAuth()
+  if (user instanceof NextResponse) return user
+
   try {
     const body = await req.json().catch(() => ({}))
     const periodFrom = body.periodFrom ? new Date(body.periodFrom) : new Date(Date.now() - 7 * 24 * 3600 * 1000)

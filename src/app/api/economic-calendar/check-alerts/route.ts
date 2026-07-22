@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { sendNotification, logInfo } from '@/lib/logger'
+import { requireAuth } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,9 @@ export const dynamic = 'force-dynamic'
 // Notification table — checks if a notification with subject containing the
 // event title already exists).
 export async function POST() {
+  const user = await requireAuth()
+  if (user instanceof NextResponse) return user
+
   const alerted: any[] = []
 
   try {

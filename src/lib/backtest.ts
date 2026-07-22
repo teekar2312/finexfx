@@ -417,7 +417,16 @@ export async function runBacktest(input: BacktestInput) {
   const mean = rets.reduce((a, b) => a + b, 0) / Math.max(1, rets.length)
   const variance = rets.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, rets.length)
   const std = Math.sqrt(variance)
-  const sharpe = std > 0 ? (mean / std) * Math.sqrt(252 * 24 * 12) : 0
+  const barsPerYear: Record<string, number> = {
+    M1: 252 * 24 * 60,
+    M5: 252 * 24 * 12,
+    M15: 252 * 24 * 4,
+    H1: 252 * 24,
+    H4: 252 * 6,
+    D1: 252,
+  }
+  const annualFactor = Math.sqrt(barsPerYear[input.timeframe] || 252 * 24 * 12)
+  const sharpe = std > 0 ? (mean / std) * annualFactor : 0
 
   const created = await db.backtest.create({
     data: {

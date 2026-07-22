@@ -146,7 +146,7 @@ export const api = {
 
   // notifications
   notifications: (limit = 50) => j<{ notifications: Notification[] }>(fetch(`/api/notifications?limit=${limit}`)),
-  testNotification: (recipient?: string) => j<{ notification: Notification }>(fetch('/api/notifications/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recipient }) })),
+  testNotification: (recipient?: string) => j<{ notification: Notification }>(fetch('/api/system/webhook-test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recipient }) })),
 
   // system
   systemConfig: () => j<{ config: Record<string, string> }>(fetch('/api/system/config')),

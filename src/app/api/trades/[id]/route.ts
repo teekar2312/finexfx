@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireTrader } from '@/lib/auth-server'
+import { canAccessTrade } from '@/lib/ownership'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,9 +16,12 @@ export async function PATCH(
     const { id } = await params
     const body = await req.json()
 
-    const existing = await db.trade.findUnique({ where: { id } })
+    const existing = await db.trade.findUnique({ where: { id }, include: { account: true } })
     if (!existing) {
       return NextResponse.json({ error: 'Trade not found' }, { status: 404 })
+    }
+    if (!canAccessTrade(user, existing.account?.userId ?? null)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     if (existing.status !== 'open') {
       return NextResponse.json(

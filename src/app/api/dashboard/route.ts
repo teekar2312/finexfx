@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import {
   SUPPORTED_SYMBOLS,
@@ -11,6 +11,7 @@ import { bidAsk, sparkline, dayHighLow, changePct24h, priceAt } from '@/lib/mark
 import { getSessions, getOverlap } from '@/lib/sessions'
 import { computeRiskUsage } from '@/lib/risk-usage'
 import { bridgeHealth, getAccountInfo, type MT5AccountInfo } from '@/lib/mt5-client'
+import { requireAuth } from '@/lib/auth-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -79,6 +80,9 @@ let dashboardCache: { data: any; ts: number; accountId: string | null } | null =
 const DASHBOARD_CACHE_TTL_MS = 5000 // 5 seconds
 
 export async function GET(req: Request) {
+  const user = await requireAuth()
+  if (user instanceof NextResponse) return user
+
   try {
     const { searchParams } = new URL(req.url)
     const requestedAccountId = searchParams.get('accountId')
