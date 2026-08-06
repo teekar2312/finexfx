@@ -14,6 +14,7 @@ import BacktestingView from '@/components/trading/BacktestingView';
 import TradeJournalView from '@/components/trading/TradeJournalView';
 import PerformanceAnalyticsView from '@/components/trading/PerformanceAnalyticsView';
 import SettingsView from '@/components/trading/SettingsView';
+import QuickTradePanel from '@/components/trading/QuickTradePanel';
 import Footer from '@/components/trading/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePriceSimulator } from '@/hooks/use-price-simulator';
@@ -65,54 +66,81 @@ function NotificationToast({ notifications, removeNotification }: {
 }
 
 function ErrorLogsView() {
-  const { errorLogs } = useTradingStore();
+  const { errorLogs, resolveErrorLog, clearResolvedLogs } = useTradingStore();
+  const unresolvedCount = errorLogs.filter(e => !e.resolved).length;
   return (
-    <div className="p-4">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold">Error Logs</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">System errors and warnings</p>
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold">Error Logs</h2>
+            {unresolvedCount > 0 && (
+              <span className="bg-red-500/20 text-red-400 text-[10px] font-bold px-2 py-0.5 rounded-full badge-pulse">
+                {unresolvedCount} unresolved
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">System errors, warnings, and diagnostics</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="metric-compact">
+            <span className="text-[9px] text-muted-foreground uppercase">Total</span>
+            <span className="text-xs font-bold tabular-nums">{errorLogs.length}</span>
+          </div>
+          <div className="metric-compact">
+            <span className="text-[9px] text-red-400 uppercase">Errors</span>
+            <span className="text-xs font-bold tabular-nums text-red-400">{errorLogs.filter(e => e.level === 'error').length}</span>
+          </div>
+          <div className="metric-compact">
+            <span className="text-[9px] text-amber-400 uppercase">Warns</span>
+            <span className="text-xs font-bold tabular-nums text-amber-400">{errorLogs.filter(e => e.level === 'warning').length}</span>
+          </div>
+        </div>
       </div>
       {errorLogs.length === 0 ? (
-        <div className="glass-card rounded-lg p-12 text-center">
-          <Info className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-          <h3 className="text-sm font-medium text-muted-foreground mb-1">No Error Logs</h3>
-          <p className="text-xs text-muted-foreground">The system is running normally. Errors will be logged here if they occur.</p>
+        <div className="glass-card-premium rounded-xl p-16 text-center mesh-gradient-bg">
+          <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="h-8 w-8 text-emerald-500" />
+          </div>
+          <h3 className="text-sm font-semibold text-foreground mb-1">All Systems Operational</h3>
+          <p className="text-xs text-muted-foreground max-w-xs mx-auto">No errors or warnings detected. The trading system is running smoothly.</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {errorLogs.map((log, i) => (
+        <div className="space-y-2 stagger-children">
+          {errorLogs.map((log) => (
             <motion.div
               key={log.id}
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03 }}
-              className={`glass-card rounded-lg p-3 border
-                ${log.level === 'error' ? 'border-red-500/20' :
-                  log.level === 'warning' ? 'border-amber-500/20' :
-                  'border-border'
-                }`}
+              className={`glass-card rounded-lg p-3 border card-hover cursor-default ${
+                log.level === 'error' ? 'border-red-500/20 hover:border-red-500/40' :
+                log.level === 'warning' ? 'border-amber-500/20 hover:border-amber-500/40' :
+                'border-border hover:border-border'
+              } ${log.resolved ? 'opacity-60' : ''}`}
             >
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded
-                    ${log.level === 'error' ? 'bg-red-500/20 text-red-500' :
-                      log.level === 'warning' ? 'bg-amber-500/20 text-amber-500' :
-                      'bg-slate-500/20 text-slate-500'
-                    }`
-                  }
-                  >
-                    {log.level}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">{log.source}</span>
+                  <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                    log.level === 'error' ? 'bg-red-500/20 text-red-500' :
+                    log.level === 'warning' ? 'bg-amber-500/20 text-amber-500' :
+                    'bg-slate-500/20 text-slate-500'
+                  }`}>{log.level}</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">{log.source}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-muted-foreground tabular-nums">{log.timestamp}</span>
                   {log.resolved && (
-                    <span className="text-[9px] bg-emerald-500/20 text-emerald-500 px-1.5 py-0.5 rounded">RESOLVED</span>
+                    <span className="text-[9px] bg-emerald-500/20 text-emerald-500 px-1.5 py-0.5 rounded font-medium">✓ RESOLVED</span>
+                  )}
+                  {!log.resolved && log.level === 'error' && (
+                    <button
+                      onClick={() => resolveErrorLog(log.id)}
+                      className="text-[9px] text-primary hover:text-primary/80 font-medium px-1.5 py-0.5 rounded border border-primary/20 hover:border-primary/40 transition-colors animated-underline"
+                    >Resolve</button>
                   )}
                 </div>
               </div>
-              <div className="text-xs">{log.message}</div>
+              <div className="text-xs leading-relaxed">{log.message}</div>
             </motion.div>
           ))}
         </div>
@@ -181,6 +209,9 @@ export default function TradingDashboard() {
 
       {/* Notification Toasts */}
       <NotificationToast notifications={notifications} removeNotification={removeNotification} />
+
+      {/* Floating Quick Trade Panel - accessible from any tab */}
+      <QuickTradePanel />
     </div>
   );
 }

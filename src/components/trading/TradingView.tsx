@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUpRight, ArrowDownRight, X, Square, AlertTriangle, History, Target, Shield } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, X, Square, AlertTriangle, History, Target, Shield, ArrowUp, ArrowDown, Timer, Activity } from 'lucide-react';
 import PriceChart from './PriceChart';
 import OrderBookDepth from './OrderBookDepth';
 import MarketSentiment from './MarketSentiment';
@@ -130,36 +130,76 @@ export default function TradingView() {
     const start = new Date(openedAt).getTime();
     const end = (closedAt ? new Date(closedAt) : new Date()).getTime();
     const diffMin = Math.floor((end - start) / 60000);
+    if (diffMin < 1) return '<1m';
     if (diffMin < 60) return `${diffMin}m`;
     const hr = Math.floor(diffMin / 60);
     const min = diffMin % 60;
-    return `${hr}h ${min}m`;
+    if (hr < 24) return `${hr}h ${min}m`;
+    const days = Math.floor(hr / 24);
+    const remHr = hr % 24;
+    return `${days}d ${remHr}h`;
   }
+
+  // Generate sparkline SVG polyline points for a symbol
+  const getSparklinePoints = useCallback((sym: string): string => {
+    const history = priceHistory[sym];
+    if (!history || history.length < 2) return '';
+    const pts = history.slice(-12);
+    const min = Math.min(...pts.map(p => p.bid));
+    const max = Math.max(...pts.map(p => p.bid));
+    const range = max - min || 1;
+    return pts.map((p, i) => `${(i / 11) * 36},${20 - ((p.bid - min) / range) * 18}`).join(' ');
+  }, [priceHistory]);
+
+  // Quick lot sizes
+  const quickLots = [0.01, 0.05, 0.1, 0.5, 1.0];
 
   return (
     <TooltipProvider delayDuration={0}>
       <div className="p-4 pb-10 md:pb-4 space-y-4">
-        {/* Symbol Tabs - scrollable on mobile */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        {/* Symbol Selector - Pill style with sparklines */}
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
           {SYMBOLS.map((sym) => {
             const isActive = sym === selectedSymbol;
             const p = prices[sym];
+            const sparkline = getSparklinePoints(sym);
             return (
               <button
                 key={sym}
                 onClick={() => setSelectedSymbol(sym)}
-                className={`flex-shrink-0 py-2 px-4 rounded-lg text-sm font-medium transition-all min-w-[100px] ${
+                className={`flex-shrink-0 py-2.5 px-3 rounded-full text-sm font-medium transition-all min-w-[120px] card-hover scale-click flex items-center gap-2 border ${
                   isActive
-                    ? 'bg-primary/10 text-primary border border-primary/30'
-                    : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-accent'
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 pill-active-glow shadow-[0_0_20px_rgba(16,185,129,0.1)]'
+                    : 'bg-card/80 border-border/60 text-muted-foreground hover:text-foreground hover:border-border'
                 }`}
               >
-                <div className="text-xs font-semibold">{SYMBOL_INFO[sym].name}</div>
-                {p && (
-                  <div className={`text-[11px] tabular-nums mt-0.5 ${p.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {p.bid.toFixed(SYMBOL_INFO[sym].digits)}
-                    <span className="ml-1">{p.change >= 0 ? '+' : ''}{p.changePercent.toFixed(2)}%</span>
+                <div className="flex flex-col items-start gap-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold tracking-tight">{SYMBOL_INFO[sym].name}</span>
+                    {p && (
+                      <span className="text-[9px] text-muted-foreground font-normal tabular-nums">
+                        {p.spread.toFixed(1)}p
+                      </span>
+                    )}
                   </div>
+                  {p && (
+                    <div className={`text-[11px] tabular-nums font-medium ${p.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {p.bid.toFixed(SYMBOL_INFO[sym].digits)}
+                    </div>
+                  )}
+                </div>
+                {sparkline && (
+                  <svg viewBox="0 0 36 20" className="w-9 h-5 flex-shrink-0" preserveAspectRatio="none">
+                    <polyline
+                      points={sparkline}
+                      fill="none"
+                      stroke={p && p.change >= 0 ? '#10b981' : '#ef4444'}
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={isActive ? 1 : 0.6}
+                    />
+                  </svg>
                 )}
               </button>
             );
@@ -169,27 +209,29 @@ export default function TradingView() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Chart */}
           <div className="lg:col-span-3 space-y-4">
-            <Card className="glass-card">
-              <CardContent className="p-0">
-                <PriceChart
-                  data={chartData}
-                  symbol={selectedSymbol}
-                  bid={price?.bid}
-                  ask={price?.ask}
-                  height={300}
-                />
-              </CardContent>
-            </Card>
+            <div className="chart-glow rounded-xl">
+              <Card className="glass-card border-border/40">
+                <CardContent className="p-0">
+                  <PriceChart
+                    data={chartData}
+                    symbol={selectedSymbol}
+                    bid={price?.bid}
+                    ask={price?.ask}
+                    height={300}
+                  />
+                </CardContent>
+              </Card>
+            </div>
 
             {/* (a) Tabbed Positions / History */}
             <Card className="glass-card card-hover">
               <Tabs defaultValue="open" className="w-full">
                 <CardHeader className="pb-0 pt-3 px-4">
                   <TabsList className="h-8 bg-slate-800/50">
-                    <TabsTrigger value="open" className="text-xs h-6 data-[state=active]:bg-emerald-600/20 data-[state=active]:text-emerald-400">
+                    <TabsTrigger value="open" className="text-xs h-6 data-[state=active]:bg-emerald-600/20 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.15)]">
                       Open ({openTrades.length})
                     </TabsTrigger>
-                    <TabsTrigger value="history" className="text-xs h-6 data-[state=active]:bg-emerald-600/20 data-[state=active]:text-emerald-400">
+                    <TabsTrigger value="history" className="text-xs h-6 data-[state=active]:bg-emerald-600/20 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.15)]">
                       History ({closedTrades.length})
                     </TabsTrigger>
                   </TabsList>
@@ -207,47 +249,75 @@ export default function TradingView() {
                           <TableHeader>
                             <TableRow className="border-border hover:bg-transparent">
                               <TableHead className="text-[10px] h-8">Symbol</TableHead>
-                              <TableHead className="text-[10px] h-8">Direction</TableHead>
+                              <TableHead className="text-[10px] h-8">Dir</TableHead>
                               <TableHead className="text-[10px] h-8 text-right">Lots</TableHead>
                               <TableHead className="text-[10px] h-8 text-right">Entry</TableHead>
                               <TableHead className="text-[10px] h-8 text-right">SL</TableHead>
                               <TableHead className="text-[10px] h-8 text-right">TP</TableHead>
                               <TableHead className="text-[10px] h-8 text-right">Pips</TableHead>
                               <TableHead className="text-[10px] h-8 text-right">P&L</TableHead>
+                              <TableHead className="text-[10px] h-8">Time</TableHead>
                               <TableHead className="text-[10px] h-8 text-center">Trail</TableHead>
                               <TableHead className="text-[10px] h-8 text-center">Action</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {openTrades.map((trade) => (
-                              <TableRow key={trade.id} className="border-border">
+                            {openTrades.map((trade) => {
+                              const maxProfit = Math.max(...openTrades.map(t => Math.abs(t.profit)), 1);
+                              return (
+                              <TableRow key={trade.id} className={`border-border compact-row ${trade.direction === 'BUY' ? 'trade-row-buy' : 'trade-row-sell'}`}>
                                 <TableCell className="text-xs font-medium">{trade.symbol}</TableCell>
                                 <TableCell>
-                                  <div className={`flex items-center gap-1 text-xs font-medium ${trade.direction === 'BUY' ? 'text-emerald-500' : 'text-red-500'}`}>
+                                  <div className={`flex items-center gap-1 text-xs font-bold ${trade.direction === 'BUY' ? 'text-emerald-500' : 'text-red-500'}`}>
                                     {trade.direction === 'BUY' ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
                                     {trade.direction}
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-xs text-right tabular-nums">{trade.lotSize}</TableCell>
                                 <TableCell className="text-xs text-right tabular-nums">{trade.entryPrice.toFixed(SYMBOL_INFO[trade.symbol].digits)}</TableCell>
-                                <TableCell className="text-xs text-right tabular-nums text-red-500">
+                                <TableCell className="text-xs text-right tabular-nums text-red-400">
                                   {trade.stopLoss?.toFixed(SYMBOL_INFO[trade.symbol].digits) || '—'}
                                 </TableCell>
-                                <TableCell className="text-xs text-right tabular-nums text-emerald-500">
+                                <TableCell className="text-xs text-right tabular-nums text-emerald-400">
                                   {trade.takeProfit?.toFixed(SYMBOL_INFO[trade.symbol].digits) || '—'}
                                 </TableCell>
                                 <TableCell className={`text-xs text-right tabular-nums font-semibold ${trade.pips >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                                   {trade.pips >= 0 ? '+' : ''}{trade.pips.toFixed(1)}
                                 </TableCell>
-                                <TableCell className={`text-xs text-right tabular-nums font-semibold ${trade.profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                                  {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
+                                <TableCell className="text-right">
+                                  <div className={`text-sm font-bold tabular-nums ${trade.profit >= 0 ? 'gradient-text-profit' : 'gradient-text-loss'}`}>
+                                    {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
+                                  </div>
+                                  <div className="pnl-bar-track mt-0.5">
+                                    <div
+                                      className={`pnl-bar-fill ${trade.profit >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}
+                                      style={{ width: `${Math.min((Math.abs(trade.profit) / maxProfit) * 100, 100)}%` }}
+                                    />
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+                                  <div className="flex items-center gap-1">
+                                    <Timer className="h-2.5 w-2.5 opacity-50" />
+                                    {formatDuration(trade.openedAt)}
+                                  </div>
                                 </TableCell>
                                 <TableCell className="text-center">
-                                  <Switch
-                                    checked={trade.isTrailingStop}
-                                    onCheckedChange={(checked) => handleToggleTrailing(trade.id, checked)}
-                                    className="scale-75 data-[state=checked]:bg-emerald-600"
-                                  />
+                                  {trade.isTrailingStop ? (
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <div className="trail-animate inline-flex">
+                                          <Activity className="h-3.5 w-3.5 text-emerald-500" />
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="text-[10px]">Trailing {trade.trailingStop} pips</TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <Switch
+                                      checked={trade.isTrailingStop}
+                                      onCheckedChange={(checked) => handleToggleTrailing(trade.id, checked)}
+                                      className="scale-75 data-[state=checked]:bg-emerald-600"
+                                    />
+                                  )}
                                 </TableCell>
                                 <TableCell className="text-center">
                                   <AnimatePresence>
@@ -268,7 +338,7 @@ export default function TradingView() {
                                         </Button>
                                         <Button
                                           size="sm"
-                                                  variant="ghost"
+                                          variant="ghost"
                                           className="h-6 px-2 text-[10px]"
                                           onClick={() => setConfirmClose(null)}
                                         >
@@ -279,7 +349,7 @@ export default function TradingView() {
                                       <Button
                                         size="sm"
                                         variant="ghost"
-                                        className="h-6 px-2 text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                                        className="h-6 px-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/15 transition-colors duration-200"
                                         onClick={() => setConfirmClose(trade.id)}
                                       >
                                         <Square className="h-3 w-3" />
@@ -288,7 +358,8 @@ export default function TradingView() {
                                   </AnimatePresence>
                                 </TableCell>
                               </TableRow>
-                            ))}
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </div>
@@ -306,75 +377,132 @@ export default function TradingView() {
                       </div>
                     ) : (
                       <>
-                        {/* Summary Stats */}
-                        {historyStats && (
-                          <div className="grid grid-cols-5 gap-2 mb-3">
-                            <div className="text-center p-2 rounded-lg bg-slate-800/30">
-                              <div className="text-[10px] text-muted-foreground uppercase">Total Trades</div>
-                              <div className="text-sm font-bold tabular-nums">{historyStats.totalTrades}</div>
-                            </div>
-                            <div className="text-center p-2 rounded-lg bg-slate-800/30">
-                              <div className="text-[10px] text-muted-foreground uppercase">Win Rate</div>
-                              <div className={`text-sm font-bold tabular-nums ${historyStats.winRate >= 50 ? 'text-emerald-500' : 'text-red-500'}`}>
-                                {historyStats.winRate.toFixed(0)}%
+                        {/* Summary Stats + Win/Loss Ratio Bar + Avg Comparison */}
+                        {historyStats && (() => {
+                          const wins = closedTrades.filter(t => t.profit > 0);
+                          const losses = closedTrades.filter(t => t.profit <= 0);
+                          const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.profit, 0) / wins.length : 0;
+                          const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.profit, 0) / losses.length) : 0;
+                          const maxAvg = Math.max(avgWin, avgLoss, 1);
+                          return (
+                            <>
+                            <div className="grid grid-cols-5 gap-2 mb-3">
+                              <div className="text-center p-2 rounded-lg bg-slate-800/30 stat-card-pattern">
+                                <div className="text-[10px] text-muted-foreground uppercase">Trades</div>
+                                <div className="text-sm font-bold tabular-nums count-up">{historyStats.totalTrades}</div>
+                              </div>
+                              <div className="text-center p-2 rounded-lg bg-slate-800/30 stat-card-pattern">
+                                <div className="text-[10px] text-muted-foreground uppercase">Win Rate</div>
+                                <div className={`text-sm font-bold tabular-nums ${historyStats.winRate >= 50 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                  {historyStats.winRate.toFixed(0)}%
+                                </div>
+                              </div>
+                              <div className="text-center p-2 rounded-lg bg-slate-800/30 stat-card-pattern">
+                                <div className="text-[10px] text-muted-foreground uppercase">Total P&L</div>
+                                <div className={`text-sm font-bold tabular-nums ${historyStats.totalPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                  {historyStats.totalPnl >= 0 ? '+' : ''}${historyStats.totalPnl.toFixed(2)}
+                                </div>
+                              </div>
+                              <div className="text-center p-2 rounded-lg bg-slate-800/30 stat-card-pattern">
+                                <div className="text-[10px] text-muted-foreground uppercase">Best</div>
+                                <div className="text-sm font-bold tabular-nums text-emerald-500">
+                                  +${historyStats.bestTrade.profit.toFixed(2)}
+                                </div>
+                              </div>
+                              <div className="text-center p-2 rounded-lg bg-slate-800/30 stat-card-pattern">
+                                <div className="text-[10px] text-muted-foreground uppercase">Worst</div>
+                                <div className="text-sm font-bold tabular-nums text-red-500">
+                                  ${historyStats.worstTrade.profit.toFixed(2)}
+                                </div>
                               </div>
                             </div>
-                            <div className="text-center p-2 rounded-lg bg-slate-800/30">
-                              <div className="text-[10px] text-muted-foreground uppercase">Total P&L</div>
-                              <div className={`text-sm font-bold tabular-nums ${historyStats.totalPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                                {historyStats.totalPnl >= 0 ? '+' : ''}${historyStats.totalPnl.toFixed(2)}
+                            {/* Win/Loss Ratio Visual Bar */}
+                            <div className="mb-3">
+                              <div className="flex items-center justify-between text-[10px] mb-1.5">
+                                <span className="text-emerald-500 font-medium">{wins.length} Wins</span>
+                                <span className="text-muted-foreground">{historyStats.winRate.toFixed(0)}%</span>
+                                <span className="text-red-500 font-medium">{losses.length} Losses</span>
+                              </div>
+                              <div className="winloss-bar">
+                                <div
+                                  className="bg-gradient-to-r from-emerald-600 to-emerald-400 animate-progress rounded-l-[4px]"
+                                  style={{ width: `${historyStats.winRate}%` }}
+                                />
+                                <div
+                                  className="bg-gradient-to-r from-red-400 to-red-600 animate-progress rounded-r-[4px]"
+                                  style={{ width: `${100 - historyStats.winRate}%` }}
+                                />
                               </div>
                             </div>
-                            <div className="text-center p-2 rounded-lg bg-slate-800/30">
-                              <div className="text-[10px] text-muted-foreground uppercase">Best Trade</div>
-                              <div className="text-sm font-bold tabular-nums text-emerald-500">
-                                +${historyStats.bestTrade.profit.toFixed(2)}
+                            {/* Avg Win vs Avg Loss Comparison */}
+                            <div className="mb-3 space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-emerald-500 w-12 shrink-0">Avg Win</span>
+                                <div className="flex-1 h-2 rounded-full bg-slate-800/50 overflow-hidden">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full animate-progress"
+                                    style={{ width: `${(avgWin / maxAvg) * 100}%` }}
+                                  />
+                                </div>
+                                <span className="text-[10px] text-emerald-500 tabular-nums font-medium w-16 text-right">
+                                  +${avgWin.toFixed(2)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-red-500 w-12 shrink-0">Avg Loss</span>
+                                <div className="flex-1 h-2 rounded-full bg-slate-800/50 overflow-hidden">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-red-400 to-red-600 rounded-full animate-progress"
+                                    style={{ width: `${(avgLoss / maxAvg) * 100}%` }}
+                                  />
+                                </div>
+                                <span className="text-[10px] text-red-500 tabular-nums font-medium w-16 text-right">
+                                  -${avgLoss.toFixed(2)}
+                                </span>
                               </div>
                             </div>
-                            <div className="text-center p-2 rounded-lg bg-slate-800/30">
-                              <div className="text-[10px] text-muted-foreground uppercase">Worst Trade</div>
-                              <div className="text-sm font-bold tabular-nums text-red-500">
-                                ${historyStats.worstTrade.profit.toFixed(2)}
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                            </>
+                          );
+                        })()}
                         <div className="overflow-x-auto">
                           <Table>
                             <TableHeader>
                               <TableRow className="border-border hover:bg-transparent">
-                                <TableHead className="text-[10px] h-8">Symbol</TableHead>
-                                <TableHead className="text-[10px] h-8">Direction</TableHead>
-                                <TableHead className="text-[10px] h-8 text-right">Lots</TableHead>
-                                <TableHead className="text-[10px] h-8 text-right">Entry</TableHead>
-                                <TableHead className="text-[10px] h-8 text-right">Close</TableHead>
-                                <TableHead className="text-[10px] h-8 text-right">Pips</TableHead>
-                                <TableHead className="text-[10px] h-8 text-right">P&L</TableHead>
-                                <TableHead className="text-[10px] h-8">Duration</TableHead>
-                                <TableHead className="text-[10px] h-8">Strategy</TableHead>
+                                <TableHead className="text-[10px] h-7">Symbol</TableHead>
+                                <TableHead className="text-[10px] h-7">Dir</TableHead>
+                                <TableHead className="text-[10px] h-7 text-right">Lots</TableHead>
+                                <TableHead className="text-[10px] h-7 text-right">Entry</TableHead>
+                                <TableHead className="text-[10px] h-7 text-right">Close</TableHead>
+                                <TableHead className="text-[10px] h-7 text-right">Pips</TableHead>
+                                <TableHead className="text-[10px] h-7 text-right">P&L</TableHead>
+                                <TableHead className="text-[10px] h-7">Duration</TableHead>
+                                <TableHead className="text-[10px] h-7">Strategy</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               {closedTrades.map((trade) => (
-                                <TableRow key={trade.id} className="border-border">
+                                <TableRow key={trade.id} className={`border-border compact-row ${trade.direction === 'BUY' ? 'trade-row-buy' : 'trade-row-sell'}`}>
                                   <TableCell className="text-xs font-medium">{trade.symbol}</TableCell>
                                   <TableCell>
-                                    <div className={`flex items-center gap-1 text-xs font-medium ${trade.direction === 'BUY' ? 'text-emerald-500' : 'text-red-500'}`}>
-                                      {trade.direction === 'BUY' ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                                    <div className={`flex items-center gap-1 text-[11px] font-bold ${trade.direction === 'BUY' ? 'text-emerald-500' : 'text-red-500'}`}>
+                                      {trade.direction === 'BUY' ? <ArrowUpRight className="h-2.5 w-2.5" /> : <ArrowDownRight className="h-2.5 w-2.5" />}
                                       {trade.direction}
                                     </div>
                                   </TableCell>
-                                  <TableCell className="text-xs text-right tabular-nums">{trade.lotSize}</TableCell>
-                                  <TableCell className="text-xs text-right tabular-nums">{trade.entryPrice.toFixed(SYMBOL_INFO[trade.symbol].digits)}</TableCell>
-                                  <TableCell className="text-xs text-right tabular-nums">{trade.currentPrice.toFixed(SYMBOL_INFO[trade.symbol].digits)}</TableCell>
-                                  <TableCell className={`text-xs text-right tabular-nums font-semibold ${trade.pips >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                  <TableCell className="text-[11px] text-right tabular-nums">{trade.lotSize}</TableCell>
+                                  <TableCell className="text-[11px] text-right tabular-nums">{trade.entryPrice.toFixed(SYMBOL_INFO[trade.symbol].digits)}</TableCell>
+                                  <TableCell className="text-[11px] text-right tabular-nums">{trade.currentPrice.toFixed(SYMBOL_INFO[trade.symbol].digits)}</TableCell>
+                                  <TableCell className={`text-[11px] text-right tabular-nums font-semibold ${trade.pips >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                                     {trade.pips >= 0 ? '+' : ''}{trade.pips.toFixed(1)}
                                   </TableCell>
-                                  <TableCell className={`text-xs text-right tabular-nums font-semibold ${trade.profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                  <TableCell className={`text-sm text-right tabular-nums font-bold ${trade.profit >= 0 ? 'gradient-text-profit' : 'gradient-text-loss'}`}>
                                     {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
                                   </TableCell>
-                                  <TableCell className="text-[10px] text-muted-foreground tabular-nums">
-                                    {formatDuration(trade.openedAt, trade.closedAt)}
+                                  <TableCell className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+                                    <div className="flex items-center gap-1">
+                                      <Timer className="h-2.5 w-2.5 opacity-40" />
+                                      {formatDuration(trade.openedAt, trade.closedAt)}
+                                    </div>
                                   </TableCell>
                                   <TableCell className="text-[10px] text-muted-foreground">
                                     {trade.strategy || '—'}
@@ -398,14 +526,16 @@ export default function TradingView() {
             <Card className="glass-card">
               <CardContent className="p-4 space-y-3">
                 <div className="text-center">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{SYMBOL_INFO[selectedSymbol].name}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-medium">{SYMBOL_INFO[selectedSymbol].name}</div>
                   {price ? (
                     <>
-                      <div className={`text-2xl font-bold tabular-nums ${priceFlash[selectedSymbol] === 'up' ? 'flash-green' : priceFlash[selectedSymbol] === 'down' ? 'flash-red' : ''}`}>
+                      <div className={`text-2xl md:text-3xl font-bold tabular-nums count-up ${priceFlash[selectedSymbol] === 'up' ? 'flash-green' : priceFlash[selectedSymbol] === 'down' ? 'flash-red' : ''}`}>
                         {price.bid.toFixed(SYMBOL_INFO[selectedSymbol].digits)}
                       </div>
-                      <div className={`text-xs tabular-nums ${price.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {price.change >= 0 ? '+' : ''}{price.change.toFixed(SYMBOL_INFO[selectedSymbol].digits)} ({price.change >= 0 ? '+' : ''}{price.changePercent.toFixed(3)}%)
+                      <div className={`text-xs tabular-nums flex items-center justify-center gap-1 mt-0.5 ${price.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {price.change >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                        <span className="font-medium">{price.change >= 0 ? '+' : ''}{price.change.toFixed(SYMBOL_INFO[selectedSymbol].digits)}</span>
+                        <span>({price.change >= 0 ? '+' : ''}{price.changePercent.toFixed(3)}%)</span>
                       </div>
                     </>
                   ) : (
@@ -414,15 +544,15 @@ export default function TradingView() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="text-center p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                    <div className="text-[10px] text-emerald-500/70 uppercase">Bid</div>
-                    <div className="text-sm font-bold text-emerald-500 tabular-nums">
+                  <div className="text-center p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                    <div className="text-[10px] text-emerald-500/70 uppercase font-medium">Bid</div>
+                    <div className="text-2xl md:text-3xl font-bold text-emerald-500 tabular-nums">
                       {price ? price.bid.toFixed(SYMBOL_INFO[selectedSymbol].digits) : '—'}
                     </div>
                   </div>
-                  <div className="text-center p-2 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <div className="text-[10px] text-red-500/70 uppercase">Ask</div>
-                    <div className="text-sm font-bold text-red-500 tabular-nums">
+                  <div className="text-center p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                    <div className="text-[10px] text-red-500/70 uppercase font-medium">Ask</div>
+                    <div className="text-2xl md:text-3xl font-bold text-red-500 tabular-nums">
                       {price ? price.ask.toFixed(SYMBOL_INFO[selectedSymbol].digits) : '—'}
                     </div>
                   </div>
@@ -432,13 +562,13 @@ export default function TradingView() {
                 {price && (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-[10px] tabular-nums">
-                      <span className="text-red-400">L: {price.low.toFixed(SYMBOL_INFO[selectedSymbol].digits)}</span>
+                      <span className="text-red-400 font-medium">L: {price.low.toFixed(SYMBOL_INFO[selectedSymbol].digits)}</span>
                       <span className="text-muted-foreground">Daily Range</span>
-                      <span className="text-emerald-400">H: {price.high.toFixed(SYMBOL_INFO[selectedSymbol].digits)}</span>
+                      <span className="text-emerald-400 font-medium">H: {price.high.toFixed(SYMBOL_INFO[selectedSymbol].digits)}</span>
                     </div>
-                    <div className="relative h-2 w-full rounded-full bg-slate-800 overflow-hidden">
+                    <div className="relative h-2.5 w-full rounded-full bg-slate-800 overflow-hidden">
                       <div
-                        className="absolute top-0 h-full w-1 bg-foreground rounded-sm shadow-[0_0_4px_rgba(255,255,255,0.5)]"
+                        className="absolute top-0 h-full w-1 bg-foreground rounded-sm shadow-[0_0_6px_rgba(255,255,255,0.5)]"
                         style={{
                           left: `${price.high !== price.low ? ((price.bid - price.low) / (price.high - price.low)) * 100 : 50}%`,
                           transform: 'translateX(-50%)',
@@ -459,13 +589,30 @@ export default function TradingView() {
             </Card>
 
             {/* (c) Better Order Panel */}
-            <Card className="glass-card card-hover">
+            <Card className={`glass-card card-hover ${oneClickMode ? 'pulsing-border-amber' : ''}`}>
               <CardHeader className="pb-2 pt-3 px-4">
-                <CardTitle className="text-sm font-semibold">New Order</CardTitle>
+                <div className="section-header-accent">
+                  <CardTitle className="text-sm font-semibold">New Order</CardTitle>
+                </div>
               </CardHeader>
               <CardContent className="px-4 pb-4 space-y-3">
                 <div>
-                  <Label className="text-[11px] text-muted-foreground">Lot Size</Label>
+                  <Label className="text-[11px] text-muted-foreground font-medium">Lot Size</Label>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5 mb-1.5">
+                    {quickLots.map((lot) => (
+                      <button
+                        key={lot}
+                        onClick={() => setLotSize(lot.toString())}
+                        className={`lot-chip text-[10px] px-2.5 py-1 rounded-full border ${
+                          parseFloat(lotSize) === lot
+                            ? 'active'
+                            : 'border-border/60 text-muted-foreground'
+                        } tabular-nums`}
+                      >
+                        {lot}
+                      </button>
+                    ))}
+                  </div>
                   <Input
                     type="number"
                     value={lotSize}
@@ -473,36 +620,62 @@ export default function TradingView() {
                     step="0.01"
                     min={BROKER_CONFIG.minLotSize}
                     max={BROKER_CONFIG.maxLotSize}
-                    className="h-10 md:h-8 text-sm tabular-nums mt-1"
+                    className="h-9 text-sm tabular-nums"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <Label className="text-[11px] text-muted-foreground">SL (pips)</Label>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label className="text-[11px] text-muted-foreground font-medium">SL (pips)</Label>
+                      <span className="text-[9px] text-muted-foreground tabular-nums">
+                        ${orderMetrics.riskAmount.toFixed(2)}
+                      </span>
+                    </div>
                     <Input
                       type="number"
                       value={stopLoss}
                       onChange={(e) => setStopLoss(e.target.value)}
                       step="1"
                       min="0"
-                      className="h-10 md:h-8 text-sm tabular-nums mt-1"
+                      className="h-9 text-sm tabular-nums"
                     />
                   </div>
                   <div>
-                    <Label className="text-[11px] text-muted-foreground">TP (pips)</Label>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label className="text-[11px] text-muted-foreground font-medium">TP (pips)</Label>
+                      <span className="text-[9px] text-muted-foreground tabular-nums">
+                        ${orderMetrics.potentialProfit.toFixed(2)}
+                      </span>
+                    </div>
                     <Input
                       type="number"
                       value={takeProfit}
                       onChange={(e) => setTakeProfit(e.target.value)}
                       step="1"
                       min="0"
-                      className="h-10 md:h-8 text-sm tabular-nums mt-1"
+                      className="h-9 text-sm tabular-nums"
                     />
                   </div>
                 </div>
 
+                {/* Risk:Reward Ratio */}
+                {(() => {
+                  const slPips = parseFloat(stopLoss) || 0;
+                  const tpPips = parseFloat(takeProfit) || 0;
+                  const rr = slPips > 0 && tpPips > 0 ? (tpPips / slPips).toFixed(1) : null;
+                  return rr ? (
+                    <div className="flex items-center justify-center gap-2 py-1.5 px-2 rounded-lg bg-slate-800/30 border border-border/30">
+                      <Target className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-[10px] text-muted-foreground">Risk:Reward</span>
+                      <span className={`text-xs font-bold tabular-nums ${parseFloat(rr) >= 2 ? 'text-emerald-500' : parseFloat(rr) >= 1 ? 'text-amber-500' : 'text-red-500'}`}>
+                        1:{rr}
+                      </span>
+                    </div>
+                  ) : null;
+                })()}
+
                 {/* Calculated Margin / Risk / Profit */}
-                <div className="space-y-1.5 p-2 rounded-lg bg-slate-800/30 border border-border/50">
+                <div className="space-y-1.5 p-2.5 rounded-lg bg-slate-800/30 border border-border/50">
                   <div className="flex justify-between text-[11px]">
                     <span className="text-muted-foreground flex items-center gap-1">
                       <Shield className="h-3 w-3" /> Calculated Margin
@@ -513,13 +686,17 @@ export default function TradingView() {
                     <span className="text-muted-foreground flex items-center gap-1">
                       <AlertTriangle className="h-3 w-3" /> Risk Amount
                     </span>
-                    <span className="font-medium tabular-nums text-red-500">${orderMetrics.riskAmount.toFixed(2)}</span>
+                    <span className={`font-bold tabular-nums ${orderMetrics.riskAmount > 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                      ${orderMetrics.riskAmount.toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex justify-between text-[11px]">
                     <span className="text-muted-foreground flex items-center gap-1">
                       <Target className="h-3 w-3" /> Potential Profit
                     </span>
-                    <span className="font-medium tabular-nums text-emerald-500">+${orderMetrics.potentialProfit.toFixed(2)}</span>
+                    <span className={`font-bold tabular-nums ${orderMetrics.potentialProfit > 0 ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+                      +${orderMetrics.potentialProfit.toFixed(2)}
+                    </span>
                   </div>
                 </div>
 
@@ -527,13 +704,13 @@ export default function TradingView() {
 
                 {oneClickMode ? (
                   <div className="space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-[10px] text-amber-500">
+                    <div className="flex items-center gap-1.5 text-[10px] text-amber-500 font-medium">
                       <AlertTriangle className="h-3 w-3" />
                       One-Click Trading Active
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <Button
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white h-12 md:h-10 font-semibold text-base scale-click"
+                        className="gradient-buy-btn text-white h-12 font-bold text-base scale-click rounded-xl"
                         onClick={() => handleOpenTrade('BUY')}
                         disabled={!isConnected}
                       >
@@ -541,7 +718,7 @@ export default function TradingView() {
                         BUY
                       </Button>
                       <Button
-                        className="bg-red-600 hover:bg-red-700 text-white h-12 md:h-10 font-semibold text-base scale-click"
+                        className="gradient-sell-btn text-white h-12 font-bold text-base scale-click rounded-xl"
                         onClick={() => handleOpenTrade('SELL')}
                         disabled={!isConnected}
                       >
@@ -553,7 +730,7 @@ export default function TradingView() {
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     <Button
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white h-12 md:h-10 font-semibold text-base scale-click"
+                      className="gradient-buy-btn text-white h-12 font-bold text-base scale-click rounded-xl"
                       onClick={() => handleOpenTrade('BUY')}
                       disabled={!isConnected}
                     >
@@ -561,7 +738,7 @@ export default function TradingView() {
                       BUY
                     </Button>
                     <Button
-                      className="bg-red-600 hover:bg-red-700 text-white h-12 md:h-10 font-semibold text-base scale-click"
+                      className="gradient-sell-btn text-white h-12 font-bold text-base scale-click rounded-xl"
                       onClick={() => handleOpenTrade('SELL')}
                       disabled={!isConnected}
                     >
@@ -571,8 +748,15 @@ export default function TradingView() {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between">
-                  <Label className="text-[11px] text-muted-foreground">One-Click Trading</Label>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-800/20 border border-border/30">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-[11px] text-muted-foreground font-medium">One-Click Trading</Label>
+                    {oneClickMode && (
+                      <Badge className="text-[9px] px-1.5 py-0 bg-amber-500/20 text-amber-400 border-amber-500/30 badge-pulse">
+                        LIVE
+                      </Badge>
+                    )}
+                  </div>
                   <Switch
                     checked={oneClickMode}
                     onCheckedChange={setOneClickMode}

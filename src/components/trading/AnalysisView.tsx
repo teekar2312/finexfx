@@ -12,8 +12,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Brain, TrendingUp, TrendingDown, Activity, Volume2, BarChart3, ArrowUpRight, ArrowDownRight,
-  CircleDot, ShieldAlert, Clock, Copy, ChevronDown, ChevronUp, Zap, Target, Sparkles, BookOpen, Award, ArrowRight
+  CircleDot, ShieldAlert, Clock, Copy, ChevronDown, ChevronUp, Zap, Target, Sparkles, BookOpen, Award, ArrowRight, Eye
 } from 'lucide-react';
+import MultiTimeframePanel from './MultiTimeframePanel';
+import SignalDetailModal from './SignalDetailModal';
+import type { TradingSignal } from '@/lib/types';
 
 function getConditionIcon(condition: MarketCondition, size: number = 20) {
   switch (condition) {
@@ -220,6 +223,8 @@ export default function AnalysisView() {
   const { signals, marketConditions, priceHistory } = useTradingStore();
   const [expandedAnalysis, setExpandedAnalysis] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedSignal, setSelectedSignal] = useState<TradingSignal | null>(null);
+  const [signalModalOpen, setSignalModalOpen] = useState(false);
 
   const unexecutedSignals = signals.filter(s => !s.isExecuted);
 
@@ -665,6 +670,20 @@ export default function AnalysisView() {
                               <Clock className="h-2.5 w-2.5" />
                               {timeAgo(signal.createdAt)}
                             </div>
+                            {/* Detail button */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => { setSelectedSignal(signal); setSignalModalOpen(true); }}
+                                  className="p-0.5 rounded hover:bg-accent transition-colors"
+                                >
+                                  <Eye className="h-3 w-3 text-muted-foreground hover:text-primary" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="left">
+                                <span className="text-[10px]">View Details</span>
+                              </TooltipContent>
+                            </Tooltip>
                             {/* Copy analysis button */}
                             {signal.aiAnalysis && (
                               <Tooltip>
@@ -701,6 +720,9 @@ export default function AnalysisView() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Multi-Timeframe Analysis */}
+      <MultiTimeframePanel />
 
       {/* Strategy Reference Grid */}
       <Card className="glass-card">
@@ -749,7 +771,13 @@ export default function AnalysisView() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Signal Detail Modal */}
+      <SignalDetailModal
+        signal={selectedSignal}
+        open={signalModalOpen}
+        onOpenChange={setSignalModalOpen}
+      />
     </div>
-    </TooltipProvider>
-  );
+    </TooltipProvider>);
 }

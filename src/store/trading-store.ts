@@ -290,6 +290,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   // Error Logs
   errorLogs: [],
   addErrorLog: (log) => set({ errorLogs: [log, ...get().errorLogs].slice(0, 100) }),
+  resolveErrorLog: (id) => set({ errorLogs: get().errorLogs.map(l => l.id === id ? { ...l, resolved: true } : l) }),
   clearResolvedLogs: () => set({ errorLogs: get().errorLogs.filter(l => !l.resolved) }),
 
   // Position Sizing

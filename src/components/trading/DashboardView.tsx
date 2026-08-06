@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, DollarSign, Activity, Zap, Play, ArrowUpRight, ArrowDownRight, Clock, BarChart3, Shield, Volume2, RefreshCw, Award, Flame, Calendar, Target } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
+import WatchlistPanel from './WatchlistPanel';
 
 function getConditionIcon(condition: MarketCondition) {
   switch (condition) {
@@ -154,6 +155,41 @@ export default function DashboardView() {
     return points;
   }, [dailyPnl]);
 
+  const balanceSparkData = useMemo(() => {
+    const points: { v: number }[] = [];
+    let val = balance - balance * 0.02 * Math.random();
+    for (let i = 0; i < 15; i++) {
+      val += (Math.random() - 0.47) * balance * 0.005;
+      points.push({ v: val });
+    }
+    points.push({ v: balance });
+    return points;
+  }, [balance]);
+
+  const equitySparkData = useMemo(() => {
+    const points: { v: number }[] = [];
+    const base = equity >= balance ? balance : balance * 0.98;
+    let val = base;
+    for (let i = 0; i < 15; i++) {
+      val += (Math.random() - 0.48) * base * 0.004;
+      points.push({ v: val });
+    }
+    points.push({ v: equity });
+    return points;
+  }, [equity, balance]);
+
+  const freeMarginSparkData = useMemo(() => {
+    const points: { v: number }[] = [];
+    const base = freeMargin * 1.1;
+    let val = base;
+    for (let i = 0; i < 15; i++) {
+      val += (Math.random() - 0.5) * freeMargin * 0.006;
+      points.push({ v: val });
+    }
+    points.push({ v: freeMargin });
+    return points;
+  }, [freeMargin]);
+
   // P&L Calendar mock data
   const calendarPnlData = useMemo(() => {
     const data = [];
@@ -231,21 +267,30 @@ export default function DashboardView() {
       value: `$${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: <DollarSign className="h-4 w-4" />,
       color: 'text-foreground',
-      sparkData: null,
+      sparkData: balanceSparkData,
+      accentClass: 'stat-accent-emerald',
+      iconGradient: 'from-emerald-500/20 to-cyan-500/20',
+      iconTextColor: 'text-emerald-400',
     },
     {
       label: 'Equity',
       value: `$${equity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: <Activity className="h-4 w-4" />,
       color: equity >= balance ? 'text-emerald-500' : 'text-red-500',
-      sparkData: null,
+      sparkData: equitySparkData,
+      accentClass: equity >= balance ? 'stat-accent-emerald' : 'stat-accent-red',
+      iconGradient: equity >= balance ? 'from-emerald-500/20 to-cyan-500/20' : 'from-red-500/20 to-orange-500/20',
+      iconTextColor: equity >= balance ? 'text-emerald-400' : 'text-red-400',
     },
     {
       label: 'Free Margin',
       value: `$${freeMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: <Shield className="h-4 w-4" />,
       color: 'text-foreground',
-      sparkData: null,
+      sparkData: freeMarginSparkData,
+      accentClass: 'stat-accent-neutral',
+      iconGradient: 'from-slate-500/20 to-slate-400/20',
+      iconTextColor: 'text-slate-400',
     },
     {
       label: 'Daily P&L',
@@ -254,6 +299,9 @@ export default function DashboardView() {
       icon: dailyPnl >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />,
       color: dailyPnl >= 0 ? 'text-emerald-500' : 'text-red-500',
       sparkData: dailyPnlData,
+      accentClass: dailyPnl >= 0 ? 'stat-accent-emerald' : 'stat-accent-red',
+      iconGradient: dailyPnl >= 0 ? 'from-emerald-500/20 to-cyan-500/20' : 'from-red-500/20 to-orange-500/20',
+      iconTextColor: dailyPnl >= 0 ? 'text-emerald-400' : 'text-red-400',
     },
     {
       label: 'Total P&L',
@@ -262,6 +310,9 @@ export default function DashboardView() {
       icon: totalPnl >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />,
       color: totalPnl >= 0 ? 'text-emerald-500' : 'text-red-500',
       sparkData: totalPnlData,
+      accentClass: totalPnl >= 0 ? 'stat-accent-emerald' : 'stat-accent-red',
+      iconGradient: totalPnl >= 0 ? 'from-emerald-500/20 to-cyan-500/20' : 'from-red-500/20 to-orange-500/20',
+      iconTextColor: totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400',
     },
   ];
 
@@ -321,42 +372,49 @@ export default function DashboardView() {
       </div>
 
       {/* Top Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        {stats.map((stat, i) => (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {stats.map((stat, i) => {
+          const isNegative = stat.color === 'text-red-500';
+          const sparkColor = isNegative ? '#ef4444' : '#10b981';
+          return (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
           >
-            <Card className="glass-card card-hover">
+            <Card className={`glass-card card-hover stat-card-glow stat-card-pattern ${stat.accentClass}`}>
               <CardContent className="p-3">
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{stat.label}</span>
-                  <span className={stat.color}>{stat.icon}</span>
+                  <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${stat.iconGradient} flex items-center justify-center ${stat.iconTextColor}`}>
+                    {stat.icon}
+                  </div>
                 </div>
-                <div className={`text-lg font-bold tabular-nums ${stat.color}${stat.label === 'Balance' ? ' gradient-text-emerald' : ''}${stat.label === 'Daily P&L' || stat.label === 'Total P&L' ? ' count-up' : ''}`}>
-                  {stat.value}
+                <div className="flex items-end gap-2">
+                  <div className={`text-xl md:text-2xl font-bold tabular-nums ${stat.color}${stat.label === 'Balance' ? ' gradient-text-emerald' : ''}${stat.label === 'Daily P&L' || stat.label === 'Total P&L' ? ' count-up' : ''}`}>
+                    {stat.value}
+                  </div>
                 </div>
                 {stat.subValue && (
-                  <div className={`text-xs tabular-nums ${stat.color}`}>
+                  <div className={`text-xs tabular-nums ${stat.color} mt-0.5`}>
                     {stat.subValue}
                   </div>
                 )}
                 {stat.sparkData && (
-                  <div className="h-8 mt-1">
+                  <div className="h-8 mt-1.5">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={stat.sparkData}>
                         <defs>
                           <linearGradient id={`spark-${stat.label}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor={stat.color === 'text-emerald-500' ? '#10b981' : '#ef4444'} stopOpacity={0.3} />
-                            <stop offset="100%" stopColor={stat.color === 'text-emerald-500' ? '#10b981' : '#ef4444'} stopOpacity={0} />
+                            <stop offset="0%" stopColor={sparkColor} stopOpacity={0.3} />
+                            <stop offset="100%" stopColor={sparkColor} stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <Area
                           type="monotone"
                           dataKey="v"
-                          stroke={stat.color === 'text-emerald-500' ? '#10b981' : '#ef4444'}
+                          stroke={sparkColor}
                           fill={`url(#spark-${stat.label})`}
                           strokeWidth={1.5}
                           dot={false}
@@ -368,34 +426,74 @@ export default function DashboardView() {
               </CardContent>
             </Card>
           </motion.div>
-        ))}
+          );
+        })}
       </div>
 
       {/* (a) Performance Metrics Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3">
-        {perfCards.map((metric, i) => (
-          <motion.div
-            key={metric.label}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 + i * 0.04 }}
-          >
-            <Card className="glass-card">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={metric.color}>{metric.icon}</span>
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{metric.label}</span>
+      <div className="perf-section-glass glass-card rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="section-title-accent">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Performance Metrics</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          {perfCards.map((metric, i) => {
+            const ringValue = metric.label === 'Win Rate' ? perfMetrics.winRate / 100
+              : metric.label === "Today's Trades" ? Math.min(todayTradeCount / BROKER_CONFIG.maxOpenPositions, 1)
+              : metric.label === 'Avg Win / Loss' ? perfMetrics.avgLoss > 0 ? Math.min(perfMetrics.avgWin / (perfMetrics.avgWin + perfMetrics.avgLoss), 1) : 0.5
+              : metric.label === 'Profit Factor' ? Math.min(perfMetrics.profitFactor / 3, 1)
+              : 0;
+            const ringColor = ringValue >= 0.6 ? '#10b981' : ringValue >= 0.4 ? '#f59e0b' : '#ef4444';
+            const ringCircumference = 2 * Math.PI * 14;
+            const ringDashoffset = ringCircumference * (1 - ringValue);
+            const changeVal = metric.label === 'Win Rate' ? (Math.random() * 6 - 2).toFixed(1)
+              : metric.label === 'Profit Factor' ? (Math.random() * 0.4 - 0.15).toFixed(2)
+              : metric.label === "Today's Trades" ? `+${(Math.random() * 2 + 1).toFixed(0)}`
+              : (Math.random() * 8 - 3).toFixed(1);
+            const changePositive = parseFloat(changeVal) >= 0;
+            return (
+            <motion.div
+              key={metric.label}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 + i * 0.04 }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative flex-shrink-0">
+                  <svg width="38" height="38" viewBox="0 0 38 38" className="-rotate-90">
+                    <circle cx="19" cy="19" r="14" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
+                    <circle
+                      cx="19" cy="19" r="14" fill="none" stroke={ringColor}
+                      strokeWidth="3" strokeLinecap="round"
+                      strokeDasharray={ringCircumference}
+                      strokeDashoffset={ringDashoffset}
+                      className="transition-all duration-1000"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className={metric.color}>{metric.icon}</span>
+                  </div>
                 </div>
-                <div className={`text-sm font-bold tabular-nums ${metric.color}`}>
-                  {metric.value}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{metric.label}</span>
+                    <span className={`text-[9px] font-medium tabular-nums ${changePositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {changePositive ? '↑' : '↓'}{Math.abs(parseFloat(changeVal))}
+                    </span>
+                  </div>
+                  <div className={`text-sm font-bold tabular-nums ${metric.color} count-up`}>
+                    {metric.value}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                    {metric.subValue}
+                  </div>
                 </div>
-                <div className="text-[10px] text-muted-foreground mt-0.5">
-                  {metric.subValue}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
+              </div>
+            </motion.div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -403,7 +501,9 @@ export default function DashboardView() {
         <Card className="glass-card lg:col-span-2 col-span-1">
           <CardHeader className="pb-2 pt-3 px-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold">Open Positions ({openTrades.length})</CardTitle>
+              <div className="section-title-accent">
+                <CardTitle className="text-sm font-semibold">Open Positions ({openTrades.length})</CardTitle>
+              </div>
               <Badge variant="outline" className="text-[10px]">
                 Max {BROKER_CONFIG.maxOpenPositions}
               </Badge>
@@ -464,10 +564,12 @@ export default function DashboardView() {
 
         {/* Quick Actions + Sessions */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-          <Card className={`glass-card ${isAutoTrading ? 'border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.15)] breathe-emerald' : ''}`}>
+          <Card className={`glass-card quick-actions-gradient ${isAutoTrading ? 'border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.15)] breathe-emerald' : ''}`}>
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
+                <div className="section-title-accent">
+                  <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
+                </div>
                 {isAutoTrading && (
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
@@ -494,30 +596,30 @@ export default function DashboardView() {
               )}
               <Button
                 onClick={() => setActiveTab('trading')}
-                className="w-full justify-start gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="w-full justify-start gap-2.5 bg-emerald-600 hover:bg-emerald-700 text-white h-9 action-btn-glass"
                 size="sm"
               >
-                <Zap className="h-3.5 w-3.5" />
-                New Trade
+                <Zap className="h-4 w-4" />
+                <span className="text-xs font-medium">New Trade</span>
               </Button>
               <Button
                 onClick={() => setAutoTrading(!isAutoTrading)}
                 variant={isAutoTrading ? 'destructive' : 'outline'}
-                className={`w-full justify-start gap-2 ${!isAutoTrading ? 'border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10' : ''}`}
+                className={`w-full justify-start gap-2.5 h-9 action-btn-glass ${!isAutoTrading ? 'border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10' : ''}`}
                 size="sm"
                 disabled={!isConnected}
               >
-                <Play className="h-3.5 w-3.5" />
-                {isAutoTrading ? 'Stop Auto Trading' : 'Start Auto Trading'}
+                <Play className="h-4 w-4" />
+                <span className="text-xs font-medium">{isAutoTrading ? 'Stop Auto Trading' : 'Start Auto Trading'}</span>
               </Button>
               <Button
                 onClick={() => setActiveTab('analysis')}
                 variant="outline"
-                className="w-full justify-start gap-2"
+                className="w-full justify-start gap-2.5 h-9 action-btn-glass"
                 size="sm"
               >
-                <RefreshCw className="h-3.5 w-3.5" />
-                Refresh Signals
+                <RefreshCw className="h-4 w-4" />
+                <span className="text-xs font-medium">Refresh Signals</span>
               </Button>
             </CardContent>
           </Card>
@@ -526,47 +628,68 @@ export default function DashboardView() {
           <Card className="glass-card">
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold">Trading Sessions</CardTitle>
+                <div className="section-title-accent">
+                  <CardTitle className="text-sm font-semibold">Trading Sessions</CardTitle>
+                </div>
                 <span className="text-[10px] text-muted-foreground tabular-nums font-medium">UTC {utcNow}</span>
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-3 space-y-3">
-              {Object.values(TRADING_SESSIONS).map((session) => {
-                const { isActive, progress, statusText } = getSessionStatus(session);
+              {(() => {
+                const sessionEntries = Object.values(TRADING_SESSIONS);
+                const activeSessions = sessionEntries.map(s => getSessionStatus(s)).filter(s => s.isActive);
+                const hasOverlap = activeSessions.length >= 2;
+                const overlappingLabels = activeSessions.length >= 2
+                  ? sessionEntries.filter(s => getSessionStatus(s).isActive).map(s => s.label).join(' × ')
+                  : '';
                 return (
-                  <div key={session.label}>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-xs font-medium">{session.label}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted-foreground tabular-nums">
-                          {session.start.toString().padStart(2, '0')}:00-{session.end.toString().padStart(2, '0')}:00
-                        </span>
-                        {isActive ? (
-                          <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
-                            <Badge className="text-[8px] px-1 py-0 bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30 h-4">ACTIVE</Badge>
-                          </div>
-                        ) : (
-                          <span className={`text-[10px] tabular-nums ${statusText === 'Closed' ? 'text-slate-600' : 'text-muted-foreground'}`}>
-                            {statusText}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {isActive && (
-                      <div className="h-1 w-full rounded-full bg-slate-800 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-emerald-500/60 transition-all duration-1000"
-                          style={{ width: `${progress}%` }}
-                        />
+                  <>
+                    {hasOverlap && (
+                      <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-emerald-500/5 border border-emerald-500/15">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+                        <span className="overlap-badge badge-pulse">Overlap</span>
+                        <span className="text-[9px] text-emerald-400/70">{overlappingLabels}</span>
                       </div>
                     )}
-                  </div>
+                    {sessionEntries.map((session) => {
+                      const { isActive, progress, statusText } = getSessionStatus(session);
+                      return (
+                        <div key={session.label}>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className={isActive ? 'clock-tick' : ''}>
+                                <Clock className={`h-3.5 w-3.5 ${isActive ? 'text-emerald-400' : 'text-muted-foreground'}`} />
+                              </span>
+                              <span className="text-xs font-medium">{session.label}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-muted-foreground tabular-nums">
+                                {session.start.toString().padStart(2, '0')}:00-{session.end.toString().padStart(2, '0')}:00
+                              </span>
+                              {isActive ? (
+                                <div className="flex items-center gap-1">
+                                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+                                  <Badge className="text-[8px] px-1 py-0 bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30 h-4">ACTIVE</Badge>
+                                </div>
+                              ) : (
+                                <span className={`text-[10px] tabular-nums ${statusText === 'Closed' ? 'text-slate-600' : 'text-muted-foreground'}`}>
+                                  {statusText}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-slate-800/80 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full animate-progress ${isActive ? 'progress-gradient-emerald' : 'progress-gradient-slate'}`}
+                              style={{ width: isActive ? `${progress}%` : '0%' }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
                 );
-              })}
+              })()}
             </CardContent>
           </Card>
         </div>
@@ -577,7 +700,9 @@ export default function DashboardView() {
         <Card className="glass-card">
           <CardHeader className="pb-2 pt-3 px-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold">Recent Signals</CardTitle>
+              <div className="section-title-accent">
+                <CardTitle className="text-sm font-semibold">Recent Signals</CardTitle>
+              </div>
               <Button variant="ghost" size="sm" className="text-xs text-primary" onClick={() => setActiveTab('analysis')}>
                 View All
               </Button>
@@ -611,8 +736,15 @@ export default function DashboardView() {
                           <Activity className="h-3.5 w-3.5 text-muted-foreground" />
                         )}
                         <div>
-                          <span className="text-xs font-medium">{signal.symbol}</span>
-                          <span className="text-[10px] text-muted-foreground ml-1.5">{signal.strategy}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-medium">{signal.symbol}</span>
+                            <Badge
+                              variant="outline"
+                              className="text-[8px] px-1 py-0 border-slate-600/50 text-slate-400 bg-slate-800/40 h-4"
+                            >
+                              {signal.strategy}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -642,11 +774,11 @@ export default function DashboardView() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between mt-1.5">
-                      <span className="text-[10px] text-muted-foreground">{timeAgo(signal.createdAt)}</span>
+                      <span className="text-[10px] text-muted-foreground time-fade">{timeAgo(signal.createdAt)}</span>
                       <div className="flex items-center gap-2">
-                        <div className="w-16 h-1 rounded-full bg-slate-800 overflow-hidden">
+                        <div className="w-16 h-1.5 rounded-full bg-slate-800/80 overflow-hidden">
                           <div
-                            className={`h-full rounded-full ${signal.confidence >= 70 ? 'bg-emerald-500' : signal.confidence >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                            className={`h-full rounded-full animate-progress ${signal.confidence >= 70 ? 'confidence-bar-emerald' : signal.confidence >= 50 ? 'confidence-bar-amber' : 'confidence-bar-red'}`}
                             style={{ width: `${signal.confidence}%` }}
                           />
                         </div>
@@ -665,7 +797,9 @@ export default function DashboardView() {
         {/* (d) Market Conditions Enhancement */}
         <Card className="glass-card">
           <CardHeader className="pb-2 pt-3 px-4">
-            <CardTitle className="text-sm font-semibold">Market Conditions</CardTitle>
+            <div className="section-title-accent">
+              <CardTitle className="text-sm font-semibold">Market Conditions</CardTitle>
+            </div>
           </CardHeader>
           <CardContent className="px-4 pb-3">
             <div className="space-y-3">
@@ -715,14 +849,19 @@ export default function DashboardView() {
         </Card>
       </div>
 
+      {/* Watchlist */}
+      <WatchlistPanel />
+
       {/* P&L Heatmap Calendar */}
       <Card className="glass-card">
         <CardHeader className="pb-2 pt-3 px-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-primary" />
-              Daily P&L Calendar
-            </CardTitle>
+            <div className="section-title-accent">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                Daily P&L Calendar
+              </CardTitle>
+            </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-sm bg-red-500/35" />
@@ -740,7 +879,7 @@ export default function DashboardView() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
             <div className="rounded-lg bg-slate-800/30 border border-border/50 p-2.5">
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider">This Month P&L</div>
-              <div className={`text-sm font-bold tabular-nums mt-0.5 ${monthlySummary.totalPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+              <div className={`text-sm font-bold tabular-nums mt-0.5 count-up ${monthlySummary.totalPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                 {monthlySummary.totalPnl >= 0 ? '+' : ''}${monthlySummary.totalPnl.toFixed(2)}
               </div>
               <div className={`text-[10px] tabular-nums ${monthlySummary.totalPnl >= 0 ? 'text-emerald-500/70' : 'text-red-500/70'}`}>
