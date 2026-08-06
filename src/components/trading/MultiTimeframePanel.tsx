@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTradingStore } from '@/store/trading-store';
 import { SYMBOLS, SYMBOL_INFO, type Symbol } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { motion } from 'framer-motion';
 import {
   TrendingUp, TrendingDown, Minus, Layers, ArrowUpCircle, ArrowDownCircle,
@@ -435,7 +435,7 @@ function SymbolCard({ mtfData }: { mtfData: SymbolMTF }) {
 
   return (
     <motion.div
-      className="glass-card card-hover rounded-xl p-3.5 flex flex-col"
+      className="glass-card-premium card-hover-lift rounded-xl p-3.5 flex flex-col"
       whileHover={{ y: -2 }}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
     >
@@ -454,7 +454,7 @@ function SymbolCard({ mtfData }: { mtfData: SymbolMTF }) {
               {price.bid.toFixed(info.digits)}
             </div>
             <div className={`text-[10px] tabular-nums font-medium ${
-              price.change >= 0 ? 'text-emerald-400' : 'text-red-400'
+              price.change >= 0 ? 'neon-text-emerald' : 'neon-text-red'
             }`}>
               {price.change >= 0 ? '+' : ''}{price.changePercent.toFixed(2)}%
             </div>
@@ -495,13 +495,13 @@ export default function MultiTimeframePanel() {
   }, [updateData]);
 
   return (
-    <Card className="glass-card">
-      <CardHeader className="pb-2 pt-3 px-4">
+    <div className="glass-card-premium rounded-xl card-hover-lift">
+      <div className="flex items-center gap-2 mb-3 pb-2 pt-3 px-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Layers className="h-4 w-4 text-cyan-400" />
-            <CardTitle className="text-xs font-semibold">Multi-Timeframe Analysis</CardTitle>
-            <span className="badge-pulse text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-medium">
+            <span className="text-xs font-semibold section-title-accent">Multi-Timeframe Analysis</span>
+            <span className="badge-glow-emerald text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-medium">
               LIVE
             </span>
           </div>
@@ -516,14 +516,14 @@ export default function MultiTimeframePanel() {
             ))}
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="px-3 pb-3">
+      </div>
+      <div className="px-3 pb-3">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {SYMBOLS.map((sym) => (
             <SymbolCard key={sym} mtfData={mtfDataMap[sym]} />
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 import {
   Calendar,
   Clock,
@@ -52,7 +52,7 @@ function getCurrencyColor(c: Currency) {
 
 function getImpactBadge(impact: Impact) {
   const map: Record<Impact, string> = {
-    High: 'bg-red-500/20 text-red-400 border-red-500/30',
+    High: 'bg-red-500/20 text-red-400 border-red-500/30 badge-glow-red',
     Medium: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
     Low: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
   };
@@ -309,7 +309,7 @@ function EventRow({ event, now }: { event: EconomicEvent; now: Date }) {
             Fore: <span className="tabular-nums">{formatVal(event.forecast)}</span>
           </span>
           <span
-            className={`text-[10px] tabular-nums ${event.actual !== null ? (parseVal(event.actual) > parseVal(event.forecast) ? 'text-emerald-400' : parseVal(event.actual) < parseVal(event.forecast) ? 'text-red-400' : 'text-blue-400') : 'text-muted-foreground/50'}`}
+            className={`text-[10px] tabular-nums ${event.actual !== null ? (parseVal(event.actual) > parseVal(event.forecast) ? 'neon-text-emerald' : parseVal(event.actual) < parseVal(event.forecast) ? 'neon-text-red' : 'text-blue-400') : 'text-muted-foreground/50'}`}
           >
             Act: {event.actual ?? 'Pending'}
           </span>
@@ -427,18 +427,18 @@ export default function EconomicCalendar() {
   };
 
   return (
-    <Card className="glass-card-premium border-white/[0.06] overflow-hidden">
+    <div className="glass-card-premium rounded-xl card-hover-lift border-white/[0.06] overflow-hidden">
       {/* Header */}
-      <CardHeader className="pb-3 px-4 pt-4">
+      <div className="flex items-center gap-2 mb-3 pb-3 px-4 pt-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
               <Calendar className="h-4 w-4 text-emerald-400" />
             </div>
             <div>
-              <CardTitle className="text-sm font-semibold text-foreground leading-tight">
+              <span className="text-sm font-semibold text-foreground leading-tight section-title-accent">
                 Economic Calendar
-              </CardTitle>
+              </span>
               <p className="text-[10px] text-muted-foreground mt-0.5">
                 {events.length} events this week · All times in UTC
               </p>
@@ -461,7 +461,7 @@ export default function EconomicCalendar() {
             </div>
           )}
         </div>
-      </CardHeader>
+      </div>
 
       {/* Filters */}
       <div className="px-4 pb-3">
@@ -481,7 +481,7 @@ export default function EconomicCalendar() {
         </div>
       </div>
 
-      <CardContent className="px-2 pb-3">
+      <div className="px-2 pb-3">
         <div className="max-h-[520px] overflow-y-auto custom-scrollbar">
           <AnimatePresence mode="popLayout">
             {groups.map((group) => (
@@ -543,7 +543,7 @@ export default function EconomicCalendar() {
             Powered by ForexPro
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

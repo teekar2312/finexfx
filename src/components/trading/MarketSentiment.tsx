@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { SYMBOLS, SYMBOL_INFO, type Symbol } from '@/lib/types';
 import { motion } from 'framer-motion';
 import { Brain, TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -209,17 +209,17 @@ export default function MarketSentiment() {
   }, [updateSentiment]);
 
   return (
-    <Card className="glass-card">
-      <CardHeader className="pb-2 pt-3 px-4">
+    <div className="glass-card-premium rounded-xl card-hover-lift">
+      <div className="flex items-center gap-2 mb-3 pb-2 pt-3 px-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Brain className="h-3.5 w-3.5 text-purple-400" />
-            <CardTitle className="text-xs font-semibold">Market Sentiment</CardTitle>
+            <span className="text-xs font-semibold section-title-accent">Market Sentiment</span>
           </div>
           <span className="text-[10px] text-muted-foreground">Live</span>
         </div>
-      </CardHeader>
-      <CardContent className="px-3 pb-3 space-y-3">
+      </div>
+      <div className="px-3 pb-3 space-y-3">
         {/* Sentiment Gauge */}
         <SentimentGauge value={data.overallSentiment} />
 
@@ -317,7 +317,7 @@ export default function MarketSentiment() {
             ))}
           </motion.div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { type Symbol, SYMBOL_INFO } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen } from 'lucide-react';
@@ -124,25 +124,25 @@ export default function OrderBookDepth({ symbol, bid, ask }: OrderBookDepthProps
   }, [bids, asks, maxBars]);
 
   return (
-    <Card className="glass-card">
-      <CardHeader className="pb-2 pt-3 px-4">
+    <div className="glass-card-premium rounded-xl card-hover-lift">
+      <div className="flex items-center gap-2 mb-3 pb-2 pt-3 px-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BookOpen className="h-3.5 w-3.5 text-emerald-500" />
-            <CardTitle className="text-xs font-semibold">Order Book Depth</CardTitle>
+            <span className="text-xs font-semibold section-title-accent">Order Book Depth</span>
           </div>
           <span className="text-[10px] text-muted-foreground tabular-nums">
             {SYMBOL_INFO[symbol].name}
           </span>
         </div>
-      </CardHeader>
-      <CardContent className="px-3 pb-3">
+      </div>
+      <div className="px-3 pb-3">
         {/* Buy/Sell Pressure Bar */}
         <div className="mb-2.5">
           <div className="flex items-center justify-between text-[10px] mb-1">
-            <span className="text-emerald-500 font-medium">Buy {buyPressure.toFixed(1)}%</span>
+            <span className="neon-text-emerald font-medium">Buy {buyPressure.toFixed(1)}%</span>
             <span className="text-muted-foreground">Pressure</span>
-            <span className="text-red-500 font-medium">Sell {sellPressure.toFixed(1)}%</span>
+            <span className="neon-text-red font-medium">Sell {sellPressure.toFixed(1)}%</span>
           </div>
           <div className="flex h-1.5 rounded-full overflow-hidden bg-slate-800">
             <motion.div
@@ -255,7 +255,7 @@ export default function OrderBookDepth({ symbol, bid, ask }: OrderBookDepthProps
             <span className="tabular-nums font-medium text-foreground/80">{totalVol.toFixed(1)}</span>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -17,6 +17,7 @@ import { Shield, Bell, Server, TriangleAlert, Plus, RefreshCw, Trash2, Wifi, Wif
 import { setSoundEnabled } from '@/lib/sounds';
 import { SYMBOLS, type Symbol } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
+import SoundNotificationPanel from './SoundNotificationPanel';
 
 export default function SettingsView() {
   const {
@@ -490,6 +491,9 @@ export default function SettingsView() {
                 </div>
                 <Switch checked={soundNotif} onCheckedChange={(checked) => { setSoundNotif(checked); setSoundEnabled(checked); }} className="data-[state=checked]:bg-emerald-600" />
               </div>
+
+              {/* Sound Notification Panel */}
+              <SoundNotificationPanel />
             </div>
           </div>
         </TabsContent>

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 import {
   Tooltip,
   TooltipContent,
@@ -206,7 +206,7 @@ function getInsights(cells: CorrelationCell[]): Insight[] {
 }
 
 const SEVERITY_STYLES: Record<string, string> = {
-  positive: 'border-emerald-500/30 bg-emerald-500/5',
+  positive: 'border-emerald-500/30 bg-emerald-500/5 badge-glow-emerald',
   negative: 'border-amber-500/30 bg-amber-500/5',
   neutral: 'border-slate-500/30 bg-slate-500/5',
 };
@@ -252,18 +252,18 @@ export default function CorrelationMatrix() {
   let animIndex = 0;
 
   return (
-    <Card className="glass-card-premium rounded-xl overflow-hidden">
+    <div className="glass-card-premium rounded-xl card-hover-lift overflow-hidden">
       {/* ── Header ── */}
-      <CardHeader className="pb-3 px-4 pt-4">
+      <div className="flex items-center gap-2 mb-3 pb-3 px-4 pt-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
               <GitBranch className="h-4 w-4 text-emerald-400" />
             </div>
             <div>
-              <CardTitle className="text-sm font-semibold text-foreground leading-tight">
+              <span className="text-sm font-semibold text-foreground leading-tight section-title-accent">
                 Correlation Matrix
-              </CardTitle>
+              </span>
               <p className="text-[10px] text-muted-foreground mt-0.5">
                 Cross-pair correlation heatmap · {SYMBOLS.length} pairs
               </p>
@@ -290,9 +290,9 @@ export default function CorrelationMatrix() {
             ))}
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="px-4 pb-4 space-y-4">
+      <div className="px-4 pb-4 space-y-4">
         {/* ── Matrix ── */}
         <div className="overflow-x-auto">
           <div className="inline-flex flex-col items-center min-w-[480px]">
@@ -340,9 +340,9 @@ export default function CorrelationMatrix() {
                           <span
                             className={`font-mono text-[15px] font-semibold leading-none ${
                               isDiagonal
-                                ? 'text-emerald-300'
+                                ? 'neon-text-emerald'
                                 : cell.value >= 0.5
-                                  ? 'text-emerald-200'
+                                  ? 'neon-text-emerald'
                                   : cell.value >= 0.2
                                     ? 'text-teal-200'
                                     : cell.value > -0.2
@@ -451,7 +451,7 @@ export default function CorrelationMatrix() {
             </motion.div>
           </AnimatePresence>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

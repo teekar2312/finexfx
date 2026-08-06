@@ -82,7 +82,7 @@ const VolumeShape = (props: any) => {
   if (!payload) return null;
   const isGreen = payload.close >= payload.open;
   const color = isGreen ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)';
-  return <rect x={x} y={y} width={width} height={height} fill={color} />;
+  return <rect x={x} y={y} width={width} height={height} fill={color} style={{ transition: 'opacity 0.2s ease' }} />;
 };
 
 // Vertical crosshair cursor that follows the mouse
@@ -226,7 +226,7 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
 
   if (!data || data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+      <div className="flex items-center justify-center h-full text-muted-foreground text-sm shimmer-subtle">
         Waiting for price data...
       </div>
     );
@@ -248,7 +248,7 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
   );
 
   return (
-    <div className="relative w-full tooltip-fade" style={{ height }}>
+    <div className="relative w-full tooltip-fade inset-highlight" style={{ height }}>
       {/* Chart Mode Toggle - Sleek Pill with Sliding Indicator */}
       <div className="absolute top-2 right-2 z-10">
         <div className="chart-toggle-container">
@@ -318,6 +318,7 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
                 fill: currentPriceColor,
                 fontSize: 10,
                 fontWeight: 'bold',
+                className: isLatestUp ? 'neon-text-emerald' : 'neon-text-red',
               }}
             />
             {ask !== undefined && (
@@ -392,6 +393,7 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
                 fill: currentPriceColor,
                 fontSize: 10,
                 fontWeight: 'bold',
+                className: isLatestUp ? 'neon-text-emerald' : 'neon-text-red',
               }}
             />
             {/* Candlestick bars: dataKey=high so bar occupies full low-high range */}

@@ -1,0 +1,757 @@
+     4→import { useTradingStore } from '@/store/trading-store';
+     5→import { BROKER_CONFIG, SYMBOL_INFO } from '@/lib/types';
+     6→import { Button } from '@/components/ui/button';
+     7→import { Input } from '@/components/ui/input';
+     8→import { Label } from '@/components/ui/label';
+     9→import { Switch } from '@/components/ui/switch';
+    10→import { Badge } from '@/components/ui/badge';
+    11→import { Separator } from '@/components/ui/separator';
+    12→import { ScrollArea } from '@/components/ui/scroll-area';
+    13→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+    14→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+    15→import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+    16→import { Shield, Bell, Server, TriangleAlert, Plus, RefreshCw, Trash2, Wifi, WifiOff, Globe, HardDrive, CheckCircle, AlertCircle, Info, Filter, Zap, DollarSign, Activity, Clock, Target, Volume2 } from 'lucide-react';
+    17→import { setSoundEnabled } from '@/lib/sounds';
+    18→import { SYMBOLS, type Symbol } from '@/lib/types';
+    19→import { motion, AnimatePresence } from 'framer-motion';
+    20→
+    21→export default function SettingsView() {
+    22→  const {
+    23→    accountType, balance, equity, margin, dailyPnl, totalPnl, isConnected, isAutoTrading,
+    24→    priceAlerts, addPriceAlert, removePriceAlert, togglePriceAlert,
+    25→    errorLogs, clearResolvedLogs, addNotification, notifications, closedTrades, openTrades,
+    26→  } = useTradingStore();
+    27→
+    28→  const [emailNotif, setEmailNotif] = useState(true);
+    29→  const [pushNotif, setPushNotif] = useState(true);
+    30→  const [soundNotif, setSoundNotif] = useState(true);
+    31→  const [newAlertSymbol, setNewAlertSymbol] = useState<Symbol>('EURUSD');
+    32→  const [newAlertCondition, setNewAlertCondition] = useState('above');
+    33→  const [newAlertPrice, setNewAlertPrice] = useState('1.10000');
+    34→  const [logFilter, setLogFilter] = useState<string>('all');
+    35→
+    36→  // Broker connection test
+    37→  const [isTesting, setIsTesting] = useState(false);
+    38→  const [testResult, setTestResult] = useState<'success' | 'fail' | null>(null);
+    39→  const [testPing, setTestPing] = useState<number | null>(null);
+    40→
+    41→  const handleConnectionTest = () => {
+    42→    setIsTesting(true);
+    43→    setTestResult(null);
+    44→    setTestPing(null);
+    45→    setTimeout(() => {
+    46→      const success = isConnected || Math.random() > 0.3;
+    47→      setIsTesting(false);
+    48→      setTestResult(success ? 'success' : 'fail');
+    49→      setTestPing(Math.floor(Math.random() * 80) + 15);
+    50→    }, 2000);
+    51→  };
+    52→
+    53→  const addNewAlert = () => {
+    54→    const price = parseFloat(newAlertPrice);
+    55→    if (isNaN(price)) {
+    56→      addNotification({ type: 'error', title: 'Invalid Price', message: 'Please enter a valid price.' });
+    57→      return;
+    58→    }
+    59→    addPriceAlert({
+    60→      symbol: newAlertSymbol,
+    61→      condition: newAlertCondition,
+    62→      price,
+    63→      isActive: true,
+    64→    });
+    65→    addNotification({ type: 'success', title: 'Alert Created', message: `${newAlertSymbol} ${newAlertCondition} ${price}` });
+    66→  };
+    67→
+    68→  // Account statistics from closed trades
+    69→  const accountStats = useMemo(() => {
+    70→    const total = closedTrades.length;
+    71→    const wins = closedTrades.filter(t => t.profit > 0).length;
+    72→    const winRate = total > 0 ? (wins / total * 100) : 0;
+    73→    let totalDuration = 0;
+    74→    closedTrades.forEach(t => {
+    75→      if (t.openedAt && t.closedAt) {
+    76→        totalDuration += new Date(t.closedAt).getTime() - new Date(t.openedAt).getTime();
+    77→      }
+    78→    });
+    79→    const avgDuration = total > 0 ? totalDuration / total : 0;
+    80→    const avgDurationStr = avgDuration > 0
+    81→      ? `${Math.floor(avgDuration / 60000)}m ${Math.round((avgDuration % 60000) / 1000)}s`
+    82→      : 'N/A';
+    83→    return { total, wins, winRate, avgDuration: avgDurationStr };
+    84→  }, [closedTrades]);
+    85→
+    86→  // Account health score
+    87→  const healthScore = useMemo(() => {
+    88→    const equityGrowth = Math.min(((equity - 10000) / 10000) * 30, 30);
+    89→    const dailyBonus = dailyPnl >= 0 ? 15 : 5;
+    90→    const positionPenalty = openTrades.length > 2 ? -10 : 0;
+    91→    return Math.round(Math.min(100, Math.max(0, 50 + equityGrowth + dailyBonus + positionPenalty)));
+    92→  }, [equity, dailyPnl, openTrades.length]);
+    93→
+    94→  // Error log counts
+    95→  const logCounts = useMemo(() => ({
+    96→    total: errorLogs.length,
+    97→    errors: errorLogs.filter(l => l.level === 'error').length,
+    98→    warnings: errorLogs.filter(l => l.level === 'warning').length,
+    99→    info: errorLogs.filter(l => l.level === 'info').length,
+   100→    resolved: errorLogs.filter(l => l.resolved).length,
+   101→  }), [errorLogs]);
+   102→
+   103→  const filteredLogs = logFilter === 'all'
+   104→    ? errorLogs
+   105→    : errorLogs.filter(l => l.level === logFilter);
+   106→
+   107→  const filterButtons = [
+   108→    { key: 'all', label: 'All', count: logCounts.total, color: 'text-foreground' },
+   109→    { key: 'error', label: 'Errors', count: logCounts.errors, color: 'text-red-500' },
+   110→    { key: 'warning', label: 'Warnings', count: logCounts.warnings, color: 'text-amber-500' },
+   111→    { key: 'info', label: 'Info', count: logCounts.info, color: 'text-slate-400' },
+   112→  ];
+   113→
+   114→  return (
+   115→    <div className="p-4">
+   116→      <Tabs defaultValue="broker" className="w-full">
+   117→        <TabsList className="bg-card border border-border mb-4">
+   118→          <TabsTrigger value="broker" className="text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+   119→            <Server className="h-3.5 w-3.5 mr-1" />
+   120→            Broker
+   121→          </TabsTrigger>
+   122→          <TabsTrigger value="account" className="text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+   123→            <Shield className="h-3.5 w-3.5 mr-1" />
+   124→            Account
+   125→          </TabsTrigger>
+   126→          <TabsTrigger value="notifications" className="text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+   127→            <Bell className="h-3.5 w-3.5 mr-1" />
+   128→            Alerts
+   129→          </TabsTrigger>
+   130→          <TabsTrigger value="logs" className="text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+   131→            <TriangleAlert className="h-3.5 w-3.5 mr-1" />
+   132→            Error Logs
+   133→          </TabsTrigger>
+   134→        </TabsList>
+   135→
+   136→        {/* ==================== BROKER TAB ==================== */}
+   137→        <TabsContent value="broker" className="space-y-4">
+   138→          {/* Broker Hero Card */}
+   139→          <div className="glass-card-premium rounded-xl card-hover-lift">
+   140→            <div className="p-4">
+   141→              <div className="flex items-center gap-4">
+   142→                {/* Logo Placeholder */}
+   143→                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center flex-shrink-0">
+   144→                  <span className="text-xl font-black text-white">FX</span>
+   145→                </div>
+   146→                <div className="flex-1 min-w-0">
+   147→                  <div className="flex items-center gap-2 mb-0.5">
+   148→                    <h2 className="text-lg font-bold">{BROKER_CONFIG.name}</h2>
+   149→                    <Badge variant="outline" className={`text-[10px] border-emerald-500/50 text-emerald-500 ${isConnected ? 'badge-glow-emerald pulse-dot-border' : ''}`}>
+   150→                      {isConnected ? '● Connected' : '○ Disconnected'}
+   151→                    </Badge>
+   152→                  </div>
+   153→                  <div className="text-[11px] text-muted-foreground">MetaTrader 5 • ECN Account • 1:{BROKER_CONFIG.leverage} Leverage</div>
+   154→                  <div className="flex items-center gap-4 mt-2">
+   155→                    <div className="flex items-center gap-1 text-[10px]">
+   156→                      <Globe className="h-3 w-3 text-muted-foreground" />
+   157→                      <span className="text-muted-foreground">Jakarta, Indonesia</span>
+   158→                    </div>
+   159→                    <div className="flex items-center gap-1 text-[10px]">
+   160→                      <HardDrive className="h-3 w-3 text-muted-foreground" />
+   161→                      <span className="text-muted-foreground">MT5 Server</span>
+   162→                    </div>
+   163→                    <div className="flex items-center gap-1 text-[10px]">
+   164→                      <DollarSign className="h-3 w-3 text-muted-foreground" />
+   165→                      <span className="text-muted-foreground">USD Account</span>
+   166→                    </div>
+   167→                  </div>
+   168→                </div>
+   169→                {/* Connection Test Button */}
+   170→                <div className="flex flex-col items-end gap-1">
+   171→                  <Button
+   172→                    onClick={handleConnectionTest}
+   173→                    disabled={isTesting}
+   174→                    variant="outline"
+   175→                    size="sm"
+   176→                    className="text-xs h-8"
+   177→                  >
+   178→                    {isTesting ? (
+   179→                      <>
+   180→                        <RefreshCw className="h-3.5 w-3.5 mr-1 animate-spin" />
+   181→                        Testing...
+   182→                      </>
+   183→                    ) : (
+   184→                      <>
+   185→                        <Wifi className="h-3.5 w-3.5 mr-1" />
+   186→                        Connection Test
+   187→                      </>
+   188→                    )}
+   189→                  </Button>
+   190→                  {testResult && (
+   191→                    <AnimatePresence>
+   192→                      <motion.div
+   193→                        initial={{ opacity: 0, y: -5 }}
+   194→                        animate={{ opacity: 1, y: 0 }}
+   195→                        className={`flex items-center gap-1 text-[10px] ${testResult === 'success' ? 'text-emerald-500 neon-text-emerald' : 'text-red-500 neon-text-red'}`}
+   196→                      >
+   197→                        {testResult === 'success' ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+   198→                        {testResult === 'success' ? `Connected (${testPing}ms)` : 'Connection failed'}
+   199→                      </motion.div>
+   200→                    </AnimatePresence>
+   201→                  )}
+   202→                </div>
+   203→              </div>
+   204→            </div>
+   205→          </div>
+   206→
+   207→          {/* Broker Specs - 2-column grid with green dots */}
+   208→          <div className="glass-card-premium rounded-xl card-hover-lift">
+   209→            <div className="pb-2 pt-3 px-4">
+   210→              <div className="flex items-center gap-2">
+   211→                <Server className="h-4 w-4 text-primary" />
+   212→                <div className="section-title-accent text-sm font-semibold">Broker Specifications</div>
+   213→              </div>
+   214→            </div>
+   215→            <div className="px-4 pb-4">
+   216→              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 stagger-children">
+   217→                {[
+   218→                  { label: 'Leverage', value: `1:${BROKER_CONFIG.leverage}` },
+   219→                  { label: 'Min Spread', value: `${BROKER_CONFIG.minSpread} pips` },
+   220→                  { label: 'Commission', value: `$${BROKER_CONFIG.commission}/lot` },
+   221→                  { label: 'Min Lot Size', value: BROKER_CONFIG.minLotSize.toString() },
+   222→                  { label: 'Max Lot Size', value: BROKER_CONFIG.maxLotSize.toString() },
+   223→                  { label: 'Max Open Positions', value: BROKER_CONFIG.maxOpenPositions.toString() },
+   224→                  { label: 'Margin Call Level', value: `${BROKER_CONFIG.marginCall}%` },
+   225→                  { label: 'Stop Out Level', value: `${BROKER_CONFIG.stopOut}%` },
+   226→                ].map((item) => (
+   227→                  <div key={item.label} className="flex items-center gap-2 py-1">
+   228→                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+   229→                    <div className="flex-1 min-w-0">
+   230→                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground block">{item.label}</span>
+   231→                      <span className={`text-sm font-medium tabular-nums ${['Leverage', 'Min Spread', 'Commission'].includes(item.label) ? 'metric-compact' : ''}`}>{item.value}</span>
+   232→                    </div>
+   233→                  </div>
+   234→                ))}
+   235→              </div>
+   236→            </div>
+   237→          </div>
+   238→
+   239→          {/* Server Status */}
+   240→          <div className="glass-card-premium rounded-xl card-hover-lift">
+   241→            <div className="pb-2 pt-3 px-4">
+   242→              <div className="section-title-accent text-sm font-semibold">Server Status</div>
+   243→            </div>
+   244→            <div className="px-4 pb-4">
+   245→              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
+   246→                <div className="flex items-center gap-2">
+   247→                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 pulse-dot' : 'bg-red-500'}`} />
+   248→                  <div>
+   249→                    <div className="text-[10px] text-muted-foreground">Connection</div>
+   250→                    <div className="text-xs font-medium">{isConnected ? 'Connected' : 'Disconnected'}</div>
+   251→                  </div>
+   252→                </div>
+   253→                <div className="flex items-center gap-2">
+   254→                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`} />
+   255→                  <div>
+   256→                    <div className="text-[10px] text-muted-foreground">Price Feed</div>
+   257→                    <div className="text-xs font-medium">{isConnected ? 'Live' : 'Offline'}</div>
+   258→                  </div>
+   259→                </div>
+   260→                <div className="flex items-center gap-2">
+   261→                  <div className={`w-2 h-2 rounded-full ${isAutoTrading ? 'bg-emerald-500 pulse-dot' : 'bg-slate-500'}`} />
+   262→                  <div>
+   263→                    <div className="text-[10px] text-muted-foreground">Auto Trading</div>
+   264→                    <div className="text-xs font-medium">{isAutoTrading ? 'Running' : 'Stopped'}</div>
+   265→                  </div>
+   266→                </div>
+   267→                <div className="flex items-center gap-2">
+   268→                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
+   269→                  <div>
+   270→                    <div className="text-[10px] text-muted-foreground">Account</div>
+   271→                    <div className="text-xs font-medium tabular-nums">${balance.toLocaleString()}</div>
+   272→                  </div>
+   273→                </div>
+   274→              </div>
+   275→            </div>
+   276→          </div>
+   277→        </TabsContent>
+   278→
+   279→        {/* ==================== ACCOUNT TAB ==================== */}
+   280→        <TabsContent value="account" className="space-y-4">
+   281→          {/* Account Summary Card */}
+   282→          <div className="glass-card-premium rounded-xl card-hover-lift">
+   283→            <div className="pb-2 pt-3 px-4">
+   284→              <div className="flex items-center justify-between">
+   285→                <div className="flex items-center gap-2">
+   286→                  <Shield className="h-4 w-4 text-primary" />
+   287→                  <div className="section-title-accent text-sm font-semibold">Account Overview</div>
+   288→                </div>
+   289→                <Badge className={`text-[10px] ${accountType === 'live' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 badge-glow-emerald' : 'bg-amber-500/10 text-amber-500 border-amber-500/30 badge-glow-amber'}`}>
+   290→                  {accountType === 'live' ? '● LIVE' : '● DEMO'}
+   291→                </Badge>
+   292→              </div>
+   293→            </div>
+   294→            <div className="px-4 pb-4">
+   295→              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
+   296→                <div className="p-3 rounded-lg bg-accent/50 border border-border metric-card-animated">
+   297→                  <div className="text-[10px] text-muted-foreground mb-0.5">Balance</div>
+   298→                  <div className="text-lg font-bold tabular-nums">${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+   299→                </div>
+   300→                <div className="p-3 rounded-lg bg-accent/50 border border-border metric-card-animated">
+   301→                  <div className="text-[10px] text-muted-foreground mb-0.5">Equity</div>
+   302→                  <div className={`text-lg font-bold tabular-nums ${equity >= balance ? 'text-emerald-500' : 'text-red-500'}`}>
+   303→                    ${equity.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+   304→                  </div>
+   305→                </div>
+   306→                <div className="p-3 rounded-lg bg-accent/50 border border-border metric-card-animated">
+   307→                  <div className="text-[10px] text-muted-foreground mb-0.5">Used Margin</div>
+   308→                  <div className="text-lg font-bold tabular-nums">${margin.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+   309→                </div>
+   310→                <div className="p-3 rounded-lg bg-accent/50 border border-border metric-card-animated">
+   311→                  <div className="text-[10px] text-muted-foreground mb-0.5">Total P&L</div>
+   312→                  <div className={`text-lg font-bold tabular-nums ${totalPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   313→                    {totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}
+   314→                  </div>
+   315→                </div>
+   316→              </div>
+   317→            </div>
+   318→          </div>
+   319→
+   320→          {/* Trading Statistics + Account Health */}
+   321→          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-children">
+   322→            <div className="glass-card-premium rounded-xl card-hover-lift">
+   323→              <div className="pb-2 pt-3 px-4">
+   324→                <div className="flex items-center gap-2">
+   325→                  <Activity className="h-4 w-4 text-primary" />
+   326→                  <div className="section-title-accent text-sm font-semibold">Trading Statistics</div>
+   327→                </div>
+   328→              </div>
+   329→              <div className="px-4 pb-4 space-y-3">
+   330→                <div className="grid grid-cols-3 gap-3 stagger-children">
+   331→                  <div className="text-center p-2 rounded-lg bg-accent/30 metric-card-animated">
+   332→                    <div className="text-[10px] text-muted-foreground">Total Trades</div>
+   333→                    <div className="text-base font-bold tabular-nums mt-0.5">{accountStats.total}</div>
+   334→                  </div>
+   335→                  <div className="text-center p-2 rounded-lg bg-accent/30 metric-card-animated">
+   336→                    <div className="text-[10px] text-muted-foreground">Win Rate</div>
+   337→                    <div className={`text-base font-bold tabular-nums mt-0.5 ${accountStats.winRate >= 50 ? 'text-emerald-500' : 'text-red-500'}`}>
+   338→                      {accountStats.winRate.toFixed(1)}%
+   339→                    </div>
+   340→                  </div>
+   341→                  <div className="text-center p-2 rounded-lg bg-accent/30 metric-card-animated">
+   342→                    <div className="text-[10px] text-muted-foreground">Avg Duration</div>
+   343→                    <div className="text-base font-bold tabular-nums mt-0.5">{accountStats.avgDuration}</div>
+   344→                  </div>
+   345→                </div>
+   346→                <Separator className="opacity-50" />
+   347→                <div className="grid grid-cols-2 gap-3 stagger-children">
+   348→                  <div className="flex items-center justify-between">
+   349→                    <span className="text-[11px] text-muted-foreground">Wins</span>
+   350→                    <span className="text-[11px] font-bold tabular-nums text-emerald-500">{accountStats.wins}</span>
+   351→                  </div>
+   352→                  <div className="flex items-center justify-between">
+   353→                    <span className="text-[11px] text-muted-foreground">Losses</span>
+   354→                    <span className="text-[11px] font-bold tabular-nums text-red-500">{accountStats.total - accountStats.wins}</span>
+   355→                  </div>
+   356→                  <div className="flex items-center justify-between">
+   357→                    <span className="text-[11px] text-muted-foreground">Daily P&L</span>
+   358→                    <span className={`text-[11px] font-bold tabular-nums ${dailyPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   359→                      {dailyPnl >= 0 ? '+' : ''}${dailyPnl.toFixed(2)}
+   360→                    </span>
+   361→                  </div>
+   362→                  <div className="flex items-center justify-between">
+   363→                    <span className="text-[11px] text-muted-foreground">Open Positions</span>
+   364→                    <span className="text-[11px] font-bold tabular-nums">{openTrades.length}</span>
+   365→                  </div>
+   366→                </div>
+   367→              </div>
+   368→            </div>
+   369→
+   370→            {/* Account Health */}
+   371→            <div className="glass-card-premium rounded-xl card-hover-lift">
+   372→              <div className="pb-2 pt-3 px-4">
+   373→                <div className="flex items-center gap-2">
+   374→                  <Target className="h-4 w-4 text-primary" />
+   375→                  <div className="section-title-accent text-sm font-semibold">Account Health</div>
+   376→                </div>
+   377→              </div>
+   378→              <div className="px-4 pb-4">
+   379→                <div className="flex items-center gap-4 mb-4">
+   380→                  {/* Health Gauge */}
+   381→                  <div className="relative w-20 h-20 flex-shrink-0">
+   382→                    <svg width="80" height="80" className="-rotate-90">
+   383→                      <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
+   384→                      <circle
+   385→                        cx="40" cy="40" r="32" fill="none"
+   386→                        stroke={healthScore >= 70 ? '#10b981' : healthScore >= 40 ? '#f59e0b' : '#ef4444'}
+   387→                        strokeWidth="6"
+   388→                        strokeDasharray={2 * Math.PI * 32}
+   389→                        strokeDashoffset={2 * Math.PI * 32 * (1 - healthScore / 100)}
+   390→                        strokeLinecap="round"
+   391→                      />
+   392→                    </svg>
+   393→                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+   394→                      <span className={`text-lg font-bold tabular-nums ${healthScore >= 70 ? 'text-emerald-500' : healthScore >= 40 ? 'text-amber-500' : 'text-red-500'}`}>
+   395→                        {healthScore}
+   396→                      </span>
+   397→                      <span className="text-[8px] text-muted-foreground">SCORE</span>
+   398→                    </div>
+   399→                  </div>
+   400→                  <div className="flex-1 space-y-2">
+   401→                    <div className={`text-sm font-semibold ${healthScore >= 70 ? 'text-emerald-500' : healthScore >= 40 ? 'text-amber-500' : 'text-red-500'}`}>
+   402→                      {healthScore >= 80 ? 'Excellent' : healthScore >= 60 ? 'Good' : healthScore >= 40 ? 'Fair' : 'Needs Attention'}
+   403→                    </div>
+   404→                    <div className="text-[10px] text-muted-foreground leading-relaxed">
+   405→                      {healthScore >= 70
+   406→                        ? 'Account is performing well. Continue following risk rules.'
+   407→                        : healthScore >= 40
+   408→                        ? 'Account performance is moderate. Consider reducing position sizes.'
+   409→                        : 'Account health is low. Review risk management and consider pausing trading.'}
+   410→                    </div>
+   411→                  </div>
+   412→                </div>
+   413→
+   414→                <Separator className="opacity-50 mb-3" />
+   415→
+   416→                <div className="grid grid-cols-2 gap-2 text-[10px] stagger-children">
+   417→                  <div className="flex items-center justify-between py-1 px-2 rounded bg-accent/30">
+   418→                    <span className="text-muted-foreground">Equity Growth</span>
+   419→                    <span className={`font-bold tabular-nums ${equity >= 10000 ? 'text-emerald-500' : 'text-red-500'}`}>
+   420→                      {((equity - 10000) / 10000 * 100).toFixed(2)}%
+   421→                    </span>
+   422→                  </div>
+   423→                  <div className="flex items-center justify-between py-1 px-2 rounded bg-accent/30">
+   424→                    <TooltipProvider>
+   425→                      <Tooltip>
+   426→                        <TooltipTrigger asChild>
+   427→                          <div className="flex items-center gap-1 cursor-help">
+   428→                            <span className="text-muted-foreground">Leverage</span>
+   429→                            <Info className="h-2.5 w-2.5 text-muted-foreground" />
+   430→                          </div>
+   431→                        </TooltipTrigger>
+   432→                        <TooltipContent className="max-w-[200px] text-[10px]">
+   433→                          1:{BROKER_CONFIG.leverage} leverage means you control ${BROKER_CONFIG.leverage.toLocaleString()} per $1 of margin.
+   434→                          Higher leverage amplifies both gains and losses.
+   435→                        </TooltipContent>
+   436→                      </Tooltip>
+   437→                    </TooltipProvider>
+   438→                    <span className="font-bold tabular-nums">1:{BROKER_CONFIG.leverage}</span>
+   439→                  </div>
+   440→                </div>
+   441→              </div>
+   442→            </div>
+   443→          </div>
+   444→
+   445→          {/* Auto Trading + Notifications */}
+   446→          <div className="glass-card-premium rounded-xl card-hover-lift">
+   447→            <div className="pb-2 pt-3 px-4">
+   448→              <div className="section-title-accent text-sm font-semibold">Settings</div>
+   449→            </div>
+   450→            <div className="px-4 pb-4 space-y-3">
+   451→              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/50 border border-border">
+   452→                <div>
+   453→                  <div className="text-xs font-medium flex items-center gap-1.5">
+   454→                    <Zap className="h-3.5 w-3.5 text-amber-500" />
+   455→                    Enable Auto Trading
+   456→                  </div>
+   457→                  <div className="text-[10px] text-muted-foreground">AI will automatically execute trades based on signals</div>
+   458→                </div>
+   459→                <Switch
+   460→                  checked={isAutoTrading}
+   461→                  onCheckedChange={(checked) => {
+   462→                    useTradingStore.getState().setAutoTrading(checked);
+   463→                    addNotification({ type: 'info', title: 'Auto Trading', message: checked ? 'Auto trading enabled' : 'Auto trading disabled' });
+   464→                  }}
+   465→                  disabled={!isConnected}
+   466→                  className="data-[state=checked]:bg-emerald-600"
+   467→                />
+   468→              </div>
+   469→              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/50 border border-border">
+   470→                <div>
+   471→                  <div className="text-xs font-medium">Email Notifications</div>
+   472→                  <div className="text-[10px] text-muted-foreground">Receive trade alerts and reports via email</div>
+   473→                </div>
+   474→                <Switch checked={emailNotif} onCheckedChange={setEmailNotif} className="data-[state=checked]:bg-emerald-600" />
+   475→              </div>
+   476→              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/50 border border-border">
+   477→                <div>
+   478→                  <div className="text-xs font-medium">Push Notifications</div>
+   479→                  <div className="text-[10px] text-muted-foreground">Browser push notifications for important events</div>
+   480→                </div>
+   481→                <Switch checked={pushNotif} onCheckedChange={setPushNotif} className="data-[state=checked]:bg-emerald-600" />
+   482→              </div>
+   483→              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/50 border border-border">
+   484→                <div>
+   485→                  <div className="text-xs font-medium flex items-center gap-1.5">
+   486→                    <Volume2 className="h-3.5 w-3.5 text-primary" />
+   487→                    Sound Notifications
+   488→                  </div>
+   489→                  <div className="text-[10px] text-muted-foreground">Play audio alerts for trades, signals, and price alerts</div>
+   490→                </div>
+   491→                <Switch checked={soundNotif} onCheckedChange={(checked) => { setSoundNotif(checked); setSoundEnabled(checked); }} className="data-[state=checked]:bg-emerald-600" />
+   492→              </div>
+   493→            </div>
+   494→          </div>
+   495→        </TabsContent>
+   496→
+   497→        {/* ==================== ALERTS TAB ==================== */}
+   498→        <TabsContent value="notifications" className="space-y-4">
+   499→          <div className="glass-card-premium rounded-xl card-hover-lift">
+   500→            <div className="pb-2 pt-3 px-4">
+   501→              <div className="flex items-center justify-between">
+   502→                <div className="flex items-center gap-2">
+   503→                  <Bell className="h-4 w-4 text-primary" />
+   504→                  <div className="section-title-accent text-sm font-semibold">Price Alerts</div>
+   505→                  <Badge variant="outline" className="text-[10px]">{priceAlerts.length}</Badge>
+   506→                </div>
+   507→                <Button
+   508→                  onClick={addNewAlert}
+   509→                  size="sm"
+   510→                  className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 text-xs"
+   511→                >
+   512→                  <Bell className="h-3.5 w-3.5 mr-1" />
+   513→                  Create Alert
+   514→                </Button>
+   515→              </div>
+   516→            </div>
+   517→            <div className="px-4 pb-4">
+   518→              {/* Alert Form */}
+   519→              <div className="flex flex-wrap items-end gap-2 mb-4 p-3 rounded-lg bg-accent/30 border border-border">
+   520→                <div className="min-w-[100px]">
+   521→                  <Label className="text-[10px] text-muted-foreground">Symbol</Label>
+   522→                  <Select value={newAlertSymbol} onValueChange={(v) => setNewAlertSymbol(v as Symbol)}>
+   523→                    <SelectTrigger className="h-8 text-xs mt-0.5">
+   524→                      <SelectValue />
+   525→                    </SelectTrigger>
+   526→                    <SelectContent>
+   527→                      {SYMBOLS.map(sym => (
+   528→                        <SelectItem key={sym} value={sym}>{SYMBOL_INFO[sym].name}</SelectItem>
+   529→                      ))}
+   530→                    </SelectContent>
+   531→                  </Select>
+   532→                </div>
+   533→                <div className="min-w-[100px]">
+   534→                  <Label className="text-[10px] text-muted-foreground">Condition</Label>
+   535→                  <Select value={newAlertCondition} onValueChange={setNewAlertCondition}>
+   536→                    <SelectTrigger className="h-8 text-xs mt-0.5">
+   537→                      <SelectValue />
+   538→                    </SelectTrigger>
+   539→                    <SelectContent>
+   540→                      <SelectItem value="above">Above</SelectItem>
+   541→                      <SelectItem value="below">Below</SelectItem>
+   542→                    </SelectContent>
+   543→                  </Select>
+   544→                </div>
+   545→                <div className="min-w-[110px]">
+   546→                  <Label className="text-[10px] text-muted-foreground">Price</Label>
+   547→                  <Input
+   548→                    type="number"
+   549→                    value={newAlertPrice}
+   550→                    onChange={(e) => setNewAlertPrice(e.target.value)}
+   551→                    step="0.00001"
+   552→                    className="h-8 text-xs tabular-nums mt-0.5 input-glass-premium bg-white/[0.03] border-white/[0.08] focus:border-emerald-500/40"
+   553→                  />
+   554→                </div>
+   555→                <Button onClick={addNewAlert} size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground h-8">
+   556→                  <Plus className="h-3.5 w-3.5" />
+   557→                </Button>
+   558→              </div>
+   559→
+   560→              {/* Alert Cards */}
+   561→              {priceAlerts.length === 0 ? (
+   562→                <div className="text-center py-10">
+   563→                  <div className="w-16 h-16 rounded-full bg-accent/50 border border-border flex items-center justify-center mx-auto mb-3">
+   564→                    <Bell className="h-7 w-7 text-muted-foreground/50" />
+   565→                  </div>
+   566→                  <h3 className="text-sm font-medium text-muted-foreground mb-1">No Price Alerts</h3>
+   567→                  <p className="text-[11px] text-muted-foreground max-w-[250px] mx-auto">Create price alerts to get notified when a symbol reaches your target price.</p>
+   568→                </div>
+   569→              ) : (
+   570→                <div className="space-y-2">
+   571→                  <AnimatePresence>
+   572→                    {priceAlerts.map((alert) => {
+   573→                      const symInfo = SYMBOL_INFO[alert.symbol as Symbol];
+   574→                      const createdTs = parseInt(alert.id.replace('alert-', ''));
+   575→                      const createdStr = isNaN(createdTs) ? '' : new Date(createdTs).toLocaleString();
+   576→                      return (
+   577→                        <motion.div
+   578→                          key={alert.id}
+   579→                          initial={{ opacity: 0, y: 5 }}
+   580→                          animate={{ opacity: 1, y: 0 }}
+   581→                          exit={{ opacity: 0, x: -20 }}
+   582→                          className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${alert.isActive ? 'border-primary/20 bg-primary/5' : 'border-border opacity-40'}`}
+   583→                        >
+   584→                          {/* Symbol Badge */}
+   585→                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+   586→                            <span className="text-[10px] font-bold text-primary">{alert.symbol}</span>
+   587→                          </div>
+   588→
+   589→                          <div className="flex-1 min-w-0">
+   590→                            <div className="flex items-center gap-1.5 mb-0.5">
+   591→                              <span className="text-xs font-medium">{symInfo?.name || alert.symbol}</span>
+   592→                              <span className={`text-[10px] px-1.5 py-0.5 rounded ${alert.condition === 'above' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+   593→                                {alert.condition === 'above' ? '↑ Above' : '↓ Below'}
+   594→                              </span>
+   595→                              <span className="text-xs font-bold tabular-nums">
+   596→                                {alert.price.toFixed(symInfo?.digits || 5)}
+   597→                              </span>
+   598→                            </div>
+   599→                            {createdStr && (
+   600→                              <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+   601→                                <Clock className="h-2.5 w-2.5" />
+   602→                                {createdStr}
+   603→                              </div>
+   604→                            )}
+   605→                          </div>
+   606→
+   607→                          <Switch
+   608→                            checked={alert.isActive}
+   609→                            onCheckedChange={() => togglePriceAlert(alert.id)}
+   610→                            className="scale-75 data-[state=checked]:bg-emerald-600"
+   611→                          />
+   612→
+   613→                          <Button variant="ghost" size="sm" className="icon-btn-glass h-7 w-7 p-0 text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={() => removePriceAlert(alert.id)}>
+   614→                            <Trash2 className="h-3 w-3" />
+   615→                          </Button>
+   616→                        </motion.div>
+   617→                      );
+   618→                    })}
+   619→                  </AnimatePresence>
+   620→                </div>
+   621→              )}
+   622→            </div>
+   623→          </div>
+   624→        </TabsContent>
+   625→
+   626→        {/* ==================== ERROR LOGS TAB ==================== */}
+   627→        <TabsContent value="logs" className="space-y-4">
+   628→          <div className="glass-card-premium rounded-xl card-hover-lift">
+   629→            <div className="pb-2 pt-3 px-4">
+   630→              <div className="flex items-center gap-2">
+   631→                <TriangleAlert className="h-4 w-4 text-primary" />
+   632→                <div className="section-title-accent text-sm font-semibold">Error Logs</div>
+   633→              </div>
+   634→            </div>
+   635→            <div className="px-4 pb-3">
+   636→              {/* Summary Bar */}
+   637→              <div className="flex items-center gap-3 mb-3 p-2.5 rounded-lg bg-accent/30 border border-border">
+   638→                <div className="flex items-center gap-1.5 text-[11px]">
+   639→                  <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+   640→                  <span className="text-muted-foreground">Errors:</span>
+   641→                  <span className="font-bold tabular-nums text-red-500">{logCounts.errors}</span>
+   642→                </div>
+   643→                <div className="w-px h-3 bg-border" />
+   644→                <div className="flex items-center gap-1.5 text-[11px]">
+   645→                  <TriangleAlert className="h-3.5 w-3.5 text-amber-500" />
+   646→                  <span className="text-muted-foreground">Warnings:</span>
+   647→                  <span className="font-bold tabular-nums text-amber-500">{logCounts.warnings}</span>
+   648→                </div>
+   649→                <div className="w-px h-3 bg-border" />
+   650→                <div className="flex items-center gap-1.5 text-[11px]">
+   651→                  <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
+   652→                  <span className="text-muted-foreground">Resolved:</span>
+   653→                  <span className="font-bold tabular-nums text-emerald-500">{logCounts.resolved}</span>
+   654→                </div>
+   655→                <div className="ml-auto">
+   656→                  <Button
+   657→                    variant="ghost"
+   658→                    size="sm"
+   659→                    className="icon-btn-glass h-6 text-[10px] text-muted-foreground hover:text-foreground"
+   660→                    onClick={() => {
+   661→                      clearResolvedLogs();
+   662→                      addNotification({ type: 'info', title: 'Logs Cleared', message: 'Resolved logs have been removed.' });
+   663→                    }}
+   664→                    disabled={logCounts.resolved === 0}
+   665→                  >
+   666→                    Clear Resolved
+   667→                  </Button>
+   668→                </div>
+   669→              </div>
+   670→
+   671→              {/* Filter Buttons */}
+   672→              <div className="flex items-center gap-2 mb-3">
+   673→                {filterButtons.map((fb) => (
+   674→                  <Button
+   675→                    key={fb.key}
+   676→                    variant={logFilter === fb.key ? 'default' : 'outline'}
+   677→                    size="sm"
+   678→                    className={`h-7 text-[10px] ${logFilter === fb.key ? 'bg-primary/15 text-primary border-primary/30 hover:bg-primary/20' : ''}`}
+   679→                    onClick={() => setLogFilter(fb.key)}
+   680→                  >
+   681→                    <Filter className="h-3 w-3 mr-1" />
+   682→                    {fb.label}
+   683→                    {fb.count > 0 && (
+   684→                      <Badge variant="outline" className={`ml-1.5 text-[9px] px-1 py-0 border-current/30 ${fb.color}`}>
+   685→                        {fb.count}
+   686→                      </Badge>
+   687→                    )}
+   688→                  </Button>
+   689→                ))}
+   690→              </div>
+   691→
+   692→              {/* Log Entries - Timeline Format */}
+   693→              {filteredLogs.length === 0 ? (
+   694→                <div className="text-center py-8">
+   695→                  <div className="w-14 h-14 rounded-full bg-accent/50 border border-border flex items-center justify-center mx-auto mb-3">
+   696→                    <RefreshCw className="h-6 w-6 text-muted-foreground/50" />
+   697→                  </div>
+   698→                  <div className="text-sm text-muted-foreground">No {logFilter === 'all' ? '' : logFilter} logs recorded</div>
+   699→                  <div className="text-xs text-muted-foreground">Errors and warnings will appear here</div>
+   700→                </div>
+   701→              ) : (
+   702→                <ScrollArea className="h-[500px]">
+   703→                  <div className="relative pl-5">
+   704→                    {/* Vertical timeline line */}
+   705→                    <div className="absolute left-[7px] top-0 bottom-0 w-px bg-border" />
+   706→
+   707→                    <div className="space-y-2">
+   708→                      {filteredLogs.map((log, i) => {
+   709→                        const lineColor = log.level === 'error' ? 'bg-red-500' : log.level === 'warning' ? 'bg-amber-500' : 'bg-slate-500';
+   710→                        const borderColor = log.level === 'error' ? 'border-red-500/20 bg-red-500/5' : log.level === 'warning' ? 'border-amber-500/20 bg-amber-500/5' : 'border-border bg-accent/30';
+   711→                        return (
+   712→                          <motion.div
+   713→                            key={log.id}
+   714→                            initial={{ opacity: 0, x: -10 }}
+   715→                            animate={{ opacity: 1, x: 0 }}
+   716→                            transition={{ delay: i * 0.02 }}
+   717→                            className="relative"
+   718→                          >
+   719→                            {/* Timeline dot */}
+   720→                            <div className={`absolute -left-5 top-3 w-3.5 h-3.5 rounded-full ${lineColor} border-2 border-[#0a0f1c]`} />
+   721→
+   722→                            <div className={`p-3 rounded-lg border ${borderColor} ${log.resolved ? 'opacity-40' : ''}`}>
+   723→                              <div className="flex items-center justify-between mb-1">
+   724→                                <div className="flex items-center gap-2">
+   725→                                  <Badge
+   726→                                    variant="outline"
+   727→                                    className={`text-[9px] px-1.5 py-0 ${
+   728→                                      log.level === 'error' ? 'border-red-500/50 text-red-500' :
+   729→                                      log.level === 'warning' ? 'border-amber-500/50 text-amber-500' :
+   730→                                      'border-slate-500/50 text-slate-500'
+   731→                                    }`}
+   732→                                  >
+   733→                                    {log.level.toUpperCase()}
+   734→                                  </Badge>
+   735→                                  <span className="text-[10px] text-muted-foreground">{log.source}</span>
+   736→                                  {log.resolved && (
+   737→                                    <Badge variant="outline" className="text-[9px] px-1 py-0 border-emerald-500/50 text-emerald-500 badge-glow-emerald">
+   738→                                      RESOLVED
+   739→                                    </Badge>
+   740→                                  )}
+   741→                                </div>
+   742→                                <span className="text-[10px] text-muted-foreground tabular-nums">{log.timestamp}</span>
+   743→                              </div>
+   744→                              <div className="text-[11px] leading-relaxed">{log.message}</div>
+   745→                            </div>
+   746→                          </motion.div>
+   747→                        );
+   748→                      })}
+   749→                    </div>
+   750→                  </div>
+   751→                </ScrollArea>
+   752→              )}
+   753→            </div>
+   754→          </div>
+   755→        </TabsContent>
+   756→      </Tabs>
+   757→    </div>
+   758→  );
+   759→}
+   760→

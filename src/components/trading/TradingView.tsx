@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
 import { SYMBOLS, SYMBOL_INFO, BROKER_CONFIG, type TradeDirection } from '@/lib/types';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -172,7 +172,7 @@ export default function TradingView() {
                 onClick={() => setSelectedSymbol(sym)}
                 className={`flex-shrink-0 py-2.5 px-3 rounded-full text-sm font-medium transition-all min-w-[120px] card-hover scale-click flex items-center gap-2.5 border ${
                   isActive
-                    ? 'text-emerald-400 border-emerald-500/30 pill-active-glow symbol-pill-active'
+                    ? 'text-emerald-400 border-emerald-500/30 pill-active-glow symbol-pill-active inset-highlight'
                     : 'bg-card/80 border-border/60 text-muted-foreground hover:text-foreground hover:border-border'
                 }`}
               >
@@ -214,8 +214,8 @@ export default function TradingView() {
           {/* Chart */}
           <div className="lg:col-span-3 space-y-4">
             <div className="chart-glow rounded-xl">
-              <Card className="glass-card border-border/40 chart-inner-glow">
-                <CardContent className="p-0">
+              <div className="glass-card-premium rounded-xl card-hover-lift border-border/40 chart-inner-glow">
+                <div className="p-0">
                   <PriceChart
                     data={chartData}
                     symbol={selectedSymbol}
@@ -223,14 +223,14 @@ export default function TradingView() {
                     ask={price?.ask}
                     height={300}
                   />
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
             {/* (a) Tabbed Positions / History */}
-            <Card className="glass-card-premium card-hover">
+            <div className="glass-card-premium rounded-xl card-hover-lift">
               <Tabs defaultValue="open" className="w-full">
-                <CardHeader className="pb-0 pt-3 px-4">
+                <div className="flex items-center gap-2 mb-3 pb-0 pt-3 px-4">
                   <div className="flex items-center justify-between gap-2">
                     <TabsList className="h-8 glass-card-premium border-0 shadow-none gap-0.5 p-1">
                       <TabsTrigger value="open" className="text-xs h-6 rounded-lg data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_12px_rgba(16,185,129,0.2),inset_0_1px_0_rgba(16,185,129,0.1)]">
@@ -245,10 +245,10 @@ export default function TradingView() {
                     </TabsList>
                     <TradeExportButton />
                   </div>
-                </CardHeader>
+                </div>
 
                 <TabsContent value="open" className="mt-0">
-                  <CardContent className="px-4 pb-3">
+                  <div className="px-4 pb-3">
                     {openTrades.length === 0 ? (
                       <div className="text-center py-6 text-muted-foreground text-sm">
                         No open positions. Use the panel to place a trade.
@@ -275,7 +275,7 @@ export default function TradingView() {
                             {openTrades.map((trade) => {
                               const maxProfit = Math.max(...openTrades.map(t => Math.abs(t.profit)), 1);
                               return (
-                              <TableRow key={trade.id} className={`border-border compact-row ${trade.direction === 'BUY' ? 'trade-row-buy' : 'trade-row-sell'}`}>
+                              <TableRow key={trade.id} className={`border-border compact-row table-row-hover ${trade.direction === 'BUY' ? 'trade-row-buy' : 'trade-row-sell'}`}>
                                 <TableCell className="text-xs font-medium">{trade.symbol}</TableCell>
                                 <TableCell>
                                   <div className={`flex items-center gap-1 text-xs font-bold ${trade.direction === 'BUY' ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -374,11 +374,11 @@ export default function TradingView() {
                         </Table>
                       </div>
                     )}
-                  </CardContent>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="history" className="mt-0">
-                  <CardContent className="px-4 pb-3">
+                  <div className="px-4 pb-3">
                     {closedTrades.length === 0 ? (
                       <div className="text-center py-10 text-muted-foreground">
                         <History className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -403,25 +403,25 @@ export default function TradingView() {
                               </div>
                               <div className="text-center p-2 rounded-lg stat-card-premium">
                                 <div className="text-[10px] text-muted-foreground uppercase">Win Rate</div>
-                                <div className={`text-sm font-bold tabular-nums ${historyStats.winRate >= 50 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                <div className={`text-sm font-bold tabular-nums ${historyStats.winRate >= 50 ? 'neon-text-emerald' : 'neon-text-red'}`}>
                                   {historyStats.winRate.toFixed(0)}%
                                 </div>
                               </div>
-                              <div className="text-center p-2 rounded-lg stat-card-premium">
+                              <div className={`text-center p-2 rounded-lg stat-card-premium ${historyStats.totalPnl >= 0 ? 'glow-pulse-emerald' : 'glow-pulse-red'}`}>
                                 <div className="text-[10px] text-muted-foreground uppercase">Total P&L</div>
-                                <div className={`text-sm font-bold tabular-nums ${historyStats.totalPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                <div className={`text-sm font-bold tabular-nums ${historyStats.totalPnl >= 0 ? 'neon-text-emerald' : 'neon-text-red'}`}>
                                   {historyStats.totalPnl >= 0 ? '+' : ''}${historyStats.totalPnl.toFixed(2)}
                                 </div>
                               </div>
                               <div className="text-center p-2 rounded-lg stat-card-premium">
                                 <div className="text-[10px] text-muted-foreground uppercase">Best</div>
-                                <div className="text-sm font-bold tabular-nums text-emerald-500">
+                                <div className="text-sm font-bold tabular-nums neon-text-emerald">
                                   +${historyStats.bestTrade.profit.toFixed(2)}
                                 </div>
                               </div>
                               <div className="text-center p-2 rounded-lg stat-card-premium">
                                 <div className="text-[10px] text-muted-foreground uppercase">Worst</div>
-                                <div className="text-sm font-bold tabular-nums text-red-500">
+                                <div className="text-sm font-bold tabular-nums neon-text-red">
                                   ${historyStats.worstTrade.profit.toFixed(2)}
                                 </div>
                               </div>
@@ -491,7 +491,7 @@ export default function TradingView() {
                             </TableHeader>
                             <TableBody>
                               {closedTrades.map((trade) => (
-                                <TableRow key={trade.id} className={`border-border compact-row ${trade.direction === 'BUY' ? 'trade-row-buy' : 'trade-row-sell'}`}>
+                                <TableRow key={trade.id} className={`border-border compact-row table-row-hover ${trade.direction === 'BUY' ? 'trade-row-buy' : 'trade-row-sell'}`}>
                                   <TableCell className="text-xs font-medium">{trade.symbol}</TableCell>
                                   <TableCell>
                                     <div className={`flex items-center gap-1 text-[11px] font-bold ${trade.direction === 'BUY' ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -524,22 +524,22 @@ export default function TradingView() {
                         </div>
                       </>
                     )}
-                  </CardContent>
+                  </div>
                 </TabsContent>
                 <TabsContent value="advanced" className="mt-0">
-                  <CardContent className="px-4 pb-3">
+                  <div className="px-4 pb-3">
                     <AdvancedOrderTypes />
-                  </CardContent>
+                  </div>
                 </TabsContent>
               </Tabs>
-            </Card>
+            </div>
           </div>
 
           {/* Trading Panel */}
           <div className="space-y-4">
             {/* (b) Better Price Display Card */}
-            <Card className="glass-card">
-              <CardContent className="p-4 space-y-3">
+            <div className="glass-card-premium rounded-xl card-hover-lift">
+              <div className="p-4 space-y-3">
                 <div className="text-center">
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-medium">{SYMBOL_INFO[selectedSymbol].name}</div>
                   {price ? (
@@ -547,7 +547,7 @@ export default function TradingView() {
                       <div className={`text-2xl md:text-3xl font-bold tabular-nums count-up ${priceFlash[selectedSymbol] === 'up' ? 'flash-green' : priceFlash[selectedSymbol] === 'down' ? 'flash-red' : ''}`}>
                         {price.bid.toFixed(SYMBOL_INFO[selectedSymbol].digits)}
                       </div>
-                      <div className={`text-xs tabular-nums flex items-center justify-center gap-1 mt-0.5 ${price.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      <div className={`text-xs tabular-nums flex items-center justify-center gap-1 mt-0.5 ${price.change >= 0 ? 'neon-text-emerald' : 'neon-text-red'}`}>
                         {price.change >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
                         <span className="font-medium">{price.change >= 0 ? '+' : ''}{price.change.toFixed(SYMBOL_INFO[selectedSymbol].digits)}</span>
                         <span>({price.change >= 0 ? '+' : ''}{price.changePercent.toFixed(3)}%)</span>
@@ -600,8 +600,8 @@ export default function TradingView() {
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* (c) Better Order Panel */}
             <div className={`order-panel-premium rounded-xl card-hover ${oneClickMode ? 'pulsing-border-amber' : ''}`}>
@@ -698,18 +698,18 @@ export default function TradingView() {
                     <span className="font-medium tabular-nums text-amber-500">${orderMetrics.margin.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-[11px]">
-                    <span className="text-muted-foreground flex items-center gap-1">
+                    <span className="text-label flex items-center gap-1">
                       <AlertTriangle className="h-3 w-3" /> Risk Amount
                     </span>
-                    <span className={`font-bold tabular-nums ${orderMetrics.riskAmount > 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                    <span className={`font-bold tabular-nums ${orderMetrics.riskAmount > 0 ? 'neon-text-red' : 'text-muted-foreground'}`}>
                       ${orderMetrics.riskAmount.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between text-[11px]">
-                    <span className="text-muted-foreground flex items-center gap-1">
+                    <span className="text-label flex items-center gap-1">
                       <Target className="h-3 w-3" /> Potential Profit
                     </span>
-                    <span className={`font-bold tabular-nums ${orderMetrics.potentialProfit > 0 ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+                    <span className={`font-bold tabular-nums ${orderMetrics.potentialProfit > 0 ? 'neon-text-emerald' : 'text-muted-foreground'}`}>
                       +${orderMetrics.potentialProfit.toFixed(2)}
                     </span>
                   </div>
@@ -725,7 +725,7 @@ export default function TradingView() {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <Button
-                        className="gradient-buy-btn trade-btn-premium text-white h-12 font-bold text-base rounded-xl"
+                        className="gradient-buy-btn trade-btn-premium card-press text-white h-12 font-bold text-base rounded-xl"
                         onClick={() => handleOpenTrade('BUY')}
                         disabled={!isConnected}
                       >
@@ -733,7 +733,7 @@ export default function TradingView() {
                         BUY
                       </Button>
                       <Button
-                        className="gradient-sell-btn trade-btn-premium text-white h-12 font-bold text-base rounded-xl"
+                        className="gradient-sell-btn trade-btn-premium card-press text-white h-12 font-bold text-base rounded-xl"
                         onClick={() => handleOpenTrade('SELL')}
                         disabled={!isConnected}
                       >
@@ -745,7 +745,7 @@ export default function TradingView() {
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     <Button
-                      className="gradient-buy-btn trade-btn-premium text-white h-12 font-bold text-base rounded-xl"
+                      className="gradient-buy-btn trade-btn-premium card-press text-white h-12 font-bold text-base rounded-xl"
                       onClick={() => handleOpenTrade('BUY')}
                       disabled={!isConnected}
                     >
@@ -753,7 +753,7 @@ export default function TradingView() {
                       BUY
                     </Button>
                     <Button
-                      className="gradient-sell-btn trade-btn-premium text-white h-12 font-bold text-base rounded-xl"
+                      className="gradient-sell-btn trade-btn-premium card-press text-white h-12 font-bold text-base rounded-xl"
                       onClick={() => handleOpenTrade('SELL')}
                       disabled={!isConnected}
                     >
@@ -767,7 +767,7 @@ export default function TradingView() {
                   <div className="flex items-center gap-2">
                     <Label className="text-[11px] text-muted-foreground font-medium">One-Click Trading</Label>
                     {oneClickMode && (
-                      <Badge className="text-[9px] px-1.5 py-0 bg-amber-500/20 text-amber-400 border-amber-500/30 badge-pulse">
+                      <Badge className="text-[9px] px-1.5 py-0 bg-amber-500/20 text-amber-400 border-amber-500/30 badge-pulse badge-glow-amber">
                         LIVE
                       </Badge>
                     )}
@@ -782,8 +782,8 @@ export default function TradingView() {
             </div>
 
             {/* Market Info */}
-            <Card className="glass-card">
-              <CardContent className="p-3 space-y-1.5">
+            <div className="glass-card-premium rounded-xl card-hover-lift">
+              <div className="p-3 space-y-1.5">
                 <div className="flex justify-between text-[11px]">
                   <span className="text-muted-foreground">Leverage</span>
                   <span className="font-medium">1:{BROKER_CONFIG.leverage}</span>
@@ -800,8 +800,8 @@ export default function TradingView() {
                   <span className="text-muted-foreground">Stop Out</span>
                   <span className="font-medium text-red-500">{BROKER_CONFIG.stopOut}%</span>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </div>
 
