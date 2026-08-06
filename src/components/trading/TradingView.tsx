@@ -16,6 +16,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUpRight, ArrowDownRight, X, Square, AlertTriangle, History, Target, Shield } from 'lucide-react';
 import PriceChart from './PriceChart';
+import OrderBookDepth from './OrderBookDepth';
+import MarketSentiment from './MarketSentiment';
 
 export default function TradingView() {
   const {
@@ -180,7 +182,7 @@ export default function TradingView() {
             </Card>
 
             {/* (a) Tabbed Positions / History */}
-            <Card className="glass-card">
+            <Card className="glass-card card-hover">
               <Tabs defaultValue="open" className="w-full">
                 <CardHeader className="pb-0 pt-3 px-4">
                   <TabsList className="h-8 bg-slate-800/50">
@@ -457,7 +459,7 @@ export default function TradingView() {
             </Card>
 
             {/* (c) Better Order Panel */}
-            <Card className="glass-card">
+            <Card className="glass-card card-hover">
               <CardHeader className="pb-2 pt-3 px-4">
                 <CardTitle className="text-sm font-semibold">New Order</CardTitle>
               </CardHeader>
@@ -531,7 +533,7 @@ export default function TradingView() {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <Button
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white h-12 md:h-10 font-semibold text-base"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white h-12 md:h-10 font-semibold text-base scale-click"
                         onClick={() => handleOpenTrade('BUY')}
                         disabled={!isConnected}
                       >
@@ -539,7 +541,7 @@ export default function TradingView() {
                         BUY
                       </Button>
                       <Button
-                        className="bg-red-600 hover:bg-red-700 text-white h-12 md:h-10 font-semibold text-base"
+                        className="bg-red-600 hover:bg-red-700 text-white h-12 md:h-10 font-semibold text-base scale-click"
                         onClick={() => handleOpenTrade('SELL')}
                         disabled={!isConnected}
                       >
@@ -551,7 +553,7 @@ export default function TradingView() {
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     <Button
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white h-12 md:h-10 font-semibold text-base"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white h-12 md:h-10 font-semibold text-base scale-click"
                       onClick={() => handleOpenTrade('BUY')}
                       disabled={!isConnected}
                     >
@@ -559,7 +561,7 @@ export default function TradingView() {
                       BUY
                     </Button>
                     <Button
-                      className="bg-red-600 hover:bg-red-700 text-white h-12 md:h-10 font-semibold text-base"
+                      className="bg-red-600 hover:bg-red-700 text-white h-12 md:h-10 font-semibold text-base scale-click"
                       onClick={() => handleOpenTrade('SELL')}
                       disabled={!isConnected}
                     >
@@ -602,6 +604,16 @@ export default function TradingView() {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Order Book & Market Sentiment */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <OrderBookDepth
+            symbol={selectedSymbol}
+            bid={price?.bid ?? SYMBOL_INFO[selectedSymbol].pipSize}
+            ask={price?.ask ?? SYMBOL_INFO[selectedSymbol].pipSize * 2}
+          />
+          <MarketSentiment />
         </div>
       </div>
     </TooltipProvider>

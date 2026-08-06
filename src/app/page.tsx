@@ -11,6 +11,8 @@ import IndicatorsView from '@/components/trading/IndicatorsView';
 import NewsView from '@/components/trading/NewsView';
 import RiskView from '@/components/trading/RiskView';
 import BacktestingView from '@/components/trading/BacktestingView';
+import TradeJournalView from '@/components/trading/TradeJournalView';
+import PerformanceAnalyticsView from '@/components/trading/PerformanceAnalyticsView';
 import SettingsView from '@/components/trading/SettingsView';
 import Footer from '@/components/trading/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -23,7 +25,7 @@ function NotificationToast({ notifications, removeNotification }: {
   removeNotification: (id: string) => void;
 }) {
   return (
-    <div className="fixed top-4 right-4 z-[100] space-y-2 pointer-events-none">
+    <div className="fixed top-4 right-4 z-[100] space-y-2 pointer-events-none border-transition">
       <AnimatePresence>
         {notifications.map((notif) => (
           <motion.div
@@ -135,6 +137,8 @@ export default function TradingDashboard() {
       case 'news': return <NewsView />;
       case 'risk': return <RiskView />;
       case 'backtesting': return <BacktestingView />;
+      case 'journal': return <TradeJournalView />;
+      case 'analytics': return <PerformanceAnalyticsView />;
       case 'settings': return <SettingsView />;
       case 'errors': return <ErrorLogsView />;
       default: return <DashboardView />;

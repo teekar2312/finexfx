@@ -15,6 +15,34 @@ import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Cartes
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, RefreshCw, LineChart as LineChartIcon, TrendingUp, TrendingDown, DollarSign, Activity, Zap, Target, Shield, BarChart3, Clock, ArrowUpRight, ArrowDownRight, History } from 'lucide-react';
 
+// Tooltip component declared outside render to avoid react-hooks/static-components lint error
+function BacktestEquityTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  const data = payload[0]?.payload;
+  if (!data) return null;
+  return (
+    <div className="bg-slate-800/95 border border-white/10 rounded-lg px-3 py-2 text-[11px] shadow-xl">
+      <div className="text-muted-foreground mb-1">Trade #{label}</div>
+      <div className="flex items-center gap-2 mb-0.5">
+        <span className="text-muted-foreground">Equity:</span>
+        <span className={`font-bold tabular-nums ${data.equity >= 10000 ? 'text-emerald-500' : 'text-red-500'}`}>
+          ${data.equity.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+        </span>
+      </div>
+      <div className="flex items-center gap-2 mb-0.5">
+        <span className="text-muted-foreground">Peak:</span>
+        <span className="tabular-nums text-slate-300">${data.peak.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+      </div>
+      {data.drawdownGap > 0 && (
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">Drawdown:</span>
+          <span className="tabular-nums text-red-400">${data.drawdownGap.toFixed(2)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function generateMockBacktestResult(strategy: StrategyName, symbol: Symbol): BacktestResult {
   const initialBalance = 10000;
   const totalTrades = Math.floor(Math.random() * 150) + 50;
@@ -148,32 +176,7 @@ export default function BacktestingView() {
   const isProfitable = latestResult ? latestResult.finalBalance >= latestResult.initialBalance : false;
   const totalPnL = latestResult ? latestResult.finalBalance - latestResult.initialBalance : 0;
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (!active || !payload?.length) return null;
-    const data = payload[0]?.payload;
-    if (!data) return null;
-    return (
-      <div className="bg-slate-800/95 border border-white/10 rounded-lg px-3 py-2 text-[11px] shadow-xl">
-        <div className="text-muted-foreground mb-1">Trade #{label}</div>
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-muted-foreground">Equity:</span>
-          <span className={`font-bold tabular-nums ${data.equity >= 10000 ? 'text-emerald-500' : 'text-red-500'}`}>
-            ${data.equity.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-muted-foreground">Peak:</span>
-          <span className="tabular-nums text-slate-300">${data.peak.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-        </div>
-        {data.drawdownGap > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Drawdown:</span>
-            <span className="tabular-nums text-red-400">${data.drawdownGap.toFixed(2)}</span>
-          </div>
-        )}
-      </div>
-    );
-  };
+
 
   return (
     <div className="p-4 space-y-4">
@@ -287,7 +290,7 @@ export default function BacktestingView() {
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
                     <XAxis dataKey="trade" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={{ stroke: 'rgba(255,255,255,0.08)' }} tickLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} width={70} tickFormatter={(v) => `$${v.toLocaleString()}`} />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<BacktestEquityTooltip />} />
                     <ReferenceLine y={10000} stroke="rgba(255,255,255,0.25)" strokeDasharray="6 4" label={{ value: 'Initial $10,000', position: 'insideTopRight', fill: 'rgba(255,255,255,0.35)', fontSize: 10 }} />
                     <Area type="monotone" dataKey="equity" stackId="stack" stroke={isProfitable ? '#10b981' : '#ef4444'} strokeWidth={1.5} fill="url(#equityGradient)" dot={false} />
                     <Area type="stepAfter" dataKey="drawdownGap" stackId="stack" fill="url(#drawdownGradient)" stroke="none" dot={false} />

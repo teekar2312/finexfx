@@ -329,13 +329,13 @@ export default function DashboardView() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
           >
-            <Card className="glass-card">
+            <Card className="glass-card card-hover">
               <CardContent className="p-3">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{stat.label}</span>
                   <span className={stat.color}>{stat.icon}</span>
                 </div>
-                <div className={`text-lg font-bold tabular-nums ${stat.color}`}>
+                <div className={`text-lg font-bold tabular-nums ${stat.color}${stat.label === 'Balance' ? ' gradient-text-emerald' : ''}${stat.label === 'Daily P&L' || stat.label === 'Total P&L' ? ' count-up' : ''}`}>
                   {stat.value}
                 </div>
                 {stat.subValue && (
@@ -464,7 +464,7 @@ export default function DashboardView() {
 
         {/* Quick Actions + Sessions */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-          <Card className={`glass-card ${isAutoTrading ? 'border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.15)]' : ''}`}>
+          <Card className={`glass-card ${isAutoTrading ? 'border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.15)] breathe-emerald' : ''}`}>
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>

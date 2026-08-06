@@ -5,6 +5,7 @@ import { BROKER_CONFIG } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart3,
+  BookOpen,
   Brain,
   CandlestickChart,
   Cog,
@@ -12,6 +13,7 @@ import {
   LineChart as LineChartIcon,
   Newspaper,
   Play,
+  PieChart as PieChartIcon,
   ChevronLeft,
   ChevronRight,
   Shield,
@@ -40,6 +42,8 @@ const navItems: NavItem[] = [
   { id: 'news', label: 'News', icon: <Newspaper className="h-4 w-4" /> },
   { id: 'risk', label: 'Risk Mgmt', icon: <Shield className="h-4 w-4" /> },
   { id: 'backtesting', label: 'Backtesting', icon: <LineChartIcon className="h-4 w-4" /> },
+  { id: 'journal', label: 'Journal', icon: <BookOpen className="h-4 w-4" /> },
+  { id: 'analytics', label: 'Analytics', icon: <PieChartIcon className="h-4 w-4" /> },
   { id: 'settings', label: 'Settings', icon: <Cog className="h-4 w-4" /> },
   { id: 'errors', label: 'Error Logs', icon: <TriangleAlert className="h-4 w-4" /> },
 ];
@@ -171,10 +175,10 @@ export default function Sidebar() {
               <button
                 key={item.id}
                 onClick={() => handleNav(item.id)}
-                className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-md text-sm transition-all duration-150 relative group min-h-[44px]
+                className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-md text-sm transition-all duration-150 relative group min-h-[44px] focus-ring
                   ${isActive
                     ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent glass-card-interactive'
                   }`}
               >
                 <span className={`flex-shrink-0 ${isActive ? 'text-primary' : ''}`}>{item.icon}</span>

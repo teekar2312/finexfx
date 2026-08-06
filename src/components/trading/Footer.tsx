@@ -37,7 +37,7 @@ export default function Footer() {
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="flex items-center gap-1">
-                <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-500 pulse-dot' : 'bg-red-500'}`} />
+                <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-500 pulse-dot badge-pulse' : 'bg-red-500'}`} />
                 <span className="text-muted-foreground">{isConnected ? 'LIVE' : 'OFF'}</span>
               </div>
             </TooltipTrigger>
@@ -70,7 +70,7 @@ export default function Footer() {
         <div className="flex items-center gap-2 text-muted-foreground">
           <span className="tabular-nums">UTC {utcTime}</span>
           <span>•</span>
-          <span>{BROKER_CONFIG.name}</span>
+          <span className="gradient-text-emerald font-medium">{BROKER_CONFIG.name}</span>
         </div>
       </footer>
     </TooltipProvider>

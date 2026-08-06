@@ -156,12 +156,12 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
   }
 
   return (
-    <div className="relative w-full" style={{ height }}>
+    <div className="relative w-full tooltip-fade" style={{ height }}>
       {/* Chart Mode Toggle */}
       <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
         <button
           onClick={() => setChartMode('area')}
-          className={`p-1.5 rounded-md transition-colors ${
+          className={`p-1.5 rounded-md border-transition ${
             chartMode === 'area'
               ? 'bg-primary/20 text-primary border border-primary/30'
               : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
@@ -172,7 +172,7 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
         </button>
         <button
           onClick={() => setChartMode('candlestick')}
-          className={`p-1.5 rounded-md transition-colors ${
+          className={`p-1.5 rounded-md border-transition ${
             chartMode === 'candlestick'
               ? 'bg-primary/20 text-primary border border-primary/30'
               : 'text-muted-foreground hover:text-foreground hover:bg-white/5'

@@ -228,6 +228,10 @@ export default function AnalysisView() {
     return { symbol: sym, signal: sig };
   });
 
+  const highestConfidenceSignal = signals.length > 0
+    ? signals.reduce((best, s) => (s.confidence > best.confidence ? s : best), signals[0])
+    : null;
+
   const handleCopy = useCallback((text: string, id: string) => {
     navigator.clipboard.writeText(text).then(() => {
       setCopiedId(id);
@@ -287,7 +291,7 @@ export default function AnalysisView() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: SYMBOLS.indexOf(sym) * 0.05 }}
             >
-              <Card className="glass-card">
+              <Card className={`glass-card card-hover${sig && highestConfidenceSignal && sig.id === highestConfidenceSignal.id ? ' shimmer-border' : ''}`}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -385,7 +389,7 @@ export default function AnalysisView() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className={`text-sm font-bold tabular-nums ${getConfidenceColor(sig.confidence)}`}>
+                          <div className={`text-sm font-bold tabular-nums ${getConfidenceColor(sig.confidence)}${sig.confidence >= 70 ? (sig.direction === 'BUY' ? ' gradient-text-profit' : sig.direction === 'SELL' ? ' gradient-text-loss' : '') : ''}`}>
                             {sig.confidence}%
                           </div>
                           <div className="text-[10px] text-muted-foreground">confidence</div>
