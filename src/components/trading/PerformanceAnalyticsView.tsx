@@ -9,6 +9,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart,
 } from 'recharts';
 import { TrendingUp, Calendar, Clock, DollarSign, Target, Award, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import PerformanceScorecard from './PerformanceScorecard';
 
 type Timeframe = 'today' | 'week' | 'month' | 'all';
 
@@ -823,6 +824,9 @@ export default function PerformanceAnalyticsView() {
             </tbody>
           </table>
         </div>
+
+        {/* Performance Scorecard - Weekly/Monthly Breakdown */}
+        <PerformanceScorecard />
       </motion.div>
     </motion.div>
   );

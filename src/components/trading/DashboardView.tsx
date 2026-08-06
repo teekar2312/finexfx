@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
 import { SYMBOLS, SYMBOL_INFO, BROKER_CONFIG, TRADING_SESSIONS, MARKET_CONDITION_CONFIG, type Symbol, type MarketCondition } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -385,8 +384,8 @@ export default function DashboardView() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
           >
-            <Card className={`glass-card card-hover card-hover-lift stat-card-glow stat-card-pattern ${stat.accentClass}`}>
-              <CardContent className="p-3">
+            <div className={`glass-card-premium rounded-xl card-hover-lift stat-card-glow stat-card-pattern ${stat.label === 'Balance' || stat.label === 'Daily P&L' ? 'metric-card-animated ' : ''}${stat.accentClass}`}>
+              <div className="p-3">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{stat.label}</span>
                   <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${stat.iconGradient} flex items-center justify-center ${stat.iconTextColor}`}>
@@ -394,14 +393,12 @@ export default function DashboardView() {
                   </div>
                 </div>
                 <div className="flex items-end gap-2">
-                  <div className={`text-xl md:text-2xl font-bold tabular-nums ${stat.color}${stat.label === 'Balance' ? ' gradient-text-emerald' : ''}${stat.label === 'Daily P&L' || stat.label === 'Total P&L' ? ' count-up' : ''}`}>
+                  <div className={`text-xl md:text-2xl font-bold tabular-nums ${stat.color}${stat.label === 'Balance' ? ' gradient-text-emerald' : ''}${stat.label === 'Daily P&L' || stat.label === 'Total P&L' ? (stat.color === 'text-emerald-500' ? ' neon-text-emerald' : ' neon-text-red') + ' count-up' : ''}`}>
                     {stat.value}
                   </div>
                 </div>
                 {stat.subValue && (
-                  <div className={`text-xs tabular-nums ${stat.color} mt-0.5`}>
-                    {stat.subValue}
-                  </div>
+                  <div className={`text-xs tabular-nums ${stat.color} mt-0.5`}>{stat.subValue}</div>
                 )}
                 {stat.sparkData && (
                   <div className="h-8 mt-1.5">
@@ -425,8 +422,8 @@ export default function DashboardView() {
                     </ResponsiveContainer>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </motion.div>
           );
         })}
@@ -461,7 +458,7 @@ export default function DashboardView() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 + i * 0.04 }}
             >
-              <div className="flex items-center gap-3 stat-card-micro rounded-lg p-2 -m-2">
+              <div className={`flex items-center gap-3 stat-card-micro rounded-lg p-2 -m-2 ${metric.label === 'Win Rate' ? 'metric-card-animated' : ''}`}>
                 <div className="relative flex-shrink-0">
                   <svg width="38" height="38" viewBox="0 0 38 38" className="-rotate-90">
                     <circle cx="19" cy="19" r="14" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
@@ -500,18 +497,14 @@ export default function DashboardView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Open Positions */}
-        <Card className="glass-card card-hover-lift lg:col-span-2 col-span-1">
-          <CardHeader className="pb-2 pt-3 px-4">
-            <div className="flex items-center justify-between">
-              <div className="section-title-accent">
-                <CardTitle className="text-sm font-semibold">Open Positions ({openTrades.length})</CardTitle>
-              </div>
-              <Badge variant="outline" className="text-[10px]">
-                Max {BROKER_CONFIG.maxOpenPositions}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-3">
+        <div className="glass-card-premium rounded-xl card-hover-lift metric-card-animated lg:col-span-2 col-span-1">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold section-title-accent">Open Positions ({openTrades.length})</span>
+            <Badge variant="outline" className="text-[10px]">
+              Max {BROKER_CONFIG.maxOpenPositions}
+            </Badge>
+          </div>
+          <div className="px-4 pb-3">
             {openTrades.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-sm">
                 No open positions
@@ -552,7 +545,7 @@ export default function DashboardView() {
                         <TableCell className={`text-xs text-right tabular-nums font-medium ${trade.pips >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                           {trade.pips >= 0 ? '+' : ''}{trade.pips.toFixed(1)}
                         </TableCell>
-                        <TableCell className={`text-xs text-right tabular-nums font-medium ${trade.profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                        <TableCell className={`text-xs text-right tabular-nums font-medium ${trade.profit >= 0 ? 'text-emerald-500 neon-text-emerald' : 'text-red-500 neon-text-red'}`}>
                           {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
                         </TableCell>
                       </TableRow>
@@ -561,26 +554,22 @@ export default function DashboardView() {
                 </Table>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Quick Actions + Sessions */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-          <Card className={`glass-card card-hover-lift quick-actions-gradient ${isAutoTrading ? 'border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.15)] breathe-emerald' : ''}`}>
-            <CardHeader className="pb-2 pt-3 px-4">
-              <div className="flex items-center justify-between">
-                <div className="section-title-accent">
-                  <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
+          <div className={`glass-card-premium rounded-xl card-hover-lift quick-actions-gradient ${isAutoTrading ? 'border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.15)] breathe-emerald' : ''}`}>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold section-title-accent">Quick Actions</span>
+              {isAutoTrading && (
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+                  <span className="text-[10px] font-medium text-emerald-400 animate-pulse">Auto Trading Active</span>
                 </div>
-                {isAutoTrading && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
-                    <span className="text-[10px] font-medium text-emerald-400 animate-pulse">Auto Trading Active</span>
-                  </div>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-3 space-y-2">
+              )}
+            </div>
+            <div className="px-4 pb-3 space-y-2">
               {isAutoTrading && (
                 <div className="flex items-center justify-between px-2 py-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 mb-1">
                   <span className="text-[10px] text-emerald-400">
@@ -623,20 +612,16 @@ export default function DashboardView() {
                 <RefreshCw className="h-4 w-4" />
                 <span className="text-xs font-medium">Refresh Signals</span>
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* (b) Better Session Indicators */}
-          <Card className="glass-card card-hover-lift">
-            <CardHeader className="pb-2 pt-3 px-4">
-              <div className="flex items-center justify-between">
-                <div className="section-title-accent">
-                  <CardTitle className="text-sm font-semibold">Trading Sessions</CardTitle>
-                </div>
-                <span className="text-[10px] text-muted-foreground tabular-nums font-medium">UTC {utcNow}</span>
-              </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-3 space-y-3">
+          <div className="glass-card-premium rounded-xl card-hover-lift">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold section-title-accent">Trading Sessions</span>
+              <span className="text-[10px] text-muted-foreground tabular-nums font-medium">UTC {utcNow}</span>
+            </div>
+            <div className="px-4 pb-3 space-y-3">
               {(() => {
                 const sessionEntries = Object.values(TRADING_SESSIONS);
                 const activeSessions = sessionEntries.map(s => getSessionStatus(s)).filter(s => s.isActive);
@@ -692,25 +677,21 @@ export default function DashboardView() {
                   </>
                 );
               })()}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* (c) Better Signal Cards */}
-        <Card className="glass-card card-hover-lift">
-          <CardHeader className="pb-2 pt-3 px-4">
-            <div className="flex items-center justify-between">
-              <div className="section-title-accent">
-                <CardTitle className="text-sm font-semibold">Recent Signals</CardTitle>
-              </div>
-              <Button variant="ghost" size="sm" className="text-xs text-primary" onClick={() => setActiveTab('analysis')}>
-                View All
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-3">
+        <div className="glass-card-premium rounded-xl card-hover-lift">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold section-title-accent">Recent Signals</span>
+            <Button variant="ghost" size="sm" className="text-xs text-primary" onClick={() => setActiveTab('analysis')}>
+              View All
+            </Button>
+          </div>
+          <div className="px-4 pb-3">
             {recentSignals.length === 0 ? (
               <div className="text-center py-6 text-muted-foreground text-sm">
                 No signals yet. Waiting for analysis...
@@ -793,17 +774,15 @@ export default function DashboardView() {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* (d) Market Conditions Enhancement */}
-        <Card className="glass-card card-hover-lift">
-          <CardHeader className="pb-2 pt-3 px-4">
-            <div className="section-title-accent">
-              <CardTitle className="text-sm font-semibold">Market Conditions</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-3">
+        <div className="glass-card-premium rounded-xl card-hover-lift">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-sm font-semibold section-title-accent">Market Conditions</span>
+          </div>
+          <div className="px-4 pb-3">
             <div className="space-y-3">
               {SYMBOLS.map((sym) => {
                 const condition = marketConditions[sym] || 'low_volatility';
@@ -847,8 +826,8 @@ export default function DashboardView() {
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Session Overlap Scanner */}
@@ -861,33 +840,29 @@ export default function DashboardView() {
       <WatchlistPanel />
 
       {/* P&L Heatmap Calendar */}
-      <Card className="glass-card card-hover-lift">
-        <CardHeader className="pb-2 pt-3 px-4">
-          <div className="flex items-center justify-between">
-            <div className="section-title-accent">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-primary" />
-                Daily P&L Calendar
-              </CardTitle>
+      <div className="glass-card-premium rounded-xl card-hover-lift">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-semibold section-title-accent flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-primary" />
+            Daily P&L Calendar
+          </span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm bg-red-500/35" />
+              <span className="text-[10px] text-muted-foreground">Loss</span>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-sm bg-red-500/35" />
-                <span className="text-[10px] text-muted-foreground">Loss</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500/35" />
-                <span className="text-[10px] text-muted-foreground">Profit</span>
-              </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500/35" />
+              <span className="text-[10px] text-muted-foreground">Profit</span>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="px-4 pb-3">
+        </div>
+        <div className="px-4 pb-3">
           {/* Monthly Summary Row */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
             <div className="rounded-lg bg-slate-800/30 border border-border/50 p-2.5">
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider">This Month P&L</div>
-              <div className={`text-sm font-bold tabular-nums mt-0.5 count-up ${monthlySummary.totalPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+              <div className={`text-sm font-bold tabular-nums mt-0.5 count-up ${monthlySummary.totalPnl >= 0 ? 'text-emerald-500 neon-text-emerald' : 'text-red-500 neon-text-red'}`}>
                 {monthlySummary.totalPnl >= 0 ? '+' : ''}${monthlySummary.totalPnl.toFixed(2)}
               </div>
               <div className={`text-[10px] tabular-nums ${monthlySummary.totalPnl >= 0 ? 'text-emerald-500/70' : 'text-red-500/70'}`}>
@@ -898,7 +873,7 @@ export default function DashboardView() {
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                 <TrendingUp className="h-3 w-3 text-emerald-500" /> Best Day
               </div>
-              <div className="text-sm font-bold tabular-nums mt-0.5 text-emerald-500">
+              <div className="text-sm font-bold tabular-nums mt-0.5 text-emerald-500 neon-text-emerald">
                 +${monthlySummary.bestDay.pnl.toFixed(2)}
               </div>
               <div className="text-[10px] text-muted-foreground tabular-nums">
@@ -909,7 +884,7 @@ export default function DashboardView() {
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                 <TrendingDown className="h-3 w-3 text-red-500" /> Worst Day
               </div>
-              <div className="text-sm font-bold tabular-nums mt-0.5 text-red-500">
+              <div className="text-sm font-bold tabular-nums mt-0.5 text-red-500 neon-text-red">
                 ${monthlySummary.worstDay.pnl.toFixed(2)}
               </div>
               <div className="text-[10px] text-muted-foreground tabular-nums">
@@ -950,7 +925,7 @@ export default function DashboardView() {
                         className={`rounded-md p-1.5 text-center transition-colors relative ${getCellBg(day.pnlPercent, day.pnl)} ${day.isToday ? 'ring-1 ring-primary ring-offset-1 ring-offset-background' : ''}`}
                       >
                         <div className="text-[10px] text-muted-foreground font-medium">{day.day}</div>
-                        <div className={`text-[10px] font-bold tabular-nums mt-0.5 ${day.pnl === 0 ? 'text-slate-500' : day.pnl > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        <div className={`text-[10px] font-bold tabular-nums mt-0.5 ${day.pnl === 0 ? 'text-slate-500' : day.pnl > 0 ? 'text-emerald-400 neon-text-emerald' : 'text-red-400 neon-text-red'}`}>
                           {day.pnl === 0 ? '•' : `${day.pnl >= 0 ? '+' : ''}$${day.pnl.toFixed(0)}`}
                         </div>
                       </div>
@@ -960,8 +935,8 @@ export default function DashboardView() {
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

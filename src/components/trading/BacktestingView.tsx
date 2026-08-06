@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
 import { SYMBOLS, SYMBOL_INFO, STRATEGIES, type Symbol, type StrategyName, type BacktestResult } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +13,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, RefreshCw, LineChart as LineChartIcon, TrendingUp, TrendingDown, DollarSign, Activity, Zap, Target, Shield, BarChart3, Clock, ArrowUpRight, ArrowDownRight, History } from 'lucide-react';
+
+// Stagger animation variants
+const containerVariants = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.06 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+};
 
 // Tooltip component declared outside render to avoid react-hooks/static-components lint error
 function BacktestEquityTooltip({ active, payload, label }: any) {
@@ -181,8 +193,8 @@ export default function BacktestingView() {
   return (
     <div className="p-4 space-y-4">
       {/* Controls */}
-      <Card className="glass-card">
-        <CardContent className="p-4">
+      <div className="glass-card-premium rounded-xl card-hover-lift">
+        <div className="p-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex-1 min-w-[160px]">
               <Label className="text-[11px] text-muted-foreground">Strategy</Label>
@@ -239,20 +251,20 @@ export default function BacktestingView() {
               </AnimatePresence>
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {latestResult ? (
         <>
           {/* Enhanced Equity Curve */}
-          <Card className="glass-card elevated-card card-hover">
-            <CardHeader className="pb-2 pt-3 px-4">
+          <div className="glass-card-premium rounded-xl card-hover-lift">
+            <div className="pb-2 pt-3 px-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <LineChartIcon className="h-4 w-4 text-primary" />
-                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">
+                  <div className="section-title-accent text-sm font-semibold">
                     Equity Curve — {latestResult.name} ({SYMBOL_INFO[latestResult.symbol].name})
-                  </CardTitle></span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   {maxPoint && (
@@ -272,8 +284,8 @@ export default function BacktestingView() {
                   </Badge>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-3">
+            </div>
+            <div className="px-4 pb-3">
               <div className="h-[280px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartData}>
@@ -297,145 +309,161 @@ export default function BacktestingView() {
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Stats Grid 2x4 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children glass-card-premium p-3 rounded-xl">
-            {/* Total P&L */}
-            <Card className={`glass-card card-hover ${isProfitable ? 'neon-glow border-emerald-500/20 bg-emerald-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
-              <CardContent className="p-3 pb-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Total P&L</span>
-                  <DollarSign className={`h-4 w-4 ${isProfitable ? 'text-emerald-500' : 'text-red-500'}`} />
-                </div>
-                <div className={`text-xl font-bold tabular-nums ${isProfitable ? 'text-emerald-500' : 'text-red-500'}`}>
-                  {totalPnL >= 0 ? '+' : ''}{"$"}{Math.abs(totalPnL).toFixed(2)}
-                </div>
-                <div className={`text-[10px] tabular-nums mt-0.5 ${isProfitable ? 'text-emerald-500/70' : 'text-red-500/70'}`}>
-                  {((totalPnL / latestResult.initialBalance) * 100).toFixed(2)}% return
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Win Rate with Ring */}
-            <Card className="glass-card card-hover">
-              <CardContent className="p-3 pb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1">Win Rate</span>
-                    <div className={`text-xl font-bold tabular-nums ${latestResult.winRate >= 55 ? 'text-emerald-500' : latestResult.winRate >= 45 ? 'text-amber-500' : 'text-red-500'}`}>
-                      {latestResult.winRate}%
-                    </div>
-                    <div className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">
-                      {Math.round(latestResult.totalTrades * latestResult.winRate / 100)}W / {latestResult.totalTrades - Math.round(latestResult.totalTrades * latestResult.winRate / 100)}L
-                    </div>
-                  </div>
-                  <WinRateRing value={latestResult.winRate} />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Profit Factor */}
-            <Card className="glass-card card-hover">
-              <CardContent className="p-3 pb-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Profit Factor</span>
-                  <Activity className={`h-4 w-4 ${latestResult.profitFactor >= 1.5 ? 'text-emerald-500' : latestResult.profitFactor >= 1.0 ? 'text-amber-500' : 'text-red-500'}`} />
-                </div>
-                <div className={`text-xl font-bold tabular-nums ${latestResult.profitFactor >= 1.5 ? 'text-emerald-500' : latestResult.profitFactor >= 1.0 ? 'text-amber-500' : 'text-red-500'}`}>
-                  {latestResult.profitFactor.toFixed(2)}
-                </div>
-                <div className="w-full h-1 rounded-full bg-white/5 mt-2">
-                  <div className={`h-full rounded-full transition-all ${latestResult.profitFactor >= 1.5 ? 'bg-emerald-500' : latestResult.profitFactor >= 1.0 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(latestResult.profitFactor / 3 * 100, 100)}%` }} />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Max Drawdown */}
-            <Card className="glass-card card-hover border-red-500/10">
-              <CardContent className="p-3 pb-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Max Drawdown</span>
-                  <Shield className={`h-4 w-4 ${latestResult.maxDrawdown <= 10 ? 'text-emerald-500' : latestResult.maxDrawdown <= 20 ? 'text-amber-500' : 'text-red-500'}`} />
-                </div>
-                <div className={`text-xl font-bold tabular-nums ${latestResult.maxDrawdown <= 10 ? 'text-emerald-500' : latestResult.maxDrawdown <= 20 ? 'text-amber-500' : 'text-red-500'}`}>
-                  {latestResult.maxDrawdown}%
-                </div>
-                <div className="w-full h-1 rounded-full bg-white/5 mt-2">
-                  <div className={`h-full rounded-full ${latestResult.maxDrawdown <= 10 ? 'bg-emerald-500' : latestResult.maxDrawdown <= 20 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(latestResult.maxDrawdown, 100)}%` }} />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Sharpe Ratio */}
-            <Card className="glass-card card-hover">
-              <CardContent className="p-3 pb-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Sharpe Ratio</span>
-                  <Zap className={`h-4 w-4 ${latestResult.sharpeRatio >= 1.5 ? 'text-emerald-500' : latestResult.sharpeRatio >= 1.0 ? 'text-amber-500' : 'text-red-500'}`} />
-                </div>
-                <div className={`text-xl font-bold tabular-nums ${latestResult.sharpeRatio >= 1.5 ? 'text-emerald-500' : latestResult.sharpeRatio >= 1.0 ? 'text-amber-500' : 'text-red-500'}`}>
-                  {latestResult.sharpeRatio.toFixed(2)}
-                </div>
-                <div className="w-full h-1 rounded-full bg-white/5 mt-2">
-                  <div className={`h-full rounded-full ${latestResult.sharpeRatio >= 1.5 ? 'bg-emerald-500' : latestResult.sharpeRatio >= 1.0 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(latestResult.sharpeRatio / 3 * 100, 100)}%` }} />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Total Trades */}
-            <Card className="glass-card card-hover">
-              <CardContent className="p-3 pb-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Total Trades</span>
-                  <BarChart3 className="h-4 w-4 text-slate-400" />
-                </div>
-                <div className="text-xl font-bold tabular-nums text-foreground">
-                  {latestResult.totalTrades}
-                </div>
-                <div className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">
-                  {Math.round(latestResult.totalTrades * latestResult.winRate / 100)} winners
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Avg Win */}
-            <Card className="glass-card card-hover border-b-2 border-b-emerald-500/40">
-              <CardContent className="p-3 pb-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Avg Win</span>
-                  <TrendingUp className="h-4 w-4 text-emerald-500" />
-                </div>
-                <div className="text-xl font-bold tabular-nums text-emerald-500">
-                  +${"$"}{latestResult.avgWin.toFixed(2)}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Avg Loss */}
-            <Card className="glass-card card-hover border-b-2 border-b-red-500/40">
-              <CardContent className="p-3 pb-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Avg Loss</span>
-                  <TrendingDown className="h-4 w-4 text-red-500" />
-                </div>
-                <div className="text-xl font-bold tabular-nums text-red-500">
-                  -${"$"}{latestResult.avgLoss.toFixed(2)}
-                </div>
-              </CardContent>
-            </Card>
+            </div>
           </div>
 
+          {/* Stats Grid 2x4 */}
+          <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-3 glass-card-premium p-3 rounded-xl" variants={containerVariants} initial="hidden" animate="show">
+            {/* Total P&L */}
+            <motion.div variants={itemVariants}>
+              <div className={`glass-card-premium rounded-xl card-hover-lift ${isProfitable ? 'neon-glow border-emerald-500/20 bg-emerald-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
+                <div className="p-3 pb-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Total P&L</span>
+                    <DollarSign className={`h-4 w-4 ${isProfitable ? 'text-emerald-500' : 'text-red-500'}`} />
+                  </div>
+                  <div className={`text-xl font-bold tabular-nums ${isProfitable ? 'text-emerald-500 neon-text-emerald' : 'text-red-500 neon-text-red'}`}>
+                    {totalPnL >= 0 ? '+' : ''}{"$"}{Math.abs(totalPnL).toFixed(2)}
+                  </div>
+                  <div className={`text-[10px] tabular-nums mt-0.5 ${isProfitable ? 'text-emerald-500/70' : 'text-red-500/70'}`}>
+                    {((totalPnL / latestResult.initialBalance) * 100).toFixed(2)}% return
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Win Rate with Ring */}
+            <motion.div variants={itemVariants}>
+              <div className="glass-card-premium rounded-xl card-hover-lift metric-card-animated">
+                <div className="p-3 pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1">Win Rate</span>
+                      <div className={`text-xl font-bold tabular-nums ${latestResult.winRate >= 55 ? 'text-emerald-500' : latestResult.winRate >= 45 ? 'text-amber-500' : 'text-red-500'}`}>
+                        {latestResult.winRate}%
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">
+                        {Math.round(latestResult.totalTrades * latestResult.winRate / 100)}W / {latestResult.totalTrades - Math.round(latestResult.totalTrades * latestResult.winRate / 100)}L
+                      </div>
+                    </div>
+                    <WinRateRing value={latestResult.winRate} />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Profit Factor */}
+            <motion.div variants={itemVariants}>
+              <div className="glass-card-premium rounded-xl card-hover-lift metric-card-animated">
+                <div className="p-3 pb-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Profit Factor</span>
+                    <Activity className={`h-4 w-4 ${latestResult.profitFactor >= 1.5 ? 'text-emerald-500' : latestResult.profitFactor >= 1.0 ? 'text-amber-500' : 'text-red-500'}`} />
+                  </div>
+                  <div className={`text-xl font-bold tabular-nums ${latestResult.profitFactor >= 1.5 ? 'text-emerald-500' : latestResult.profitFactor >= 1.0 ? 'text-amber-500' : 'text-red-500'}`}>
+                    {latestResult.profitFactor.toFixed(2)}
+                  </div>
+                  <div className="w-full h-1 rounded-full bg-white/5 mt-2">
+                    <div className={`h-full rounded-full transition-all ${latestResult.profitFactor >= 1.5 ? 'bg-emerald-500' : latestResult.profitFactor >= 1.0 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(latestResult.profitFactor / 3 * 100, 100)}%` }} />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Max Drawdown */}
+            <motion.div variants={itemVariants}>
+              <div className="glass-card-premium rounded-xl card-hover-lift metric-card-animated border-red-500/10">
+                <div className="p-3 pb-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Max Drawdown</span>
+                    <Shield className={`h-4 w-4 ${latestResult.maxDrawdown <= 10 ? 'text-emerald-500' : latestResult.maxDrawdown <= 20 ? 'text-amber-500' : 'text-red-500'}`} />
+                  </div>
+                  <div className={`text-xl font-bold tabular-nums ${latestResult.maxDrawdown <= 10 ? 'text-emerald-500' : latestResult.maxDrawdown <= 20 ? 'text-amber-500' : 'text-red-500'}`}>
+                    {latestResult.maxDrawdown}%
+                  </div>
+                  <div className="w-full h-1 rounded-full bg-white/5 mt-2">
+                    <div className={`h-full rounded-full ${latestResult.maxDrawdown <= 10 ? 'bg-emerald-500' : latestResult.maxDrawdown <= 20 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(latestResult.maxDrawdown, 100)}%` }} />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Sharpe Ratio */}
+            <motion.div variants={itemVariants}>
+              <div className="glass-card-premium rounded-xl card-hover-lift metric-card-animated">
+                <div className="p-3 pb-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Sharpe Ratio</span>
+                    <Zap className={`h-4 w-4 ${latestResult.sharpeRatio >= 1.5 ? 'text-emerald-500' : latestResult.sharpeRatio >= 1.0 ? 'text-amber-500' : 'text-red-500'}`} />
+                  </div>
+                  <div className={`text-xl font-bold tabular-nums ${latestResult.sharpeRatio >= 1.5 ? 'text-emerald-500' : latestResult.sharpeRatio >= 1.0 ? 'text-amber-500' : 'text-red-500'}`}>
+                    {latestResult.sharpeRatio.toFixed(2)}
+                  </div>
+                  <div className="w-full h-1 rounded-full bg-white/5 mt-2">
+                    <div className={`h-full rounded-full ${latestResult.sharpeRatio >= 1.5 ? 'bg-emerald-500' : latestResult.sharpeRatio >= 1.0 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(latestResult.sharpeRatio / 3 * 100, 100)}%` }} />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Total Trades */}
+            <motion.div variants={itemVariants}>
+              <div className="glass-card-premium rounded-xl card-hover-lift">
+                <div className="p-3 pb-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Total Trades</span>
+                    <BarChart3 className="h-4 w-4 text-slate-400" />
+                  </div>
+                  <div className="text-xl font-bold tabular-nums text-foreground">
+                    {latestResult.totalTrades}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">
+                    {Math.round(latestResult.totalTrades * latestResult.winRate / 100)} winners
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Avg Win */}
+            <motion.div variants={itemVariants}>
+              <div className="glass-card-premium rounded-xl card-hover-lift border-b-2 border-b-emerald-500/40">
+                <div className="p-3 pb-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Avg Win</span>
+                    <TrendingUp className="h-4 w-4 text-emerald-500" />
+                  </div>
+                  <div className="text-xl font-bold tabular-nums text-emerald-500 neon-text-emerald">
+                    +${"$"}{latestResult.avgWin.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Avg Loss */}
+            <motion.div variants={itemVariants}>
+              <div className="glass-card-premium rounded-xl card-hover-lift border-b-2 border-b-red-500/40">
+                <div className="p-3 pb-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Avg Loss</span>
+                    <TrendingDown className="h-4 w-4 text-red-500" />
+                  </div>
+                  <div className="text-xl font-bold tabular-nums text-red-500 neon-text-red">
+                    -${"$"}{latestResult.avgLoss.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+
           {/* Trade Distribution */}
-          <Card className="glass-card card-hover">
-            <CardHeader className="pb-2 pt-3 px-4">
+          <div className="glass-card-premium rounded-xl card-hover-lift">
+            <div className="pb-2 pt-3 px-4">
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-primary" />
-                <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Trade Distribution</CardTitle></span>
+                <div className="section-title-accent text-sm font-semibold">Trade Distribution</div>
               </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
+            </div>
+            <div className="px-4 pb-4">
               <div className="grid grid-cols-3 gap-4 stagger-children">
                 {/* Win/Loss Distribution */}
                 <div>
@@ -476,85 +504,89 @@ export default function BacktestingView() {
                   <div className="text-[10px] text-muted-foreground mt-0.5">{STRATEGIES[latestResult.strategy].timeframe} timeframe</div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Detailed Stats + Trade List */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 stagger-children">
-            <Card className="glass-card card-hover">
-              <CardHeader className="pb-2 pt-3 px-4">
-                <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Detailed Stats</CardTitle></span>
-              </CardHeader>
-              <CardContent className="px-4 pb-3 space-y-2">
-                {[
-                  { label: 'Initial Balance', value: `$${latestResult.initialBalance.toLocaleString()}` },
-                  { label: 'Final Balance', value: `$${latestResult.finalBalance.toLocaleString()}`, color: latestResult.finalBalance >= latestResult.initialBalance ? 'text-emerald-500' : 'text-red-500' },
-                  { label: 'Net Profit/Loss', value: `$${(latestResult.finalBalance - latestResult.initialBalance).toFixed(2)}`, color: latestResult.finalBalance >= latestResult.initialBalance ? 'text-emerald-500' : 'text-red-500' },
-                  { label: 'Return', value: `${(((latestResult.finalBalance - latestResult.initialBalance) / latestResult.initialBalance) * 100).toFixed(2)}%`, color: latestResult.finalBalance >= latestResult.initialBalance ? 'text-emerald-500' : 'text-red-500' },
-                  { label: 'Avg Win', value: `$${latestResult.avgWin.toFixed(2)}`, color: 'text-emerald-500' },
-                  { label: 'Avg Loss', value: `$${latestResult.avgLoss.toFixed(2)}`, color: 'text-red-500' },
-                  { label: 'Avg Win/Loss Ratio', value: (latestResult.avgLoss > 0 ? (latestResult.avgWin / latestResult.avgLoss).toFixed(2) : '∞') },
-                  { label: 'Expected Value', value: `$${((latestResult.winRate / 100 * latestResult.avgWin) - ((100 - latestResult.winRate) / 100 * latestResult.avgLoss)).toFixed(2)}` },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center justify-between py-1">
-                    <span className="text-[11px] text-muted-foreground">{item.label}</span>
-                    <span className={`text-[11px] font-medium tabular-nums ${'color' in item && (item as any).color ? (item as any).color : 'text-foreground'}`}>{item.value}</span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+          <motion.div className="grid grid-cols-1 lg:grid-cols-3 gap-4" variants={containerVariants} initial="hidden" animate="show">
+            <motion.div variants={itemVariants}>
+              <div className="glass-card-premium rounded-xl card-hover-lift">
+                <div className="pb-2 pt-3 px-4">
+                  <div className="section-title-accent text-sm font-semibold">Detailed Stats</div>
+                </div>
+                <div className="px-4 pb-3 space-y-2">
+                  {[
+                    { label: 'Initial Balance', value: `$${latestResult.initialBalance.toLocaleString()}` },
+                    { label: 'Final Balance', value: `$${latestResult.finalBalance.toLocaleString()}`, color: latestResult.finalBalance >= latestResult.initialBalance ? 'text-emerald-500' : 'text-red-500' },
+                    { label: 'Net Profit/Loss', value: `$${(latestResult.finalBalance - latestResult.initialBalance).toFixed(2)}`, color: latestResult.finalBalance >= latestResult.initialBalance ? 'text-emerald-500 neon-text-emerald' : 'text-red-500 neon-text-red' },
+                    { label: 'Return', value: `${(((latestResult.finalBalance - latestResult.initialBalance) / latestResult.initialBalance) * 100).toFixed(2)}%`, color: latestResult.finalBalance >= latestResult.initialBalance ? 'text-emerald-500' : 'text-red-500' },
+                    { label: 'Avg Win', value: `$${latestResult.avgWin.toFixed(2)}`, color: 'text-emerald-500' },
+                    { label: 'Avg Loss', value: `$${latestResult.avgLoss.toFixed(2)}`, color: 'text-red-500' },
+                    { label: 'Avg Win/Loss Ratio', value: (latestResult.avgLoss > 0 ? (latestResult.avgWin / latestResult.avgLoss).toFixed(2) : '∞') },
+                    { label: 'Expected Value', value: `$${((latestResult.winRate / 100 * latestResult.avgWin) - ((100 - latestResult.winRate) / 100 * latestResult.avgLoss)).toFixed(2)}` },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center justify-between py-1">
+                      <span className="text-[11px] text-muted-foreground">{item.label}</span>
+                      <span className={`text-[11px] font-medium tabular-nums ${'color' in item && (item as any).color ? (item as any).color : 'text-foreground'}`}>{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
 
-            <Card className="glass-card card-hover lg:col-span-2">
-              <CardHeader className="pb-2 pt-3 px-4">
-                <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Trade List (Sample)</CardTitle></span>
-              </CardHeader>
-              <CardContent className="px-4 pb-3">
-                <ScrollArea className="h-[300px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-border hover:bg-transparent">
-                        <TableHead className="text-[10px] h-8">#</TableHead>
-                        <TableHead className="text-[10px] h-8">Equity</TableHead>
-                        <TableHead className="text-[10px] h-8">P&L Change</TableHead>
-                        <TableHead className="text-[10px] h-8 text-right">Cumulative P&L</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {latestResult.equityCurve.map((point, idx) => {
-                        const prevEquity = idx > 0 ? latestResult.equityCurve[idx - 1].equity : latestResult.initialBalance;
-                        const pnlChange = point.equity - prevEquity;
-                        const cumPnl = point.equity - latestResult.initialBalance;
-                        return (
-                          <TableRow key={point.trade} className="border-border">
-                            <TableCell className="text-[10px] tabular-nums">{point.trade}</TableCell>
-                            <TableCell className="text-[10px] tabular-nums">${point.equity.toFixed(2)}</TableCell>
-                            <TableCell className={`text-[10px] tabular-nums font-medium ${pnlChange >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                              {pnlChange >= 0 ? '+' : ''}${pnlChange.toFixed(2)}
-                            </TableCell>
-                            <TableCell className={`text-[10px] text-right tabular-nums font-medium ${cumPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                              {cumPnl >= 0 ? '+' : ''}${cumPnl.toFixed(2)}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </div>
+            <motion.div variants={itemVariants} className="lg:col-span-2">
+              <div className="glass-card-premium rounded-xl card-hover-lift">
+                <div className="pb-2 pt-3 px-4">
+                  <div className="section-title-accent text-sm font-semibold">Trade List (Sample)</div>
+                </div>
+                <div className="px-4 pb-3">
+                  <ScrollArea className="h-[300px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-border hover:bg-transparent">
+                          <TableHead className="text-[10px] h-8">#</TableHead>
+                          <TableHead className="text-[10px] h-8">Equity</TableHead>
+                          <TableHead className="text-[10px] h-8">P&L Change</TableHead>
+                          <TableHead className="text-[10px] h-8 text-right">Cumulative P&L</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {latestResult.equityCurve.map((point, idx) => {
+                          const prevEquity = idx > 0 ? latestResult.equityCurve[idx - 1].equity : latestResult.initialBalance;
+                          const pnlChange = point.equity - prevEquity;
+                          const cumPnl = point.equity - latestResult.initialBalance;
+                          return (
+                            <TableRow key={point.trade} className="border-border">
+                              <TableCell className="text-[10px] tabular-nums">{point.trade}</TableCell>
+                              <TableCell className="text-[10px] tabular-nums">${point.equity.toFixed(2)}</TableCell>
+                              <TableCell className={`text-[10px] tabular-nums font-medium ${pnlChange >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                {pnlChange >= 0 ? '+' : ''}${pnlChange.toFixed(2)}
+                              </TableCell>
+                              <TableCell className={`text-[10px] text-right tabular-nums font-medium ${cumPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                {cumPnl >= 0 ? '+' : ''}${cumPnl.toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
 
           {/* Backtest History */}
           {backtestResults.length > 1 && (
-            <Card className="glass-card card-hover">
-              <CardHeader className="pb-2 pt-3 px-4">
+            <div className="glass-card-premium rounded-xl card-hover-lift">
+              <div className="pb-2 pt-3 px-4">
                 <div className="flex items-center gap-2">
                   <History className="h-4 w-4 text-primary" />
-                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Backtest History</CardTitle></span>
+                  <div className="section-title-accent text-sm font-semibold">Backtest History</div>
                   <Badge variant="outline" className="text-[10px] ml-auto">{backtestResults.length} results</Badge>
                 </div>
-              </CardHeader>
-              <CardContent className="px-4 pb-3">
+              </div>
+              <div className="px-4 pb-3">
                 <ScrollArea className="max-h-[200px]">
                   <Table>
                     <TableHeader>
@@ -597,18 +629,18 @@ export default function BacktestingView() {
                     </TableBody>
                   </Table>
                 </ScrollArea>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
         </>
       ) : (
-        <Card className="glass-card card-hover">
-          <CardContent className="p-12 text-center">
+        <div className="glass-card-premium rounded-xl card-hover-lift">
+          <div className="p-12 text-center">
             <LineChartIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
             <h3 className="text-sm font-medium text-muted-foreground mb-1">No Backtest Results</h3>
             <p className="text-xs text-muted-foreground">Select a strategy, symbol, and date range, then click &quot;Run Backtest&quot; to see results.</p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
     </div>
   );

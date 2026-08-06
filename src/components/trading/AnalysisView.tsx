@@ -17,6 +17,7 @@ import {
 import MultiTimeframePanel from './MultiTimeframePanel';
 import SignalDetailModal from './SignalDetailModal';
 import CorrelationMatrix from './CorrelationMatrix';
+import CandlestickPatternRecognition from './CandlestickPatternRecognition';
 import type { TradingSignal } from '@/lib/types';
 
 function getConditionIcon(condition: MarketCondition, size: number = 20) {
@@ -256,6 +257,9 @@ export default function AnalysisView() {
   return (
     <TooltipProvider delayDuration={200}>
     <div className="p-4 space-y-4 scrollbar-thin">
+      {/* Candlestick Pattern Recognition */}
+      <CandlestickPatternRecognition />
+
       {/* Currency Correlation Matrix - Enhanced */}
       <CorrelationMatrix />
 

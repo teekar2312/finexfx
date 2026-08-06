@@ -1,0 +1,760 @@
+     1→     1→'use client';
+     2→     2→
+     3→     3→import { useState, useMemo } from 'react';
+     4→     4→import { useTradingStore } from '@/store/trading-store';
+     5→     5→import { BROKER_CONFIG, SYMBOL_INFO } from '@/lib/types';
+     6→     6→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+     7→     7→import { Button } from '@/components/ui/button';
+     8→     8→import { Input } from '@/components/ui/input';
+     9→     9→import { Label } from '@/components/ui/label';
+    10→    10→import { Switch } from '@/components/ui/switch';
+    11→    11→import { Badge } from '@/components/ui/badge';
+    12→    12→import { Separator } from '@/components/ui/separator';
+    13→    13→import { ScrollArea } from '@/components/ui/scroll-area';
+    14→    14→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+    15→    15→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+    16→    16→import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+    17→    17→import { Shield, Bell, Server, TriangleAlert, Plus, RefreshCw, Trash2, Wifi, WifiOff, Globe, HardDrive, CheckCircle, AlertCircle, Info, Filter, Zap, DollarSign, Activity, Clock, Target, Volume2 } from 'lucide-react';
+    18→    18→import { setSoundEnabled } from '@/lib/sounds';
+    19→    19→import { SYMBOLS, type Symbol } from '@/lib/types';
+    20→    20→import { motion, AnimatePresence } from 'framer-motion';
+    21→    21→
+    22→    22→export default function SettingsView() {
+    23→    23→  const {
+    24→    24→    accountType, balance, equity, margin, dailyPnl, totalPnl, isConnected, isAutoTrading,
+    25→    25→    priceAlerts, addPriceAlert, removePriceAlert, togglePriceAlert,
+    26→    26→    errorLogs, clearResolvedLogs, addNotification, notifications, closedTrades, openTrades,
+    27→    27→  } = useTradingStore();
+    28→    28→
+    29→    29→  const [emailNotif, setEmailNotif] = useState(true);
+    30→    30→  const [pushNotif, setPushNotif] = useState(true);
+    31→    31→  const [soundNotif, setSoundNotif] = useState(true);
+    32→    32→  const [newAlertSymbol, setNewAlertSymbol] = useState<Symbol>('EURUSD');
+    33→    33→  const [newAlertCondition, setNewAlertCondition] = useState('above');
+    34→    34→  const [newAlertPrice, setNewAlertPrice] = useState('1.10000');
+    35→    35→  const [logFilter, setLogFilter] = useState<string>('all');
+    36→    36→
+    37→    37→  // Broker connection test
+    38→    38→  const [isTesting, setIsTesting] = useState(false);
+    39→    39→  const [testResult, setTestResult] = useState<'success' | 'fail' | null>(null);
+    40→    40→  const [testPing, setTestPing] = useState<number | null>(null);
+    41→    41→
+    42→    42→  const handleConnectionTest = () => {
+    43→    43→    setIsTesting(true);
+    44→    44→    setTestResult(null);
+    45→    45→    setTestPing(null);
+    46→    46→    setTimeout(() => {
+    47→    47→      const success = isConnected || Math.random() > 0.3;
+    48→    48→      setIsTesting(false);
+    49→    49→      setTestResult(success ? 'success' : 'fail');
+    50→    50→      setTestPing(Math.floor(Math.random() * 80) + 15);
+    51→    51→    }, 2000);
+    52→    52→  };
+    53→    53→
+    54→    54→  const addNewAlert = () => {
+    55→    55→    const price = parseFloat(newAlertPrice);
+    56→    56→    if (isNaN(price)) {
+    57→    57→      addNotification({ type: 'error', title: 'Invalid Price', message: 'Please enter a valid price.' });
+    58→    58→      return;
+    59→    59→    }
+    60→    60→    addPriceAlert({
+    61→    61→      symbol: newAlertSymbol,
+    62→    62→      condition: newAlertCondition,
+    63→    63→      price,
+    64→    64→      isActive: true,
+    65→    65→    });
+    66→    66→    addNotification({ type: 'success', title: 'Alert Created', message: `${newAlertSymbol} ${newAlertCondition} ${price}` });
+    67→    67→  };
+    68→    68→
+    69→    69→  // Account statistics from closed trades
+    70→    70→  const accountStats = useMemo(() => {
+    71→    71→    const total = closedTrades.length;
+    72→    72→    const wins = closedTrades.filter(t => t.profit > 0).length;
+    73→    73→    const winRate = total > 0 ? (wins / total * 100) : 0;
+    74→    74→    let totalDuration = 0;
+    75→    75→    closedTrades.forEach(t => {
+    76→    76→      if (t.openedAt && t.closedAt) {
+    77→    77→        totalDuration += new Date(t.closedAt).getTime() - new Date(t.openedAt).getTime();
+    78→    78→      }
+    79→    79→    });
+    80→    80→    const avgDuration = total > 0 ? totalDuration / total : 0;
+    81→    81→    const avgDurationStr = avgDuration > 0
+    82→    82→      ? `${Math.floor(avgDuration / 60000)}m ${Math.round((avgDuration % 60000) / 1000)}s`
+    83→    83→      : 'N/A';
+    84→    84→    return { total, wins, winRate, avgDuration: avgDurationStr };
+    85→    85→  }, [closedTrades]);
+    86→    86→
+    87→    87→  // Account health score
+    88→    88→  const healthScore = useMemo(() => {
+    89→    89→    const equityGrowth = Math.min(((equity - 10000) / 10000) * 30, 30);
+    90→    90→    const dailyBonus = dailyPnl >= 0 ? 15 : 5;
+    91→    91→    const positionPenalty = openTrades.length > 2 ? -10 : 0;
+    92→    92→    return Math.round(Math.min(100, Math.max(0, 50 + equityGrowth + dailyBonus + positionPenalty)));
+    93→    93→  }, [equity, dailyPnl, openTrades.length]);
+    94→    94→
+    95→    95→  // Error log counts
+    96→    96→  const logCounts = useMemo(() => ({
+    97→    97→    total: errorLogs.length,
+    98→    98→    errors: errorLogs.filter(l => l.level === 'error').length,
+    99→    99→    warnings: errorLogs.filter(l => l.level === 'warning').length,
+   100→   100→    info: errorLogs.filter(l => l.level === 'info').length,
+   101→   101→    resolved: errorLogs.filter(l => l.resolved).length,
+   102→   102→  }), [errorLogs]);
+   103→   103→
+   104→   104→  const filteredLogs = logFilter === 'all'
+   105→   105→    ? errorLogs
+   106→   106→    : errorLogs.filter(l => l.level === logFilter);
+   107→   107→
+   108→   108→  const filterButtons = [
+   109→   109→    { key: 'all', label: 'All', count: logCounts.total, color: 'text-foreground' },
+   110→   110→    { key: 'error', label: 'Errors', count: logCounts.errors, color: 'text-red-500' },
+   111→   111→    { key: 'warning', label: 'Warnings', count: logCounts.warnings, color: 'text-amber-500' },
+   112→   112→    { key: 'info', label: 'Info', count: logCounts.info, color: 'text-slate-400' },
+   113→   113→  ];
+   114→   114→
+   115→   115→  return (
+   116→   116→    <div className="p-4">
+   117→   117→      <Tabs defaultValue="broker" className="w-full">
+   118→   118→        <TabsList className="bg-card border border-border mb-4">
+   119→   119→          <TabsTrigger value="broker" className="text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+   120→   120→            <Server className="h-3.5 w-3.5 mr-1" />
+   121→   121→            Broker
+   122→   122→          </TabsTrigger>
+   123→   123→          <TabsTrigger value="account" className="text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+   124→   124→            <Shield className="h-3.5 w-3.5 mr-1" />
+   125→   125→            Account
+   126→   126→          </TabsTrigger>
+   127→   127→          <TabsTrigger value="notifications" className="text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+   128→   128→            <Bell className="h-3.5 w-3.5 mr-1" />
+   129→   129→            Alerts
+   130→   130→          </TabsTrigger>
+   131→   131→          <TabsTrigger value="logs" className="text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+   132→   132→            <TriangleAlert className="h-3.5 w-3.5 mr-1" />
+   133→   133→            Error Logs
+   134→   134→          </TabsTrigger>
+   135→   135→        </TabsList>
+   136→   136→
+   137→   137→        {/* ==================== BROKER TAB ==================== */}
+   138→   138→        <TabsContent value="broker" className="space-y-4">
+   139→   139→          {/* Broker Hero Card */}
+   140→   140→          <Card className="glass-card elevated-card card-hover">
+   141→   141→            <CardContent className="p-4">
+   142→   142→              <div className="flex items-center gap-4">
+   143→   143→                {/* Logo Placeholder */}
+   144→   144→                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center flex-shrink-0">
+   145→   145→                  <span className="text-xl font-black text-white">FX</span>
+   146→   146→                </div>
+   147→   147→                <div className="flex-1 min-w-0">
+   148→   148→                  <div className="flex items-center gap-2 mb-0.5">
+   149→   149→                    <h2 className="text-lg font-bold">{BROKER_CONFIG.name}</h2>
+   150→   150→                    <Badge variant="outline" className={`text-[10px] border-emerald-500/50 text-emerald-500 ${isConnected ? 'pulse-dot-border' : ''}`}>
+   151→   151→                      {isConnected ? '● Connected' : '○ Disconnected'}
+   152→   152→                    </Badge>
+   153→   153→                  </div>
+   154→   154→                  <div className="text-[11px] text-muted-foreground">MetaTrader 5 • ECN Account • 1:{BROKER_CONFIG.leverage} Leverage</div>
+   155→   155→                  <div className="flex items-center gap-4 mt-2">
+   156→   156→                    <div className="flex items-center gap-1 text-[10px]">
+   157→   157→                      <Globe className="h-3 w-3 text-muted-foreground" />
+   158→   158→                      <span className="text-muted-foreground">Jakarta, Indonesia</span>
+   159→   159→                    </div>
+   160→   160→                    <div className="flex items-center gap-1 text-[10px]">
+   161→   161→                      <HardDrive className="h-3 w-3 text-muted-foreground" />
+   162→   162→                      <span className="text-muted-foreground">MT5 Server</span>
+   163→   163→                    </div>
+   164→   164→                    <div className="flex items-center gap-1 text-[10px]">
+   165→   165→                      <DollarSign className="h-3 w-3 text-muted-foreground" />
+   166→   166→                      <span className="text-muted-foreground">USD Account</span>
+   167→   167→                    </div>
+   168→   168→                  </div>
+   169→   169→                </div>
+   170→   170→                {/* Connection Test Button */}
+   171→   171→                <div className="flex flex-col items-end gap-1">
+   172→   172→                  <Button
+   173→   173→                    onClick={handleConnectionTest}
+   174→   174→                    disabled={isTesting}
+   175→   175→                    variant="outline"
+   176→   176→                    size="sm"
+   177→   177→                    className="text-xs h-8"
+   178→   178→                  >
+   179→   179→                    {isTesting ? (
+   180→   180→                      <>
+   181→   181→                        <RefreshCw className="h-3.5 w-3.5 mr-1 animate-spin" />
+   182→   182→                        Testing...
+   183→   183→                      </>
+   184→   184→                    ) : (
+   185→   185→                      <>
+   186→   186→                        <Wifi className="h-3.5 w-3.5 mr-1" />
+   187→   187→                        Connection Test
+   188→   188→                      </>
+   189→   189→                    )}
+   190→   190→                  </Button>
+   191→   191→                  {testResult && (
+   192→   192→                    <AnimatePresence>
+   193→   193→                      <motion.div
+   194→   194→                        initial={{ opacity: 0, y: -5 }}
+   195→   195→                        animate={{ opacity: 1, y: 0 }}
+   196→   196→                        className={`flex items-center gap-1 text-[10px] ${testResult === 'success' ? 'text-emerald-500' : 'text-red-500'}`}
+   197→   197→                      >
+   198→   198→                        {testResult === 'success' ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+   199→   199→                        {testResult === 'success' ? `Connected (${testPing}ms)` : 'Connection failed'}
+   200→   200→                      </motion.div>
+   201→   201→                    </AnimatePresence>
+   202→   202→                  )}
+   203→   203→                </div>
+   204→   204→              </div>
+   205→   205→            </CardContent>
+   206→   206→          </Card>
+   207→   207→
+   208→   208→          {/* Broker Specs - 2-column grid with green dots */}
+   209→   209→          <Card className="glass-card card-hover">
+   210→   210→            <CardHeader className="pb-2 pt-3 px-4">
+   211→   211→              <div className="flex items-center gap-2">
+   212→   212→                <Server className="h-4 w-4 text-primary" />
+   213→   213→                <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Broker Specifications</CardTitle></span>
+   214→   214→              </div>
+   215→   215→            </CardHeader>
+   216→   216→            <CardContent className="px-4 pb-4">
+   217→   217→              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 stagger-children">
+   218→   218→                {[
+   219→   219→                  { label: 'Leverage', value: `1:${BROKER_CONFIG.leverage}` },
+   220→   220→                  { label: 'Min Spread', value: `${BROKER_CONFIG.minSpread} pips` },
+   221→   221→                  { label: 'Commission', value: `$${BROKER_CONFIG.commission}/lot` },
+   222→   222→                  { label: 'Min Lot Size', value: BROKER_CONFIG.minLotSize.toString() },
+   223→   223→                  { label: 'Max Lot Size', value: BROKER_CONFIG.maxLotSize.toString() },
+   224→   224→                  { label: 'Max Open Positions', value: BROKER_CONFIG.maxOpenPositions.toString() },
+   225→   225→                  { label: 'Margin Call Level', value: `${BROKER_CONFIG.marginCall}%` },
+   226→   226→                  { label: 'Stop Out Level', value: `${BROKER_CONFIG.stopOut}%` },
+   227→   227→                ].map((item) => (
+   228→   228→                  <div key={item.label} className="flex items-center gap-2 py-1">
+   229→   229→                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+   230→   230→                    <div className="flex-1 min-w-0">
+   231→   231→                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground block">{item.label}</span>
+   232→   232→                      <span className={`text-sm font-medium tabular-nums ${['Leverage', 'Min Spread', 'Commission'].includes(item.label) ? 'metric-compact' : ''}`}>{item.value}</span>
+   233→   233→                    </div>
+   234→   234→                  </div>
+   235→   235→                ))}
+   236→   236→              </div>
+   237→   237→            </CardContent>
+   238→   238→          </Card>
+   239→   239→
+   240→   240→          {/* Server Status */}
+   241→   241→          <Card className="glass-card card-hover">
+   242→   242→            <CardHeader className="pb-2 pt-3 px-4">
+   243→   243→              <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Server Status</CardTitle></span>
+   244→   244→            </CardHeader>
+   245→   245→            <CardContent className="px-4 pb-4">
+   246→   246→              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
+   247→   247→                <div className="flex items-center gap-2">
+   248→   248→                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 pulse-dot' : 'bg-red-500'}`} />
+   249→   249→                  <div>
+   250→   250→                    <div className="text-[10px] text-muted-foreground">Connection</div>
+   251→   251→                    <div className="text-xs font-medium">{isConnected ? 'Connected' : 'Disconnected'}</div>
+   252→   252→                  </div>
+   253→   253→                </div>
+   254→   254→                <div className="flex items-center gap-2">
+   255→   255→                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`} />
+   256→   256→                  <div>
+   257→   257→                    <div className="text-[10px] text-muted-foreground">Price Feed</div>
+   258→   258→                    <div className="text-xs font-medium">{isConnected ? 'Live' : 'Offline'}</div>
+   259→   259→                  </div>
+   260→   260→                </div>
+   261→   261→                <div className="flex items-center gap-2">
+   262→   262→                  <div className={`w-2 h-2 rounded-full ${isAutoTrading ? 'bg-emerald-500 pulse-dot' : 'bg-slate-500'}`} />
+   263→   263→                  <div>
+   264→   264→                    <div className="text-[10px] text-muted-foreground">Auto Trading</div>
+   265→   265→                    <div className="text-xs font-medium">{isAutoTrading ? 'Running' : 'Stopped'}</div>
+   266→   266→                  </div>
+   267→   267→                </div>
+   268→   268→                <div className="flex items-center gap-2">
+   269→   269→                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
+   270→   270→                  <div>
+   271→   271→                    <div className="text-[10px] text-muted-foreground">Account</div>
+   272→   272→                    <div className="text-xs font-medium tabular-nums">${balance.toLocaleString()}</div>
+   273→   273→                  </div>
+   274→   274→                </div>
+   275→   275→              </div>
+   276→   276→            </CardContent>
+   277→   277→          </Card>
+   278→   278→        </TabsContent>
+   279→   279→
+   280→   280→        {/* ==================== ACCOUNT TAB ==================== */}
+   281→   281→        <TabsContent value="account" className="space-y-4">
+   282→   282→          {/* Account Summary Card */}
+   283→   283→          <Card className="glass-card card-hover">
+   284→   284→            <CardHeader className="pb-2 pt-3 px-4">
+   285→   285→              <div className="flex items-center justify-between">
+   286→   286→                <div className="flex items-center gap-2">
+   287→   287→                  <Shield className="h-4 w-4 text-primary" />
+   288→   288→                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Account Overview</CardTitle></span>
+   289→   289→                </div>
+   290→   290→                <Badge className={`text-[10px] ${accountType === 'live' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'bg-amber-500/10 text-amber-500 border-amber-500/30'}`}>
+   291→   291→                  {accountType === 'live' ? '● LIVE' : '● DEMO'}
+   292→   292→                </Badge>
+   293→   293→              </div>
+   294→   294→            </CardHeader>
+   295→   295→            <CardContent className="px-4 pb-4">
+   296→   296→              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
+   297→   297→                <div className="p-3 rounded-lg bg-accent/50 border border-border">
+   298→   298→                  <div className="text-[10px] text-muted-foreground mb-0.5">Balance</div>
+   299→   299→                  <div className="text-lg font-bold tabular-nums">${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+   300→   300→                </div>
+   301→   301→                <div className="p-3 rounded-lg bg-accent/50 border border-border">
+   302→   302→                  <div className="text-[10px] text-muted-foreground mb-0.5">Equity</div>
+   303→   303→                  <div className={`text-lg font-bold tabular-nums ${equity >= balance ? 'text-emerald-500' : 'text-red-500'}`}>
+   304→   304→                    ${equity.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+   305→   305→                  </div>
+   306→   306→                </div>
+   307→   307→                <div className="p-3 rounded-lg bg-accent/50 border border-border">
+   308→   308→                  <div className="text-[10px] text-muted-foreground mb-0.5">Used Margin</div>
+   309→   309→                  <div className="text-lg font-bold tabular-nums">${margin.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+   310→   310→                </div>
+   311→   311→                <div className="p-3 rounded-lg bg-accent/50 border border-border">
+   312→   312→                  <div className="text-[10px] text-muted-foreground mb-0.5">Total P&L</div>
+   313→   313→                  <div className={`text-lg font-bold tabular-nums ${totalPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   314→   314→                    {totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}
+   315→   315→                  </div>
+   316→   316→                </div>
+   317→   317→              </div>
+   318→   318→            </CardContent>
+   319→   319→          </Card>
+   320→   320→
+   321→   321→          {/* Trading Statistics + Account Health */}
+   322→   322→          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-children">
+   323→   323→            <Card className="glass-card card-hover">
+   324→   324→              <CardHeader className="pb-2 pt-3 px-4">
+   325→   325→                <div className="flex items-center gap-2">
+   326→   326→                  <Activity className="h-4 w-4 text-primary" />
+   327→   327→                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Trading Statistics</CardTitle></span>
+   328→   328→                </div>
+   329→   329→              </CardHeader>
+   330→   330→              <CardContent className="px-4 pb-4 space-y-3">
+   331→   331→                <div className="grid grid-cols-3 gap-3 stagger-children">
+   332→   332→                  <div className="text-center p-2 rounded-lg bg-accent/30">
+   333→   333→                    <div className="text-[10px] text-muted-foreground">Total Trades</div>
+   334→   334→                    <div className="text-base font-bold tabular-nums mt-0.5">{accountStats.total}</div>
+   335→   335→                  </div>
+   336→   336→                  <div className="text-center p-2 rounded-lg bg-accent/30">
+   337→   337→                    <div className="text-[10px] text-muted-foreground">Win Rate</div>
+   338→   338→                    <div className={`text-base font-bold tabular-nums mt-0.5 ${accountStats.winRate >= 50 ? 'text-emerald-500' : 'text-red-500'}`}>
+   339→   339→                      {accountStats.winRate.toFixed(1)}%
+   340→   340→                    </div>
+   341→   341→                  </div>
+   342→   342→                  <div className="text-center p-2 rounded-lg bg-accent/30">
+   343→   343→                    <div className="text-[10px] text-muted-foreground">Avg Duration</div>
+   344→   344→                    <div className="text-base font-bold tabular-nums mt-0.5">{accountStats.avgDuration}</div>
+   345→   345→                  </div>
+   346→   346→                </div>
+   347→   347→                <Separator className="opacity-50" />
+   348→   348→                <div className="grid grid-cols-2 gap-3 stagger-children">
+   349→   349→                  <div className="flex items-center justify-between">
+   350→   350→                    <span className="text-[11px] text-muted-foreground">Wins</span>
+   351→   351→                    <span className="text-[11px] font-bold tabular-nums text-emerald-500">{accountStats.wins}</span>
+   352→   352→                  </div>
+   353→   353→                  <div className="flex items-center justify-between">
+   354→   354→                    <span className="text-[11px] text-muted-foreground">Losses</span>
+   355→   355→                    <span className="text-[11px] font-bold tabular-nums text-red-500">{accountStats.total - accountStats.wins}</span>
+   356→   356→                  </div>
+   357→   357→                  <div className="flex items-center justify-between">
+   358→   358→                    <span className="text-[11px] text-muted-foreground">Daily P&L</span>
+   359→   359→                    <span className={`text-[11px] font-bold tabular-nums ${dailyPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   360→   360→                      {dailyPnl >= 0 ? '+' : ''}${dailyPnl.toFixed(2)}
+   361→   361→                    </span>
+   362→   362→                  </div>
+   363→   363→                  <div className="flex items-center justify-between">
+   364→   364→                    <span className="text-[11px] text-muted-foreground">Open Positions</span>
+   365→   365→                    <span className="text-[11px] font-bold tabular-nums">{openTrades.length}</span>
+   366→   366→                  </div>
+   367→   367→                </div>
+   368→   368→              </CardContent>
+   369→   369→            </Card>
+   370→   370→
+   371→   371→            {/* Account Health */}
+   372→   372→            <Card className="glass-card card-hover">
+   373→   373→              <CardHeader className="pb-2 pt-3 px-4">
+   374→   374→                <div className="flex items-center gap-2">
+   375→   375→                  <Target className="h-4 w-4 text-primary" />
+   376→   376→                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Account Health</CardTitle></span>
+   377→   377→                </div>
+   378→   378→              </CardHeader>
+   379→   379→              <CardContent className="px-4 pb-4">
+   380→   380→                <div className="flex items-center gap-4 mb-4">
+   381→   381→                  {/* Health Gauge */}
+   382→   382→                  <div className="relative w-20 h-20 flex-shrink-0">
+   383→   383→                    <svg width="80" height="80" className="-rotate-90">
+   384→   384→                      <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
+   385→   385→                      <circle
+   386→   386→                        cx="40" cy="40" r="32" fill="none"
+   387→   387→                        stroke={healthScore >= 70 ? '#10b981' : healthScore >= 40 ? '#f59e0b' : '#ef4444'}
+   388→   388→                        strokeWidth="6"
+   389→   389→                        strokeDasharray={2 * Math.PI * 32}
+   390→   390→                        strokeDashoffset={2 * Math.PI * 32 * (1 - healthScore / 100)}
+   391→   391→                        strokeLinecap="round"
+   392→   392→                      />
+   393→   393→                    </svg>
+   394→   394→                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+   395→   395→                      <span className={`text-lg font-bold tabular-nums ${healthScore >= 70 ? 'text-emerald-500' : healthScore >= 40 ? 'text-amber-500' : 'text-red-500'}`}>
+   396→   396→                        {healthScore}
+   397→   397→                      </span>
+   398→   398→                      <span className="text-[8px] text-muted-foreground">SCORE</span>
+   399→   399→                    </div>
+   400→   400→                  </div>
+   401→   401→                  <div className="flex-1 space-y-2">
+   402→   402→                    <div className={`text-sm font-semibold ${healthScore >= 70 ? 'text-emerald-500' : healthScore >= 40 ? 'text-amber-500' : 'text-red-500'}`}>
+   403→   403→                      {healthScore >= 80 ? 'Excellent' : healthScore >= 60 ? 'Good' : healthScore >= 40 ? 'Fair' : 'Needs Attention'}
+   404→   404→                    </div>
+   405→   405→                    <div className="text-[10px] text-muted-foreground leading-relaxed">
+   406→   406→                      {healthScore >= 70
+   407→   407→                        ? 'Account is performing well. Continue following risk rules.'
+   408→   408→                        : healthScore >= 40
+   409→   409→                        ? 'Account performance is moderate. Consider reducing position sizes.'
+   410→   410→                        : 'Account health is low. Review risk management and consider pausing trading.'}
+   411→   411→                    </div>
+   412→   412→                  </div>
+   413→   413→                </div>
+   414→   414→
+   415→   415→                <Separator className="opacity-50 mb-3" />
+   416→   416→
+   417→   417→                <div className="grid grid-cols-2 gap-2 text-[10px] stagger-children">
+   418→   418→                  <div className="flex items-center justify-between py-1 px-2 rounded bg-accent/30">
+   419→   419→                    <span className="text-muted-foreground">Equity Growth</span>
+   420→   420→                    <span className={`font-bold tabular-nums ${equity >= 10000 ? 'text-emerald-500' : 'text-red-500'}`}>
+   421→   421→                      {((equity - 10000) / 10000 * 100).toFixed(2)}%
+   422→   422→                    </span>
+   423→   423→                  </div>
+   424→   424→                  <div className="flex items-center justify-between py-1 px-2 rounded bg-accent/30">
+   425→   425→                    <TooltipProvider>
+   426→   426→                      <Tooltip>
+   427→   427→                        <TooltipTrigger asChild>
+   428→   428→                          <div className="flex items-center gap-1 cursor-help">
+   429→   429→                            <span className="text-muted-foreground">Leverage</span>
+   430→   430→                            <Info className="h-2.5 w-2.5 text-muted-foreground" />
+   431→   431→                          </div>
+   432→   432→                        </TooltipTrigger>
+   433→   433→                        <TooltipContent className="max-w-[200px] text-[10px]">
+   434→   434→                          1:{BROKER_CONFIG.leverage} leverage means you control ${BROKER_CONFIG.leverage.toLocaleString()} per $1 of margin.
+   435→   435→                          Higher leverage amplifies both gains and losses.
+   436→   436→                        </TooltipContent>
+   437→   437→                      </Tooltip>
+   438→   438→                    </TooltipProvider>
+   439→   439→                    <span className="font-bold tabular-nums">1:{BROKER_CONFIG.leverage}</span>
+   440→   440→                  </div>
+   441→   441→                </div>
+   442→   442→              </CardContent>
+   443→   443→            </Card>
+   444→   444→          </div>
+   445→   445→
+   446→   446→          {/* Auto Trading + Notifications */}
+   447→   447→          <Card className="glass-card card-hover">
+   448→   448→            <CardHeader className="pb-2 pt-3 px-4">
+   449→   449→              <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Settings</CardTitle></span>
+   450→   450→            </CardHeader>
+   451→   451→            <CardContent className="px-4 pb-4 space-y-3">
+   452→   452→              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/50 border border-border">
+   453→   453→                <div>
+   454→   454→                  <div className="text-xs font-medium flex items-center gap-1.5">
+   455→   455→                    <Zap className="h-3.5 w-3.5 text-amber-500" />
+   456→   456→                    Enable Auto Trading
+   457→   457→                  </div>
+   458→   458→                  <div className="text-[10px] text-muted-foreground">AI will automatically execute trades based on signals</div>
+   459→   459→                </div>
+   460→   460→                <Switch
+   461→   461→                  checked={isAutoTrading}
+   462→   462→                  onCheckedChange={(checked) => {
+   463→   463→                    useTradingStore.getState().setAutoTrading(checked);
+   464→   464→                    addNotification({ type: 'info', title: 'Auto Trading', message: checked ? 'Auto trading enabled' : 'Auto trading disabled' });
+   465→   465→                  }}
+   466→   466→                  disabled={!isConnected}
+   467→   467→                  className="data-[state=checked]:bg-emerald-600"
+   468→   468→                />
+   469→   469→              </div>
+   470→   470→              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/50 border border-border">
+   471→   471→                <div>
+   472→   472→                  <div className="text-xs font-medium">Email Notifications</div>
+   473→   473→                  <div className="text-[10px] text-muted-foreground">Receive trade alerts and reports via email</div>
+   474→   474→                </div>
+   475→   475→                <Switch checked={emailNotif} onCheckedChange={setEmailNotif} className="data-[state=checked]:bg-emerald-600" />
+   476→   476→              </div>
+   477→   477→              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/50 border border-border">
+   478→   478→                <div>
+   479→   479→                  <div className="text-xs font-medium">Push Notifications</div>
+   480→   480→                  <div className="text-[10px] text-muted-foreground">Browser push notifications for important events</div>
+   481→   481→                </div>
+   482→   482→                <Switch checked={pushNotif} onCheckedChange={setPushNotif} className="data-[state=checked]:bg-emerald-600" />
+   483→   483→              </div>
+   484→   484→              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/50 border border-border">
+   485→   485→                <div>
+   486→   486→                  <div className="text-xs font-medium flex items-center gap-1.5">
+   487→   487→                    <Volume2 className="h-3.5 w-3.5 text-primary" />
+   488→   488→                    Sound Notifications
+   489→   489→                  </div>
+   490→   490→                  <div className="text-[10px] text-muted-foreground">Play audio alerts for trades, signals, and price alerts</div>
+   491→   491→                </div>
+   492→   492→                <Switch checked={soundNotif} onCheckedChange={(checked) => { setSoundNotif(checked); setSoundEnabled(checked); }} className="data-[state=checked]:bg-emerald-600" />
+   493→   493→              </div>
+   494→   494→            </CardContent>
+   495→   495→          </Card>
+   496→   496→        </TabsContent>
+   497→   497→
+   498→   498→        {/* ==================== ALERTS TAB ==================== */}
+   499→   499→        <TabsContent value="notifications" className="space-y-4">
+   500→   500→          <Card className="glass-card card-hover">
+   501→   501→            <CardHeader className="pb-2 pt-3 px-4">
+   502→   502→              <div className="flex items-center justify-between">
+   503→   503→                <div className="flex items-center gap-2">
+   504→   504→                  <Bell className="h-4 w-4 text-primary" />
+   505→   505→                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Price Alerts</CardTitle></span>
+   506→   506→                  <Badge variant="outline" className="text-[10px]">{priceAlerts.length}</Badge>
+   507→   507→                </div>
+   508→   508→                <Button
+   509→   509→                  onClick={addNewAlert}
+   510→   510→                  size="sm"
+   511→   511→                  className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 text-xs"
+   512→   512→                >
+   513→   513→                  <Bell className="h-3.5 w-3.5 mr-1" />
+   514→   514→                  Create Alert
+   515→   515→                </Button>
+   516→   516→              </div>
+   517→   517→            </CardHeader>
+   518→   518→            <CardContent className="px-4 pb-4">
+   519→   519→              {/* Alert Form */}
+   520→   520→              <div className="flex flex-wrap items-end gap-2 mb-4 p-3 rounded-lg bg-accent/30 border border-border">
+   521→   521→                <div className="min-w-[100px]">
+   522→   522→                  <Label className="text-[10px] text-muted-foreground">Symbol</Label>
+   523→   523→                  <Select value={newAlertSymbol} onValueChange={(v) => setNewAlertSymbol(v as Symbol)}>
+   524→   524→                    <SelectTrigger className="h-8 text-xs mt-0.5">
+   525→   525→                      <SelectValue />
+   526→   526→                    </SelectTrigger>
+   527→   527→                    <SelectContent>
+   528→   528→                      {SYMBOLS.map(sym => (
+   529→   529→                        <SelectItem key={sym} value={sym}>{SYMBOL_INFO[sym].name}</SelectItem>
+   530→   530→                      ))}
+   531→   531→                    </SelectContent>
+   532→   532→                  </Select>
+   533→   533→                </div>
+   534→   534→                <div className="min-w-[100px]">
+   535→   535→                  <Label className="text-[10px] text-muted-foreground">Condition</Label>
+   536→   536→                  <Select value={newAlertCondition} onValueChange={setNewAlertCondition}>
+   537→   537→                    <SelectTrigger className="h-8 text-xs mt-0.5">
+   538→   538→                      <SelectValue />
+   539→   539→                    </SelectTrigger>
+   540→   540→                    <SelectContent>
+   541→   541→                      <SelectItem value="above">Above</SelectItem>
+   542→   542→                      <SelectItem value="below">Below</SelectItem>
+   543→   543→                    </SelectContent>
+   544→   544→                  </Select>
+   545→   545→                </div>
+   546→   546→                <div className="min-w-[110px]">
+   547→   547→                  <Label className="text-[10px] text-muted-foreground">Price</Label>
+   548→   548→                  <Input
+   549→   549→                    type="number"
+   550→   550→                    value={newAlertPrice}
+   551→   551→                    onChange={(e) => setNewAlertPrice(e.target.value)}
+   552→   552→                    step="0.00001"
+   553→   553→                    className="h-8 text-xs tabular-nums mt-0.5"
+   554→   554→                  />
+   555→   555→                </div>
+   556→   556→                <Button onClick={addNewAlert} size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground h-8">
+   557→   557→                  <Plus className="h-3.5 w-3.5" />
+   558→   558→                </Button>
+   559→   559→              </div>
+   560→   560→
+   561→   561→              {/* Alert Cards */}
+   562→   562→              {priceAlerts.length === 0 ? (
+   563→   563→                <div className="text-center py-10">
+   564→   564→                  <div className="w-16 h-16 rounded-full bg-accent/50 border border-border flex items-center justify-center mx-auto mb-3">
+   565→   565→                    <Bell className="h-7 w-7 text-muted-foreground/50" />
+   566→   566→                  </div>
+   567→   567→                  <h3 className="text-sm font-medium text-muted-foreground mb-1">No Price Alerts</h3>
+   568→   568→                  <p className="text-[11px] text-muted-foreground max-w-[250px] mx-auto">Create price alerts to get notified when a symbol reaches your target price.</p>
+   569→   569→                </div>
+   570→   570→              ) : (
+   571→   571→                <div className="space-y-2">
+   572→   572→                  <AnimatePresence>
+   573→   573→                    {priceAlerts.map((alert) => {
+   574→   574→                      const symInfo = SYMBOL_INFO[alert.symbol as Symbol];
+   575→   575→                      const createdTs = parseInt(alert.id.replace('alert-', ''));
+   576→   576→                      const createdStr = isNaN(createdTs) ? '' : new Date(createdTs).toLocaleString();
+   577→   577→                      return (
+   578→   578→                        <motion.div
+   579→   579→                          key={alert.id}
+   580→   580→                          initial={{ opacity: 0, y: 5 }}
+   581→   581→                          animate={{ opacity: 1, y: 0 }}
+   582→   582→                          exit={{ opacity: 0, x: -20 }}
+   583→   583→                          className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${alert.isActive ? 'border-primary/20 bg-primary/5' : 'border-border opacity-40'}`}
+   584→   584→                        >
+   585→   585→                          {/* Symbol Badge */}
+   586→   586→                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+   587→   587→                            <span className="text-[10px] font-bold text-primary">{alert.symbol}</span>
+   588→   588→                          </div>
+   589→   589→
+   590→   590→                          <div className="flex-1 min-w-0">
+   591→   591→                            <div className="flex items-center gap-1.5 mb-0.5">
+   592→   592→                              <span className="text-xs font-medium">{symInfo?.name || alert.symbol}</span>
+   593→   593→                              <span className={`text-[10px] px-1.5 py-0.5 rounded ${alert.condition === 'above' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+   594→   594→                                {alert.condition === 'above' ? '↑ Above' : '↓ Below'}
+   595→   595→                              </span>
+   596→   596→                              <span className="text-xs font-bold tabular-nums">
+   597→   597→                                {alert.price.toFixed(symInfo?.digits || 5)}
+   598→   598→                              </span>
+   599→   599→                            </div>
+   600→   600→                            {createdStr && (
+   601→   601→                              <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+   602→   602→                                <Clock className="h-2.5 w-2.5" />
+   603→   603→                                {createdStr}
+   604→   604→                              </div>
+   605→   605→                            )}
+   606→   606→                          </div>
+   607→   607→
+   608→   608→                          <Switch
+   609→   609→                            checked={alert.isActive}
+   610→   610→                            onCheckedChange={() => togglePriceAlert(alert.id)}
+   611→   611→                            className="scale-75 data-[state=checked]:bg-emerald-600"
+   612→   612→                          />
+   613→   613→
+   614→   614→                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={() => removePriceAlert(alert.id)}>
+   615→   615→                            <Trash2 className="h-3 w-3" />
+   616→   616→                          </Button>
+   617→   617→                        </motion.div>
+   618→   618→                      );
+   619→   619→                    })}
+   620→   620→                  </AnimatePresence>
+   621→   621→                </div>
+   622→   622→              )}
+   623→   623→            </CardContent>
+   624→   624→          </Card>
+   625→   625→        </TabsContent>
+   626→   626→
+   627→   627→        {/* ==================== ERROR LOGS TAB ==================== */}
+   628→   628→        <TabsContent value="logs" className="space-y-4">
+   629→   629→          <Card className="glass-card card-hover">
+   630→   630→            <CardHeader className="pb-2 pt-3 px-4">
+   631→   631→              <div className="flex items-center gap-2">
+   632→   632→                <TriangleAlert className="h-4 w-4 text-primary" />
+   633→   633→                <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Error Logs</CardTitle></span>
+   634→   634→              </div>
+   635→   635→            </CardHeader>
+   636→   636→            <CardContent className="px-4 pb-3">
+   637→   637→              {/* Summary Bar */}
+   638→   638→              <div className="flex items-center gap-3 mb-3 p-2.5 rounded-lg bg-accent/30 border border-border">
+   639→   639→                <div className="flex items-center gap-1.5 text-[11px]">
+   640→   640→                  <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+   641→   641→                  <span className="text-muted-foreground">Errors:</span>
+   642→   642→                  <span className="font-bold tabular-nums text-red-500">{logCounts.errors}</span>
+   643→   643→                </div>
+   644→   644→                <div className="w-px h-3 bg-border" />
+   645→   645→                <div className="flex items-center gap-1.5 text-[11px]">
+   646→   646→                  <TriangleAlert className="h-3.5 w-3.5 text-amber-500" />
+   647→   647→                  <span className="text-muted-foreground">Warnings:</span>
+   648→   648→                  <span className="font-bold tabular-nums text-amber-500">{logCounts.warnings}</span>
+   649→   649→                </div>
+   650→   650→                <div className="w-px h-3 bg-border" />
+   651→   651→                <div className="flex items-center gap-1.5 text-[11px]">
+   652→   652→                  <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
+   653→   653→                  <span className="text-muted-foreground">Resolved:</span>
+   654→   654→                  <span className="font-bold tabular-nums text-emerald-500">{logCounts.resolved}</span>
+   655→   655→                </div>
+   656→   656→                <div className="ml-auto">
+   657→   657→                  <Button
+   658→   658→                    variant="ghost"
+   659→   659→                    size="sm"
+   660→   660→                    className="h-6 text-[10px] text-muted-foreground hover:text-foreground"
+   661→   661→                    onClick={() => {
+   662→   662→                      clearResolvedLogs();
+   663→   663→                      addNotification({ type: 'info', title: 'Logs Cleared', message: 'Resolved logs have been removed.' });
+   664→   664→                    }}
+   665→   665→                    disabled={logCounts.resolved === 0}
+   666→   666→                  >
+   667→   667→                    Clear Resolved
+   668→   668→                  </Button>
+   669→   669→                </div>
+   670→   670→              </div>
+   671→   671→
+   672→   672→              {/* Filter Buttons */}
+   673→   673→              <div className="flex items-center gap-2 mb-3">
+   674→   674→                {filterButtons.map((fb) => (
+   675→   675→                  <Button
+   676→   676→                    key={fb.key}
+   677→   677→                    variant={logFilter === fb.key ? 'default' : 'outline'}
+   678→   678→                    size="sm"
+   679→   679→                    className={`h-7 text-[10px] ${logFilter === fb.key ? 'bg-primary/15 text-primary border-primary/30 hover:bg-primary/20' : ''}`}
+   680→   680→                    onClick={() => setLogFilter(fb.key)}
+   681→   681→                  >
+   682→   682→                    <Filter className="h-3 w-3 mr-1" />
+   683→   683→                    {fb.label}
+   684→   684→                    {fb.count > 0 && (
+   685→   685→                      <Badge variant="outline" className={`ml-1.5 text-[9px] px-1 py-0 border-current/30 ${fb.color}`}>
+   686→   686→                        {fb.count}
+   687→   687→                      </Badge>
+   688→   688→                    )}
+   689→   689→                  </Button>
+   690→   690→                ))}
+   691→   691→              </div>
+   692→   692→
+   693→   693→              {/* Log Entries - Timeline Format */}
+   694→   694→              {filteredLogs.length === 0 ? (
+   695→   695→                <div className="text-center py-8">
+   696→   696→                  <div className="w-14 h-14 rounded-full bg-accent/50 border border-border flex items-center justify-center mx-auto mb-3">
+   697→   697→                    <RefreshCw className="h-6 w-6 text-muted-foreground/50" />
+   698→   698→                  </div>
+   699→   699→                  <div className="text-sm text-muted-foreground">No {logFilter === 'all' ? '' : logFilter} logs recorded</div>
+   700→   700→                  <div className="text-xs text-muted-foreground">Errors and warnings will appear here</div>
+   701→   701→                </div>
+   702→   702→              ) : (
+   703→   703→                <ScrollArea className="h-[500px]">
+   704→   704→                  <div className="relative pl-5">
+   705→   705→                    {/* Vertical timeline line */}
+   706→   706→                    <div className="absolute left-[7px] top-0 bottom-0 w-px bg-border" />
+   707→   707→
+   708→   708→                    <div className="space-y-2">
+   709→   709→                      {filteredLogs.map((log, i) => {
+   710→   710→                        const lineColor = log.level === 'error' ? 'bg-red-500' : log.level === 'warning' ? 'bg-amber-500' : 'bg-slate-500';
+   711→   711→                        const borderColor = log.level === 'error' ? 'border-red-500/20 bg-red-500/5' : log.level === 'warning' ? 'border-amber-500/20 bg-amber-500/5' : 'border-border bg-accent/30';
+   712→   712→                        return (
+   713→   713→                          <motion.div
+   714→   714→                            key={log.id}
+   715→   715→                            initial={{ opacity: 0, x: -10 }}
+   716→   716→                            animate={{ opacity: 1, x: 0 }}
+   717→   717→                            transition={{ delay: i * 0.02 }}
+   718→   718→                            className="relative"
+   719→   719→                          >
+   720→   720→                            {/* Timeline dot */}
+   721→   721→                            <div className={`absolute -left-5 top-3 w-3.5 h-3.5 rounded-full ${lineColor} border-2 border-[#0a0f1c]`} />
+   722→   722→
+   723→   723→                            <div className={`p-3 rounded-lg border ${borderColor} ${log.resolved ? 'opacity-40' : ''}`}>
+   724→   724→                              <div className="flex items-center justify-between mb-1">
+   725→   725→                                <div className="flex items-center gap-2">
+   726→   726→                                  <Badge
+   727→   727→                                    variant="outline"
+   728→   728→                                    className={`text-[9px] px-1.5 py-0 ${
+   729→   729→                                      log.level === 'error' ? 'border-red-500/50 text-red-500' :
+   730→   730→                                      log.level === 'warning' ? 'border-amber-500/50 text-amber-500' :
+   731→   731→                                      'border-slate-500/50 text-slate-500'
+   732→   732→                                    }`}
+   733→   733→                                  >
+   734→   734→                                    {log.level.toUpperCase()}
+   735→   735→                                  </Badge>
+   736→   736→                                  <span className="text-[10px] text-muted-foreground">{log.source}</span>
+   737→   737→                                  {log.resolved && (
+   738→   738→                                    <Badge variant="outline" className="text-[9px] px-1 py-0 border-emerald-500/50 text-emerald-500">
+   739→   739→                                      RESOLVED
+   740→   740→                                    </Badge>
+   741→   741→                                  )}
+   742→   742→                                </div>
+   743→   743→                                <span className="text-[10px] text-muted-foreground tabular-nums">{log.timestamp}</span>
+   744→   744→                              </div>
+   745→   745→                              <div className="text-[11px] leading-relaxed">{log.message}</div>
+   746→   746→                            </div>
+   747→   747→                          </motion.div>
+   748→   748→                        );
+   749→   749→                      })}
+   750→   750→                    </div>
+   751→   751→                  </div>
+   752→   752→                </ScrollArea>
+   753→   753→              )}
+   754→   754→            </CardContent>
+   755→   755→          </Card>
+   756→   756→        </TabsContent>
+   757→   757→      </Tabs>
+   758→   758→    </div>
+   759→   759→  );
+   760→   760→}

@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
 import { BROKER_CONFIG, SYMBOL_INFO } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -137,8 +136,8 @@ export default function SettingsView() {
         {/* ==================== BROKER TAB ==================== */}
         <TabsContent value="broker" className="space-y-4">
           {/* Broker Hero Card */}
-          <Card className="glass-card elevated-card card-hover">
-            <CardContent className="p-4">
+          <div className="glass-card-premium rounded-xl card-hover-lift">
+            <div className="p-4">
               <div className="flex items-center gap-4">
                 {/* Logo Placeholder */}
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center flex-shrink-0">
@@ -147,7 +146,7 @@ export default function SettingsView() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <h2 className="text-lg font-bold">{BROKER_CONFIG.name}</h2>
-                    <Badge variant="outline" className={`text-[10px] border-emerald-500/50 text-emerald-500 ${isConnected ? 'pulse-dot-border' : ''}`}>
+                    <Badge variant="outline" className={`text-[10px] border-emerald-500/50 text-emerald-500 ${isConnected ? 'badge-glow-emerald pulse-dot-border' : ''}`}>
                       {isConnected ? '● Connected' : '○ Disconnected'}
                     </Badge>
                   </div>
@@ -193,7 +192,7 @@ export default function SettingsView() {
                       <motion.div
                         initial={{ opacity: 0, y: -5 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className={`flex items-center gap-1 text-[10px] ${testResult === 'success' ? 'text-emerald-500' : 'text-red-500'}`}
+                        className={`flex items-center gap-1 text-[10px] ${testResult === 'success' ? 'text-emerald-500 neon-text-emerald' : 'text-red-500 neon-text-red'}`}
                       >
                         {testResult === 'success' ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
                         {testResult === 'success' ? `Connected (${testPing}ms)` : 'Connection failed'}
@@ -202,18 +201,18 @@ export default function SettingsView() {
                   )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Broker Specs - 2-column grid with green dots */}
-          <Card className="glass-card card-hover">
-            <CardHeader className="pb-2 pt-3 px-4">
+          <div className="glass-card-premium rounded-xl card-hover-lift">
+            <div className="pb-2 pt-3 px-4">
               <div className="flex items-center gap-2">
                 <Server className="h-4 w-4 text-primary" />
-                <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Broker Specifications</CardTitle></span>
+                <div className="section-title-accent text-sm font-semibold">Broker Specifications</div>
               </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
+            </div>
+            <div className="px-4 pb-4">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 stagger-children">
                 {[
                   { label: 'Leverage', value: `1:${BROKER_CONFIG.leverage}` },
@@ -234,15 +233,15 @@ export default function SettingsView() {
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Server Status */}
-          <Card className="glass-card card-hover">
-            <CardHeader className="pb-2 pt-3 px-4">
-              <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Server Status</CardTitle></span>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
+          <div className="glass-card-premium rounded-xl card-hover-lift">
+            <div className="pb-2 pt-3 px-4">
+              <div className="section-title-accent text-sm font-semibold">Server Status</div>
+            </div>
+            <div className="px-4 pb-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
                 <div className="flex items-center gap-2">
                   <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 pulse-dot' : 'bg-red-500'}`} />
@@ -273,73 +272,73 @@ export default function SettingsView() {
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
 
         {/* ==================== ACCOUNT TAB ==================== */}
         <TabsContent value="account" className="space-y-4">
           {/* Account Summary Card */}
-          <Card className="glass-card card-hover">
-            <CardHeader className="pb-2 pt-3 px-4">
+          <div className="glass-card-premium rounded-xl card-hover-lift">
+            <div className="pb-2 pt-3 px-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4 text-primary" />
-                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Account Overview</CardTitle></span>
+                  <div className="section-title-accent text-sm font-semibold">Account Overview</div>
                 </div>
-                <Badge className={`text-[10px] ${accountType === 'live' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'bg-amber-500/10 text-amber-500 border-amber-500/30'}`}>
+                <Badge className={`text-[10px] ${accountType === 'live' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 badge-glow-emerald' : 'bg-amber-500/10 text-amber-500 border-amber-500/30 badge-glow-amber'}`}>
                   {accountType === 'live' ? '● LIVE' : '● DEMO'}
                 </Badge>
               </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
+            </div>
+            <div className="px-4 pb-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
-                <div className="p-3 rounded-lg bg-accent/50 border border-border">
+                <div className="p-3 rounded-lg bg-accent/50 border border-border metric-card-animated">
                   <div className="text-[10px] text-muted-foreground mb-0.5">Balance</div>
                   <div className="text-lg font-bold tabular-nums">${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
                 </div>
-                <div className="p-3 rounded-lg bg-accent/50 border border-border">
+                <div className="p-3 rounded-lg bg-accent/50 border border-border metric-card-animated">
                   <div className="text-[10px] text-muted-foreground mb-0.5">Equity</div>
                   <div className={`text-lg font-bold tabular-nums ${equity >= balance ? 'text-emerald-500' : 'text-red-500'}`}>
                     ${equity.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
-                <div className="p-3 rounded-lg bg-accent/50 border border-border">
+                <div className="p-3 rounded-lg bg-accent/50 border border-border metric-card-animated">
                   <div className="text-[10px] text-muted-foreground mb-0.5">Used Margin</div>
                   <div className="text-lg font-bold tabular-nums">${margin.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
                 </div>
-                <div className="p-3 rounded-lg bg-accent/50 border border-border">
+                <div className="p-3 rounded-lg bg-accent/50 border border-border metric-card-animated">
                   <div className="text-[10px] text-muted-foreground mb-0.5">Total P&L</div>
                   <div className={`text-lg font-bold tabular-nums ${totalPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                     {totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Trading Statistics + Account Health */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-children">
-            <Card className="glass-card card-hover">
-              <CardHeader className="pb-2 pt-3 px-4">
+            <div className="glass-card-premium rounded-xl card-hover-lift">
+              <div className="pb-2 pt-3 px-4">
                 <div className="flex items-center gap-2">
                   <Activity className="h-4 w-4 text-primary" />
-                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Trading Statistics</CardTitle></span>
+                  <div className="section-title-accent text-sm font-semibold">Trading Statistics</div>
                 </div>
-              </CardHeader>
-              <CardContent className="px-4 pb-4 space-y-3">
+              </div>
+              <div className="px-4 pb-4 space-y-3">
                 <div className="grid grid-cols-3 gap-3 stagger-children">
-                  <div className="text-center p-2 rounded-lg bg-accent/30">
+                  <div className="text-center p-2 rounded-lg bg-accent/30 metric-card-animated">
                     <div className="text-[10px] text-muted-foreground">Total Trades</div>
                     <div className="text-base font-bold tabular-nums mt-0.5">{accountStats.total}</div>
                   </div>
-                  <div className="text-center p-2 rounded-lg bg-accent/30">
+                  <div className="text-center p-2 rounded-lg bg-accent/30 metric-card-animated">
                     <div className="text-[10px] text-muted-foreground">Win Rate</div>
                     <div className={`text-base font-bold tabular-nums mt-0.5 ${accountStats.winRate >= 50 ? 'text-emerald-500' : 'text-red-500'}`}>
                       {accountStats.winRate.toFixed(1)}%
                     </div>
                   </div>
-                  <div className="text-center p-2 rounded-lg bg-accent/30">
+                  <div className="text-center p-2 rounded-lg bg-accent/30 metric-card-animated">
                     <div className="text-[10px] text-muted-foreground">Avg Duration</div>
                     <div className="text-base font-bold tabular-nums mt-0.5">{accountStats.avgDuration}</div>
                   </div>
@@ -365,18 +364,18 @@ export default function SettingsView() {
                     <span className="text-[11px] font-bold tabular-nums">{openTrades.length}</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Account Health */}
-            <Card className="glass-card card-hover">
-              <CardHeader className="pb-2 pt-3 px-4">
+            <div className="glass-card-premium rounded-xl card-hover-lift">
+              <div className="pb-2 pt-3 px-4">
                 <div className="flex items-center gap-2">
                   <Target className="h-4 w-4 text-primary" />
-                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Account Health</CardTitle></span>
+                  <div className="section-title-accent text-sm font-semibold">Account Health</div>
                 </div>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
+              </div>
+              <div className="px-4 pb-4">
                 <div className="flex items-center gap-4 mb-4">
                   {/* Health Gauge */}
                   <div className="relative w-20 h-20 flex-shrink-0">
@@ -439,16 +438,16 @@ export default function SettingsView() {
                     <span className="font-bold tabular-nums">1:{BROKER_CONFIG.leverage}</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
 
           {/* Auto Trading + Notifications */}
-          <Card className="glass-card card-hover">
-            <CardHeader className="pb-2 pt-3 px-4">
-              <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Settings</CardTitle></span>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-3">
+          <div className="glass-card-premium rounded-xl card-hover-lift">
+            <div className="pb-2 pt-3 px-4">
+              <div className="section-title-accent text-sm font-semibold">Settings</div>
+            </div>
+            <div className="px-4 pb-4 space-y-3">
               <div className="flex items-center justify-between p-3 rounded-lg bg-accent/50 border border-border">
                 <div>
                   <div className="text-xs font-medium flex items-center gap-1.5">
@@ -491,18 +490,18 @@ export default function SettingsView() {
                 </div>
                 <Switch checked={soundNotif} onCheckedChange={(checked) => { setSoundNotif(checked); setSoundEnabled(checked); }} className="data-[state=checked]:bg-emerald-600" />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
 
         {/* ==================== ALERTS TAB ==================== */}
         <TabsContent value="notifications" className="space-y-4">
-          <Card className="glass-card card-hover">
-            <CardHeader className="pb-2 pt-3 px-4">
+          <div className="glass-card-premium rounded-xl card-hover-lift">
+            <div className="pb-2 pt-3 px-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Bell className="h-4 w-4 text-primary" />
-                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Price Alerts</CardTitle></span>
+                  <div className="section-title-accent text-sm font-semibold">Price Alerts</div>
                   <Badge variant="outline" className="text-[10px]">{priceAlerts.length}</Badge>
                 </div>
                 <Button
@@ -514,8 +513,8 @@ export default function SettingsView() {
                   Create Alert
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
+            </div>
+            <div className="px-4 pb-4">
               {/* Alert Form */}
               <div className="flex flex-wrap items-end gap-2 mb-4 p-3 rounded-lg bg-accent/30 border border-border">
                 <div className="min-w-[100px]">
@@ -550,7 +549,7 @@ export default function SettingsView() {
                     value={newAlertPrice}
                     onChange={(e) => setNewAlertPrice(e.target.value)}
                     step="0.00001"
-                    className="h-8 text-xs tabular-nums mt-0.5"
+                    className="h-8 text-xs tabular-nums mt-0.5 input-glass-premium bg-white/[0.03] border-white/[0.08] focus:border-emerald-500/40"
                   />
                 </div>
                 <Button onClick={addNewAlert} size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground h-8">
@@ -611,7 +610,7 @@ export default function SettingsView() {
                             className="scale-75 data-[state=checked]:bg-emerald-600"
                           />
 
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={() => removePriceAlert(alert.id)}>
+                          <Button variant="ghost" size="sm" className="icon-btn-glass h-7 w-7 p-0 text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={() => removePriceAlert(alert.id)}>
                             <Trash2 className="h-3 w-3" />
                           </Button>
                         </motion.div>
@@ -620,20 +619,20 @@ export default function SettingsView() {
                   </AnimatePresence>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
 
         {/* ==================== ERROR LOGS TAB ==================== */}
         <TabsContent value="logs" className="space-y-4">
-          <Card className="glass-card card-hover">
-            <CardHeader className="pb-2 pt-3 px-4">
+          <div className="glass-card-premium rounded-xl card-hover-lift">
+            <div className="pb-2 pt-3 px-4">
               <div className="flex items-center gap-2">
                 <TriangleAlert className="h-4 w-4 text-primary" />
-                <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Error Logs</CardTitle></span>
+                <div className="section-title-accent text-sm font-semibold">Error Logs</div>
               </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-3">
+            </div>
+            <div className="px-4 pb-3">
               {/* Summary Bar */}
               <div className="flex items-center gap-3 mb-3 p-2.5 rounded-lg bg-accent/30 border border-border">
                 <div className="flex items-center gap-1.5 text-[11px]">
@@ -657,7 +656,7 @@ export default function SettingsView() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 text-[10px] text-muted-foreground hover:text-foreground"
+                    className="icon-btn-glass h-6 text-[10px] text-muted-foreground hover:text-foreground"
                     onClick={() => {
                       clearResolvedLogs();
                       addNotification({ type: 'info', title: 'Logs Cleared', message: 'Resolved logs have been removed.' });
@@ -735,7 +734,7 @@ export default function SettingsView() {
                                   </Badge>
                                   <span className="text-[10px] text-muted-foreground">{log.source}</span>
                                   {log.resolved && (
-                                    <Badge variant="outline" className="text-[9px] px-1 py-0 border-emerald-500/50 text-emerald-500">
+                                    <Badge variant="outline" className="text-[9px] px-1 py-0 border-emerald-500/50 text-emerald-500 badge-glow-emerald">
                                       RESOLVED
                                     </Badge>
                                   )}
@@ -751,8 +750,8 @@ export default function SettingsView() {
                   </div>
                 </ScrollArea>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

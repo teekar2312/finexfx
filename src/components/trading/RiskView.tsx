@@ -3,33 +3,63 @@
 import { useState, useMemo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
 import { BROKER_CONFIG, SYMBOL_INFO, type Symbol } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Shield, Calculator, DollarSign, Target, Zap, CheckCircle, ArrowRight } from 'lucide-react';
 import { SYMBOLS } from '@/lib/types';
+import { motion } from 'framer-motion';
 
-function DonutGauge({ value, max, size = 80, strokeWidth = 6 }: { value: number; max: number; size?: number; strokeWidth?: number }) {
+function DonutGauge({ value, max, size = 80, strokeWidth = 6, showPercent = false }: { value: number; max: number; size?: number; strokeWidth?: number; showPercent?: boolean }) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const ratio = Math.min(value / max, 1);
   const offset = circumference * (1 - ratio);
-  const color = ratio < 0.5 ? '#10b981' : ratio < 0.8 ? '#f59e0b' : '#ef4444';
+  const isSafe = ratio < 0.5;
+  const isWarn = ratio >= 0.5 && ratio < 0.8;
+  const isDanger = ratio >= 0.8;
+  const color = isSafe ? '#10b981' : isWarn ? '#f59e0b' : '#ef4444';
+  const glowColor = isSafe ? 'rgba(16,185,129,0.35)' : isWarn ? 'rgba(245,158,11,0.35)' : 'rgba(239,68,68,0.35)';
+  const pct = Math.round(ratio * 100);
 
   return (
-    <svg width={size} height={size} className="-rotate-90">
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
-      <circle
-        cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth}
-        strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
-        style={{ transition: 'stroke-dashoffset 0.5s ease, stroke 0.3s' }}
-      />
-    </svg>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      className="relative inline-flex items-center justify-center"
+    >
+      <svg width={size} height={size} className="-rotate-90">
+        <defs>
+          <filter id={`gauge-glow-${size}`}>
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
+        {/* Glow layer */}
+        <circle
+          cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth + 4}
+          strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset 0.6s ease, stroke 0.3s', opacity: 0.2, filter: `drop-shadow(0 0 6px ${glowColor})` }}
+        />
+        {/* Main arc */}
+        <circle
+          cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth}
+          strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset 0.6s ease, stroke 0.3s' }}
+          filter={`url(#gauge-glow-${size})`}
+        />
+      </svg>
+      {showPercent && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center rotate-0">
+          <span className={`text-sm font-bold tabular-nums ${isSafe ? 'text-emerald-400' : isWarn ? 'text-amber-400' : 'text-red-400'}`}>{pct}%</span>
+        </div>
+      )}
+    </motion.div>
   );
 }
 
@@ -97,8 +127,7 @@ export default function RiskView() {
   return (
     <div className="p-4 space-y-4">
       {/* Daily Risk Dashboard */}
-      <Card className={`glass-card card-hover parallax-hover animated-border-gradient ${isDailyLimitReached ? 'neon-glow-red border-red-500/50' : isDailyLimitWarning ? 'neon-glow-amber border-amber-500/50' : ''}`}>
-        <CardContent className="p-4">
+      <div className={`glass-card-premium rounded-xl p-4 card-hover-lift ${isDailyLimitReached ? 'neon-glow-red border border-red-500/50' : isDailyLimitWarning ? 'neon-glow-amber border border-amber-500/50' : ''}`}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Shield className={`h-4 w-4 ${isDailyLimitReached ? 'text-red-500' : isDailyLimitWarning ? 'text-amber-500' : 'text-emerald-500'}`} />
@@ -112,7 +141,7 @@ export default function RiskView() {
           <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto_auto] gap-4 items-center">
             {/* Donut Gauge */}
             <div className="relative flex items-center justify-center">
-              <DonutGauge value={dailyRiskPercent} max={dailyRiskLimitPercent} size={88} strokeWidth={8} />
+              <DonutGauge value={dailyRiskPercent} max={dailyRiskLimitPercent} size={88} strokeWidth={8} showPercent={false} />
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className={`text-sm font-bold tabular-nums ${isDailyLimitReached ? 'text-red-500' : isDailyLimitWarning ? 'text-amber-500' : 'text-emerald-500'}`}>
                   {Math.round(dailyRiskRatio * 100)}%
@@ -123,10 +152,15 @@ export default function RiskView() {
 
             {/* Risk Bar */}
             <div className="flex-1">
-              <Progress
-                value={Math.min(dailyRiskPercent, 100)}
-                className={`h-2.5 ${isDailyLimitReached ? '[&>div]:bg-red-500' : isDailyLimitWarning ? '[&>div]:bg-amber-500' : '[&>div]:bg-emerald-500'}`}
-              />
+              {/* Premium gradient risk bar */}
+              <div className="risk-bar-premium h-2.5 rounded-full overflow-hidden bg-white/5">
+                <motion.div
+                  className={`risk-bar-fill-premium h-full rounded-full ${isDailyLimitReached ? 'from-red-600 to-red-400' : isDailyLimitWarning ? 'from-amber-600 to-amber-400' : 'from-emerald-600 to-emerald-400'} bg-gradient-to-r`}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(dailyRiskPercent, 100)}%` }}
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                />
+              </div>
               <div className="flex justify-between mt-1.5">
                 <span className="text-[10px] text-muted-foreground">
                   ${todayRiskUsed.toFixed(2)} used of ${maxDailyRisk.toFixed(2)} max
@@ -144,10 +178,14 @@ export default function RiskView() {
                     ${Math.max(0, dailyPnl).toFixed(2)} / ${dailyTargetAmount.toFixed(2)}
                   </span>
                 </div>
-                <Progress
-                  value={dailyTargetRatio * 100}
-                  className={`h-1.5 ${dailyPnl >= dailyTargetAmount ? '[&>div]:bg-emerald-500' : dailyPnl >= 0 ? '[&>div]:bg-amber-500' : '[&>div]:bg-red-500'}`}
-                />
+                <div className="risk-bar-premium h-1.5 rounded-full overflow-hidden bg-white/5">
+                  <motion.div
+                    className={`risk-bar-fill-premium h-full rounded-full ${dailyPnl >= dailyTargetAmount ? 'from-emerald-600 to-emerald-400' : dailyPnl >= 0 ? 'from-amber-600 to-amber-400' : 'from-red-600 to-red-400'} bg-gradient-to-r`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${dailyTargetRatio * 100}%` }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                  />
+                </div>
               </div>
             </div>
 
@@ -167,19 +205,16 @@ export default function RiskView() {
               <div className="text-[9px] text-muted-foreground uppercase tracking-wider">Risk Left</div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
         {/* Risk Settings Form */}
-        <Card className="glass-card card-hover parallax-hover">
-          <CardHeader className="pb-2 pt-3 px-4">
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-primary" />
-              <CardTitle className="text-sm font-semibold"><span className="section-title-accent">Risk Settings</span></CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-4 space-y-4">
+        <div className="glass-card-premium rounded-xl p-4 card-hover-lift">
+          <div className="flex items-center gap-2 mb-3">
+            <Shield className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold section-title-accent">Risk Settings</span>
+          </div>
+          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-[11px] text-muted-foreground">Risk Per Trade (%)</Label>
@@ -262,22 +297,20 @@ export default function RiskView() {
                 />
               </div>
             </div>
-            <Button onClick={handleSaveSettings} className="w-full bg-primary hover:bg-primary/90" size="sm">
+            <Button onClick={handleSaveSettings} className="w-full bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-transform" size="sm">
               Save Risk Settings
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Position Size Calculator - Enhanced */}
         <div className="space-y-4">
-          <Card className="glass-card card-hover parallax-hover border-emerald-500/30">
-            <CardHeader className="pb-2 pt-3 px-4">
-              <div className="flex items-center gap-2">
-                <Calculator className="h-4 w-4 text-emerald-500" />
-                <CardTitle className="text-sm font-semibold"><span className="section-title-accent">Position Size Calculator</span></CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-3">
+          <div className="glass-card-premium rounded-xl p-4 card-hover-lift border-emerald-500/30">
+            <div className="flex items-center gap-2 mb-3">
+              <Calculator className="h-4 w-4 text-emerald-500" />
+              <span className="text-sm font-semibold section-title-accent">Position Size Calculator</span>
+            </div>
+            <div className="space-y-3">
               <div>
                 <Label className="text-[11px] text-muted-foreground">Symbol</Label>
                 <Select value={calcSymbol} onValueChange={(v) => setCalcSymbol(v as Symbol)}>
@@ -357,7 +390,7 @@ export default function RiskView() {
               <Separator className="opacity-50" />
 
               {/* Result */}
-              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <div className="risk-calc-result p-3 rounded-lg">
                 <div className="text-[10px] uppercase tracking-wider text-emerald-500 mb-1">Recommended Lot Size</div>
                 <div className="text-3xl font-bold text-emerald-500 tabular-nums">{calculatedLotSize.toFixed(2)}</div>
                 <div className="text-[10px] text-muted-foreground mt-1">
@@ -365,24 +398,22 @@ export default function RiskView() {
                 </div>
               </div>
 
-              <Button onClick={handleApplyLotSize} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white" size="sm">
+              <Button onClick={handleApplyLotSize} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white hover:scale-[1.02] active:scale-[0.98] transition-transform" size="sm">
                 <ArrowRight className="h-3.5 w-3.5 mr-1" />
                 Apply to Trade
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Money Management Summary */}
-      <Card className="glass-card card-hover parallax-hover">
-        <CardHeader className="pb-2 pt-3 px-4">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-primary" />
-            <CardTitle className="text-sm font-semibold"><span className="section-title-accent">Money Management Summary</span></CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
+      <div className="glass-card-premium rounded-xl p-4 card-hover-lift">
+        <div className="flex items-center gap-2 mb-3">
+          <DollarSign className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold section-title-accent">Money Management Summary</span>
+        </div>
+        <div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 stagger-children">
             <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 metric-compact">
               <div className="text-[10px] text-emerald-500 mb-0.5">Max Risk / Trade</div>
@@ -430,31 +461,41 @@ export default function RiskView() {
                 {marginUsage.toFixed(1)}%
               </span>
             </div>
-            <Progress value={Math.min(marginUsage, 100)} className={`h-1.5 ${marginUsage > 50 ? '[&>div]:bg-red-500' : marginUsage > 20 ? '[&>div]:bg-amber-500' : '[&>div]:bg-emerald-500'}`} />
+            <div className="risk-bar-premium h-1.5 rounded-full overflow-hidden bg-white/5">
+              <motion.div
+                className={`risk-bar-fill-premium h-full rounded-full ${marginUsage > 50 ? 'from-red-600 to-red-400' : marginUsage > 20 ? 'from-amber-600 to-amber-400' : 'from-emerald-600 to-emerald-400'} bg-gradient-to-r`}
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(marginUsage, 100)}%` }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
+              />
+            </div>
             <div className="flex justify-between mt-1">
               <span className="text-[10px] text-muted-foreground">${margin.toFixed(2)} used</span>
               <span className="text-[10px] text-muted-foreground">{openTrades.length} open position{openTrades.length !== 1 ? 's' : ''}</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Risk Rules Display */}
-      <Card className="glass-card card-hover parallax-hover">
-        <CardHeader className="pb-2 pt-3 px-4">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-primary" />
-            <CardTitle className="text-sm font-semibold"><span className="section-title-accent">Risk Rules Reference</span></CardTitle>
-            <Badge variant="outline" className="text-[10px] ml-auto">
-              {riskRules.filter(r => r.ok).length}/{riskRules.length} compliant
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
-          <div className="space-y-1.5 stagger-children">
-            {riskRules.map((rule) => (
-              <div key={rule.name} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-accent/30 border border-border">
-                <CheckCircle className={`h-4 w-4 flex-shrink-0 ${rule.ok ? 'text-emerald-500' : 'text-red-500/50'}`} />
+      <div className="glass-card-premium rounded-xl p-4 card-hover-lift">
+        <div className="flex items-center gap-2 mb-3">
+          <CheckCircle className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold section-title-accent">Risk Rules Reference</span>
+          <Badge variant="outline" className="text-[10px] ml-auto">
+            {riskRules.filter(r => r.ok).length}/{riskRules.length} compliant
+          </Badge>
+        </div>
+        <div className="space-y-1.5 stagger-children">
+          {riskRules.map((rule) => (
+            <motion.div
+              key={rule.name}
+              whileHover={{ x: 2, backgroundColor: 'rgba(255,255,255,0.03)' }}
+              className={`risk-rule-card flex items-center gap-3 py-2 px-3 rounded-lg border-l-[3px] transition-colors ${rule.ok ? 'border-l-emerald-500/60 bg-emerald-500/[0.03]' : 'border-l-red-500/60 bg-red-500/[0.03]'}`}
+            >
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${rule.ok ? 'bg-emerald-500/15' : 'bg-red-500/15'}`}>
+                <CheckCircle className={`h-3.5 w-3.5 ${rule.ok ? 'text-emerald-500' : 'text-red-500/50'}`} />
+              </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-medium">{rule.name}</span>
@@ -467,11 +508,10 @@ export default function RiskView() {
                 >
                   {rule.current}
                 </Badge>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }
