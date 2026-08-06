@@ -82,6 +82,11 @@ interface TradingState {
   // Error Logs
   errorLogs: Array<{ id: string; level: string; source: string; message: string; timestamp: string; resolved: boolean }>;
   addErrorLog: (log: any) => void;
+  clearResolvedLogs: () => void;
+
+  // Position Sizing
+  suggestedLotSize: number;
+  setSuggestedLotSize: (size: number) => void;
 
   // Connection
   isConnected: boolean;
@@ -245,6 +250,11 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   // Error Logs
   errorLogs: [],
   addErrorLog: (log) => set({ errorLogs: [log, ...get().errorLogs].slice(0, 100) }),
+  clearResolvedLogs: () => set({ errorLogs: get().errorLogs.filter(l => !l.resolved) }),
+
+  // Position Sizing
+  suggestedLotSize: 0.01,
+  setSuggestedLotSize: (size) => set({ suggestedLotSize: size }),
 
   // Connection
   isConnected: false,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
+import { ComposedChart, Area, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
 import { SYMBOL_INFO, type Symbol } from '@/lib/types';
 
 interface PriceChartProps {
@@ -9,22 +9,23 @@ interface PriceChartProps {
   symbol: Symbol;
   bid?: number;
   ask?: number;
- height?: number;
+  height?: number;
 }
 
 export default function PriceChart({ data, symbol, bid, ask, height = 350 }: PriceChartProps) {
   const info = SYMBOL_INFO[symbol];
 
-  const { minPrice, maxPrice, midPrice } = useMemo(() => {
-    if (!data || data.length === 0) return { minPrice: 0, maxPrice: 1, midPrice: 0.5 };
+  const { minPrice, maxPrice, maxVolume } = useMemo(() => {
+    if (!data || data.length === 0) return { minPrice: 0, maxPrice: 1, maxVolume: 1 };
     const prices = data.flatMap(d => [d.high, d.low]);
     const min = Math.min(...prices);
     const max = Math.max(...prices);
     const padding = (max - min) * 0.1 || 0.001;
+    const vol = Math.max(...data.map(d => d.volume)) || 1;
     return {
       minPrice: min - padding,
       maxPrice: max + padding,
-      midPrice: (min + max) / 2,
+      maxVolume: vol,
     };
   }, [data]);
 
@@ -41,6 +42,14 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
   const gradientColor = isUp ? '#10b981' : '#ef4444';
   const strokeColor = isUp ? '#10b981' : '#ef4444';
 
+  // Prepare data with bar colors
+  const chartData = useMemo(() => {
+    return data.map(d => ({
+      ...d,
+      barColor: d.close >= d.open ? '#10b98150' : '#ef444450',
+    }));
+  }, [data]);
+
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
@@ -52,7 +61,7 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+        <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
           <defs>
             <linearGradient id={`gradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={gradientColor} stopOpacity={0.3} />
@@ -69,12 +78,19 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
             minTickGap={40}
           />
           <YAxis
+            yAxisId="price"
             domain={[minPrice, maxPrice]}
             tickFormatter={formatPrice}
             tick={{ fontSize: 10, fill: '#64748b' }}
             axisLine={false}
             tickLine={false}
             width={75}
+          />
+          <YAxis
+            yAxisId="volume"
+            domain={[0, maxVolume]}
+            hide
+            orientation="right"
           />
           <Tooltip
             contentStyle={{
@@ -84,7 +100,10 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
               fontSize: '12px',
               color: '#e2e8f0',
             }}
-            formatter={(value: number) => [formatPrice(value), 'Price']}
+            formatter={(value: number, name: string) => {
+              if (name === 'volume') return [value, 'Volume'];
+              return [formatPrice(value), 'Price'];
+            }}
             labelFormatter={(time) => {
               const d = new Date(time as number);
               return d.toLocaleString();
@@ -92,6 +111,7 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
           />
           {bid !== undefined && (
             <ReferenceLine
+              yAxisId="price"
               y={bid}
               stroke="#10b981"
               strokeDasharray="4 4"
@@ -106,6 +126,7 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
           )}
           {ask !== undefined && (
             <ReferenceLine
+              yAxisId="price"
               y={ask}
               stroke="#ef4444"
               strokeDasharray="4 4"
@@ -119,6 +140,7 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
             />
           )}
           <Area
+            yAxisId="price"
             type="monotone"
             dataKey="close"
             stroke={strokeColor}
@@ -126,7 +148,14 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
             fill={`url(#gradient-${symbol})`}
             animationDuration={300}
           />
-        </AreaChart>
+          <Bar
+            yAxisId="volume"
+            dataKey="volume"
+            fill={gradientColor}
+            fillOpacity={0.15}
+            isAnimationActive={false}
+          />
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   );

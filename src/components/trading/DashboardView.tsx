@@ -1,16 +1,15 @@
 'use client';
 
+import { useState, useEffect, useMemo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
 import { SYMBOLS, SYMBOL_INFO, BROKER_CONFIG, TRADING_SESSIONS, MARKET_CONDITION_CONFIG, type Symbol, type MarketCondition } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, DollarSign, Activity, Zap, Play, ArrowUpRight, ArrowDownRight, Clock, BarChart3, Shield, Volume2, RefreshCw } from 'lucide-react';
-import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis } from 'recharts';
-import { useMemo } from 'react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, Zap, Play, ArrowUpRight, ArrowDownRight, Clock, BarChart3, Shield, Volume2, RefreshCw, Award, Flame } from 'lucide-react';
+import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 
 function getConditionIcon(condition: MarketCondition) {
   switch (condition) {
@@ -24,24 +23,116 @@ function getConditionIcon(condition: MarketCondition) {
 function getSessionStatus(session: { start: number; end: number }) {
   const now = new Date();
   const currentHour = now.getUTCHours();
-  const isActive = currentHour >= session.start && currentHour < session.end;
-  return isActive;
+  const currentMinute = now.getUTCMinutes();
+  const currentDecimal = currentHour + currentMinute / 60;
+  const isActive = currentDecimal >= session.start && currentDecimal < session.end;
+  const progress = isActive
+    ? ((currentDecimal - session.start) / (session.end - session.start)) * 100
+    : 0;
+  const duration = session.end - session.start;
+  let statusText = '';
+  if (isActive) {
+    statusText = 'ACTIVE';
+  } else if (currentDecimal < session.start) {
+    const hoursUntil = session.start - currentHour;
+    const minsUntil = (hoursUntil * 60 - currentMinute);
+    if (minsUntil > 0) {
+      const h = Math.floor(minsUntil / 60);
+      const m = minsUntil % 60;
+      statusText = `Opens in ${h}:${m.toString().padStart(2, '0')}`;
+    } else {
+      statusText = 'Closed';
+    }
+  } else {
+    statusText = 'Closed';
+  }
+  return { isActive, progress, statusText, duration };
+}
+
+function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  return `${diffHr}h ago`;
+}
+
+function MiniSparkline({ values, width = 48, height = 18 }: { values: number[]; width?: number; height?: number }) {
+  if (values.length < 2) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const padding = 2;
+  const points = values.map((v, i) => {
+    const x = padding + (i / (values.length - 1)) * (width - padding * 2);
+    const y = padding + (1 - (v - min) / range) * (height - padding * 2);
+    return `${x},${y}`;
+  }).join(' ');
+  const isUp = values[values.length - 1] >= values[0];
+  const color = isUp ? '#10b981' : '#ef4444';
+  return (
+    <svg width={width} height={height} className="inline-block">
+      <polyline
+        fill="none"
+        stroke={color}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={points}
+      />
+    </svg>
+  );
 }
 
 export default function DashboardView() {
   const {
     balance, equity, freeMargin, dailyPnl, totalPnl,
-    openTrades, signals, prices, marketConditions,
+    openTrades, closedTrades, signals, prices, marketConditions,
     isConnected, isAutoTrading, setActiveTab, setAutoTrading,
+    todayTradeCount,
   } = useTradingStore();
+
+  const [utcNow, setUtcNow] = useState('');
+  const [currentDateTime, setCurrentDateTime] = useState('');
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      setUtcNow(now.toUTCString().slice(17, 25));
+      setCurrentDateTime(now.toLocaleString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+      }));
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const recentSignals = signals.slice(0, 5);
 
   const pnlPercent = totalPnl !== 0 ? ((totalPnl / balance) * 100) : 0;
   const dailyPnlPercent = dailyPnl !== 0 ? ((dailyPnl / balance) * 100) : 0;
 
+  // Performance metrics from closed trades
+  const perfMetrics = useMemo(() => {
+    const wins = closedTrades.filter(t => t.profit > 0);
+    const losses = closedTrades.filter(t => t.profit <= 0);
+    const winRate = closedTrades.length > 0 ? (wins.length / closedTrades.length) * 100 : 0;
+    const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.profit, 0) / wins.length : 0;
+    const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.profit, 0) / losses.length) : 0;
+    const totalWins = wins.reduce((s, t) => s + t.profit, 0);
+    const totalLosses = Math.abs(losses.reduce((s, t) => s + t.profit, 0));
+    const profitFactor = totalLosses > 0 ? totalWins / totalLosses : 0;
+    return { winRate, avgWin, avgLoss, profitFactor, totalTrades: closedTrades.length };
+  }, [closedTrades]);
+
   const totalPnlData = useMemo(() => {
-    const points = [];
+    const points: { v: number }[] = [];
     let val = 0;
     for (let i = 0; i < 20; i++) {
       val += (Math.random() - 0.45) * 15;
@@ -52,7 +143,7 @@ export default function DashboardView() {
   }, [totalPnl]);
 
   const dailyPnlData = useMemo(() => {
-    const points = [];
+    const points: { v: number }[] = [];
     let val = 0;
     for (let i = 0; i < 20; i++) {
       val += (Math.random() - 0.48) * 5;
@@ -61,6 +152,28 @@ export default function DashboardView() {
     points.push({ v: dailyPnl });
     return points;
   }, [dailyPnl]);
+
+  // Sparkline data for market conditions
+  const sparklineData = useMemo(() => {
+    const data: Record<string, number[]> = {};
+    SYMBOLS.forEach((sym) => {
+      const history = useTradingStore.getState().priceHistory[sym];
+      if (history && history.length >= 3) {
+        const recent = history.slice(-3);
+        data[sym] = recent.map(h => h.close);
+      } else {
+        const p = prices[sym];
+        if (p) {
+          const base = p.bid;
+          const pip = SYMBOL_INFO[sym].pipSize;
+          data[sym] = [base - pip * 3, base - pip, base];
+        } else {
+          data[sym] = [1, 1.001, 1.002];
+        }
+      }
+    });
+    return data;
+  }, [prices]);
 
   const stats = [
     {
@@ -102,8 +215,53 @@ export default function DashboardView() {
     },
   ];
 
+  const perfCards = [
+    {
+      label: 'Win Rate',
+      value: perfMetrics.totalTrades > 0 ? `${perfMetrics.winRate.toFixed(0)}%` : '0%',
+      icon: <Award className="h-3.5 w-3.5" />,
+      color: perfMetrics.winRate >= 50 ? 'text-emerald-500' : 'text-amber-500',
+      subValue: perfMetrics.totalTrades > 0 ? `${perfMetrics.totalTrades} trades` : 'No closed trades',
+    },
+    {
+      label: "Today's Trades",
+      value: todayTradeCount.toString(),
+      icon: <Flame className="h-3.5 w-3.5" />,
+      color: 'text-foreground',
+      subValue: `Max ${BROKER_CONFIG.maxOpenPositions} positions`,
+    },
+    {
+      label: 'Avg Win / Loss',
+      value: perfMetrics.totalTrades > 0
+        ? `$${perfMetrics.avgWin.toFixed(0)} / $${perfMetrics.avgLoss.toFixed(0)}`
+        : '$0 / $0',
+      icon: <TrendingUp className="h-3.5 w-3.5" />,
+      color: perfMetrics.avgWin >= perfMetrics.avgLoss ? 'text-emerald-500' : 'text-red-500',
+      subValue: perfMetrics.totalTrades > 0 ? `R:R ${perfMetrics.avgLoss > 0 ? (perfMetrics.avgWin / perfMetrics.avgLoss).toFixed(2) : '∞'}` : '—',
+    },
+    {
+      label: 'Profit Factor',
+      value: perfMetrics.totalTrades > 0 ? perfMetrics.profitFactor.toFixed(2) : '—',
+      icon: <BarChart3 className="h-3.5 w-3.5" />,
+      color: perfMetrics.profitFactor >= 1.5 ? 'text-emerald-500' : perfMetrics.profitFactor >= 1 ? 'text-amber-500' : 'text-red-500',
+      subValue: perfMetrics.totalTrades > 0 ? (perfMetrics.profitFactor >= 1.5 ? 'Excellent' : perfMetrics.profitFactor >= 1 ? 'Breakeven' : 'Negative') : 'No data',
+    },
+  ];
+
   return (
     <div className="space-y-4 p-4">
+      {/* (e) Header Enhancement */}
+      <div className="flex items-center justify-between mb-1">
+        <div>
+          <h1 className="text-xl font-bold">Trading Dashboard</h1>
+          <p className="text-xs text-muted-foreground">FINEX Indonesia • Demo Account • {currentDateTime}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-[10px] border-emerald-500/50 text-emerald-500">● Connected</Badge>
+          <Badge variant="outline" className="text-[10px]">UTC {utcNow}</Badge>
+        </div>
+      </div>
+
       {/* Top Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {stats.map((stat, i) => (
@@ -149,6 +307,33 @@ export default function DashboardView() {
                     </ResponsiveContainer>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* (a) Performance Metrics Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {perfCards.map((metric, i) => (
+          <motion.div
+            key={metric.label}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 + i * 0.04 }}
+          >
+            <Card className="glass-card">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={metric.color}>{metric.icon}</span>
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{metric.label}</span>
+                </div>
+                <div className={`text-sm font-bold tabular-nums ${metric.color}`}>
+                  {metric.value}
+                </div>
+                <div className="text-[10px] text-muted-foreground mt-0.5">
+                  {metric.subValue}
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -256,26 +441,48 @@ export default function DashboardView() {
             </CardContent>
           </Card>
 
-          {/* Trading Sessions */}
+          {/* (b) Better Session Indicators */}
           <Card className="glass-card">
             <CardHeader className="pb-2 pt-3 px-4">
-              <CardTitle className="text-sm font-semibold">Trading Sessions</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold">Trading Sessions</CardTitle>
+                <span className="text-[10px] text-muted-foreground tabular-nums font-medium">UTC {utcNow}</span>
+              </div>
             </CardHeader>
-            <CardContent className="px-4 pb-3 space-y-2">
+            <CardContent className="px-4 pb-3 space-y-3">
               {Object.values(TRADING_SESSIONS).map((session) => {
-                const active = getSessionStatus(session);
+                const { isActive, progress, statusText } = getSessionStatus(session);
                 return (
-                  <div key={session.label} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-xs">{session.label}</span>
+                  <div key={session.label}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs font-medium">{session.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground tabular-nums">
+                          {session.start.toString().padStart(2, '0')}:00-{session.end.toString().padStart(2, '0')}:00
+                        </span>
+                        {isActive ? (
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+                            <Badge className="text-[8px] px-1 py-0 bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30 h-4">ACTIVE</Badge>
+                          </div>
+                        ) : (
+                          <span className={`text-[10px] tabular-nums ${statusText === 'Closed' ? 'text-slate-600' : 'text-muted-foreground'}`}>
+                            {statusText}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-muted-foreground tabular-nums">
-                        {session.start.toString().padStart(2, '0')}:00-{session.end.toString().padStart(2, '0')}:00 UTC
-                      </span>
-                      <div className={`w-2 h-2 rounded-full ${active ? 'bg-emerald-500 pulse-dot' : 'bg-slate-600'}`} />
-                    </div>
+                    {isActive && (
+                      <div className="h-1 w-full rounded-full bg-slate-800 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-emerald-500/60 transition-all duration-1000"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -285,7 +492,7 @@ export default function DashboardView() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Recent Signals */}
+        {/* (c) Better Signal Cards */}
         <Card className="glass-card">
           <CardHeader className="pb-2 pt-3 px-4">
             <div className="flex items-center justify-between">
@@ -303,36 +510,69 @@ export default function DashboardView() {
             ) : (
               <div className="space-y-2">
                 {recentSignals.map((signal) => (
-                  <div key={signal.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
-                    <div className="flex items-center gap-2">
-                      {signal.direction === 'BUY' ? (
-                        <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />
-                      ) : signal.direction === 'SELL' ? (
-                        <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />
-                      ) : (
-                        <Activity className="h-3.5 w-3.5 text-muted-foreground" />
-                      )}
-                      <div>
-                        <span className="text-xs font-medium">{signal.symbol}</span>
-                        <span className="text-[10px] text-muted-foreground ml-1.5">{signal.strategy}</span>
+                  <div
+                    key={signal.id}
+                    className={`py-2 px-2.5 rounded-lg border-l-2 ${
+                      signal.direction === 'BUY'
+                        ? 'border-l-emerald-500 bg-emerald-500/5'
+                        : signal.direction === 'SELL'
+                        ? 'border-l-red-500 bg-red-500/5'
+                        : 'border-l-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {signal.direction === 'BUY' ? (
+                          <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />
+                        ) : signal.direction === 'SELL' ? (
+                          <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />
+                        ) : (
+                          <Activity className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                        <div>
+                          <span className="text-xs font-medium">{signal.symbol}</span>
+                          <span className="text-[10px] text-muted-foreground ml-1.5">{signal.strategy}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          className={`text-[9px] px-1.5 py-0 ${
+                            signal.marketCondition === 'trending' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                            : signal.marketCondition === 'high_volatility' ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                            : signal.marketCondition === 'range_bound' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                            : 'bg-slate-500/15 text-slate-400 border-slate-500/30'
+                          }`}
+                          variant="outline"
+                        >
+                          {MARKET_CONDITION_CONFIG[signal.marketCondition]?.label || signal.marketCondition}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] px-1.5 py-0 ${
+                            signal.direction === 'BUY'
+                              ? 'border-emerald-500/50 text-emerald-500'
+                              : signal.direction === 'SELL'
+                              ? 'border-red-500/50 text-red-500'
+                              : 'border-slate-500/50 text-slate-500'
+                          }`}
+                        >
+                          {signal.direction}
+                        </Badge>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] px-1.5 py-0 ${
-                          signal.direction === 'BUY'
-                            ? 'border-emerald-500/50 text-emerald-500'
-                            : signal.direction === 'SELL'
-                            ? 'border-red-500/50 text-red-500'
-                            : 'border-slate-500/50 text-slate-500'
-                        }`}
-                      >
-                        {signal.direction}
-                      </Badge>
-                      <span className={`text-[10px] font-medium tabular-nums ${signal.confidence >= 70 ? 'text-emerald-500' : signal.confidence >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
-                        {signal.confidence}%
-                      </span>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className="text-[10px] text-muted-foreground">{timeAgo(signal.createdAt)}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-1 rounded-full bg-slate-800 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${signal.confidence >= 70 ? 'bg-emerald-500' : signal.confidence >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                            style={{ width: `${signal.confidence}%` }}
+                          />
+                        </div>
+                        <span className={`text-[10px] font-medium tabular-nums ${signal.confidence >= 70 ? 'text-emerald-500' : signal.confidence >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
+                          {signal.confidence}%
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -341,7 +581,7 @@ export default function DashboardView() {
           </CardContent>
         </Card>
 
-        {/* Market Conditions */}
+        {/* (d) Market Conditions Enhancement */}
         <Card className="glass-card">
           <CardHeader className="pb-2 pt-3 px-4">
             <CardTitle className="text-sm font-semibold">Market Conditions</CardTitle>
@@ -352,15 +592,20 @@ export default function DashboardView() {
                 const condition = marketConditions[sym] || 'low_volatility';
                 const config = MARKET_CONDITION_CONFIG[condition];
                 const price = prices[sym];
+                const sparkValues = sparklineData[sym] || [];
                 return (
                   <div key={sym} className="flex items-center justify-between py-1.5">
                     <div className="flex items-center gap-3">
                       {getConditionIcon(condition)}
                       <div>
-                        <div className="text-xs font-medium">{SYMBOL_INFO[sym].name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium">{SYMBOL_INFO[sym].name}</span>
+                          <MiniSparkline values={sparkValues} width={40} height={14} />
+                        </div>
                         {price && (
                           <div className="text-[10px] text-muted-foreground tabular-nums">
-                            {price.bid.toFixed(SYMBOL_INFO[sym].digits)} / {price.ask.toFixed(SYMBOL_INFO[sym].digits)}
+                            {price.bid.toFixed(SYMBOL_INFO[sym].digits)}
+                            <span className="ml-1 text-slate-600">spread: {price.spread.toFixed(1)}</span>
                             <span className={`ml-1.5 ${price.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                               {price.change >= 0 ? '+' : ''}{price.changePercent.toFixed(2)}%
                             </span>
@@ -370,8 +615,13 @@ export default function DashboardView() {
                     </div>
                     <div className="text-right">
                       <Badge
+                        className={`text-[10px] px-2 py-0 ${
+                          condition === 'trending' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                          : condition === 'high_volatility' ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                          : condition === 'range_bound' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                          : 'bg-slate-500/15 text-slate-400 border-slate-500/30'
+                        }`}
                         variant="outline"
-                        className={`text-[10px] px-2 py-0 ${config.color}`}
                       >
                         {config.label}
                       </Badge>
