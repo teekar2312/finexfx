@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useTradingStore } from '@/store/trading-store';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -220,7 +219,7 @@ export default function NewsView() {
                 <div className="relative">
                   <div className="w-2.5 h-2.5 rounded-full bg-red-500 pulse-dot-anim" />
                 </div>
-                <Badge className="bg-red-500 text-white text-[10px] px-2.5 py-0 font-bold flex items-center gap-1 time-fade">
+                <Badge className="badge-glow-red bg-red-500 text-white text-[10px] px-2.5 py-0 font-bold flex items-center gap-1 time-fade">
                   <Radio className="h-2.5 w-2.5" />
                   BREAKING
                 </Badge>
@@ -284,31 +283,31 @@ export default function NewsView() {
             <SelectItem value="JPY">JPY</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={impactFilter} onValueChange={setImpactFilter}>
-          <SelectTrigger className="w-[100px] h-8 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Impact</SelectItem>
-            <SelectItem value="high">High</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
-            <SelectItem value="low">Low</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="tab-pill-group">
+          {['all', 'high', 'medium', 'low'].map((val) => (
+            <button
+              key={val}
+              onClick={() => setImpactFilter(val)}
+              className={`text-[11px] ${impactFilter === val ? 'tab-pill-active' : 'tab-pill'}`}
+            >
+              {val === 'all' ? 'All Impact' : val.charAt(0).toUpperCase() + val.slice(1)}
+            </button>
+          ))}
+        </div>
         <div className="flex-1" />
         <span className="text-[10px] text-muted-foreground">{filteredNews.length} articles • {filteredEvents.length} events</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
         {/* News Feed - Enhanced */}
-        <Card className="glass-card card-hover">
-          <CardHeader className="pb-2 pt-3 px-4">
+        <div className="glass-card-premium rounded-xl card-hover-lift">
+          <div className="flex items-center gap-2 mb-3 pb-2 pt-3 px-4">
             <div className="flex items-center gap-2">
               <Newspaper className="h-4 w-4 text-primary" />
-              <CardTitle className="text-sm font-semibold"><span className="section-title-accent">News Feed</span></CardTitle>
+              <span className="text-sm font-semibold section-title-accent">News Feed</span>
             </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-3">
+          </div>
+          <div className="px-4 pb-3">
             <ScrollArea className="h-[600px]">
               <div className="space-y-3 stagger-children">
                 {filteredNews.map((news, i) => {
@@ -321,9 +320,9 @@ export default function NewsView() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.03 }}
-                      className={`p-3 rounded-lg border transition-all border-l-4 hover:bg-accent/30 group card-hover ${isFirst ? 'shimmer-border ' : ''}
-                        news.impact === 'high' ? 'border-l-red-500 border-red-500/20 hover:border-l-red-400 hover:shadow-[0_0_12px_rgba(239,68,68,0.1)]' :
-                        news.impact === 'medium' ? 'border-l-amber-500 border-amber-500/20 hover:border-l-amber-400 hover:shadow-[0_0_12px_rgba(245,158,11,0.1)]' :
+                      className={`p-3 rounded-lg border transition-all transition-colors duration-200 border-l-2 hover:bg-accent/30 group card-hover ${isFirst ? 'shimmer-border ' : ''}
+                        news.impact === 'high' ? 'border-l-red-500/50 border-red-500/20 hover:border-l-red-400 hover:shadow-[0_0_12px_rgba(239,68,68,0.1)]' :
+                        news.impact === 'medium' ? 'border-l-amber-500/40 border-amber-500/20 hover:border-l-amber-400 hover:shadow-[0_0_12px_rgba(245,158,11,0.1)]' :
                         'border-l-slate-500 border-border hover:border-l-slate-400'
                       }`}
                     >
@@ -335,7 +334,7 @@ export default function NewsView() {
                             <h4 className={`font-semibold leading-tight ${news.impact === 'high' ? 'text-sm' : 'text-xs'}`}>{news.title}</h4>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               {isNew && (
-                                <Badge className="bg-red-500 text-white text-[8px] px-1 py-0 font-bold">
+                                <Badge className="badge-glow-red bg-red-500 text-white text-[8px] px-1 py-0 font-bold">
                                   NEW
                                 </Badge>
                               )}
@@ -351,7 +350,7 @@ export default function NewsView() {
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-[9px] px-1.5 py-0">{news.currency}</Badge>
                           {(news as any).category && (
-                            <Badge variant="outline" className={`text-[9px] px-1.5 py-0 flex items-center gap-1 ${getCategoryColor((news as any).category)}`}>
+                            <Badge variant="outline" className={`rounded-full px-2 py-0.5 text-[9px] font-medium tracking-wide uppercase flex items-center gap-1 ${getCategoryColor((news as any).category)}`}>
                               {getCategoryIcon((news as any).category)}
                               {(news as any).category}
                             </Badge>
@@ -362,7 +361,7 @@ export default function NewsView() {
                           )}
                         </div>
                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                          <span>{(news as any).source || 'News'}</span>
+                          <Badge variant="outline" className={`${(news as any).source === 'Reuters' ? 'badge-glow-emerald' : (news as any).source === 'Bloomberg' ? 'badge-glow-amber' : ''} text-[9px] px-1.5 py-0`}>{(news as any).source || 'News'}</Badge>
                           <span>•</span>
                           <div className="flex items-center gap-1">
                             <Clock className="h-2.5 w-2.5" />
@@ -380,16 +379,16 @@ export default function NewsView() {
                 )}
               </div>
             </ScrollArea>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Economic Calendar - Enhanced with timeline, color-coded actual vs forecast */}
-        <Card className="glass-card card-hover">
-          <CardHeader className="pb-2 pt-3 px-4">
+        <div className="glass-card-premium rounded-xl card-hover-lift">
+          <div className="flex items-center gap-2 mb-3 pb-2 pt-3 px-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Globe className="h-4 w-4 text-primary" />
-                <CardTitle className="text-sm font-semibold"><span className="section-title-accent">Economic Calendar</span></CardTitle>
+                <span className="text-sm font-semibold section-title-accent">Economic Calendar</span>
               </div>
               {/* Currency Strength summary */}
               <div className="flex items-center gap-2 elevated-card px-2 py-1 rounded-lg">
@@ -412,8 +411,8 @@ export default function NewsView() {
                 </div>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-3">
+          </div>
+          <div className="px-4 pb-3">
             <ScrollArea className="h-[600px]">
               <div className="relative">
                 {/* Vertical timeline line */}
@@ -468,8 +467,8 @@ export default function NewsView() {
                 </div>
               </div>
             </ScrollArea>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Economic Calendar */}

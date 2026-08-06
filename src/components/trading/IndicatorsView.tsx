@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
 import { INDICATOR_POOL, type Symbol } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
@@ -64,11 +63,11 @@ function getTrendArrow(signal: string) {
   return <Minus className="h-3.5 w-3.5 text-slate-500" />;
 }
 
-const categoryConfig: Record<string, { label: string; color: string; icon: React.ReactNode; accent: string }> = {
-  trend: { label: 'Trend', color: 'text-emerald-500', icon: <TrendingUp className="h-4 w-4" />, accent: 'stat-accent-emerald' },
-  momentum: { label: 'Momentum', color: 'text-amber-500', icon: <Activity className="h-4 w-4" />, accent: 'stat-accent-amber' },
-  volatility: { label: 'Volatility', color: 'text-red-500', icon: <BarChart3 className="h-4 w-4" />, accent: 'stat-accent-red' },
-  volume: { label: 'Volume', color: 'text-cyan-500', icon: <Volume2 className="h-4 w-4" />, accent: 'stat-accent-cyan' },
+const categoryConfig: Record<string, { label: string; color: string; icon: React.ReactNode; accent: string; borderAccent: string }> = {
+  trend: { label: 'Trend', color: 'text-emerald-500', icon: <TrendingUp className="h-4 w-4" />, accent: 'stat-accent-emerald', borderAccent: 'border-l-emerald-500' },
+  momentum: { label: 'Momentum', color: 'text-amber-500', icon: <Activity className="h-4 w-4" />, accent: 'stat-accent-amber', borderAccent: 'border-l-amber-500' },
+  volatility: { label: 'Volatility', color: 'text-red-500', icon: <BarChart3 className="h-4 w-4" />, accent: 'stat-accent-red', borderAccent: 'border-l-rose-500' },
+  volume: { label: 'Volume', color: 'text-cyan-500', icon: <Volume2 className="h-4 w-4" />, accent: 'stat-accent-cyan', borderAccent: 'border-l-cyan-500' },
 };
 
 // Indicator gauge configuration
@@ -251,7 +250,7 @@ export default function IndicatorsView() {
           ))}
         </div>
         <div className="flex-1" />
-        <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-emerald-500/30 text-emerald-400">
+        <Badge variant="outline" className="badge-glow-emerald text-[10px] px-2 py-0.5 border-emerald-500/30 text-emerald-400">
           Active: {enabledIndicators.length}/{INDICATOR_POOL.length}
         </Badge>
       </div>
@@ -264,7 +263,7 @@ export default function IndicatorsView() {
           placeholder="Filter indicators by name..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full h-8 pl-9 pr-3 rounded-md bg-accent/50 border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all"
+          className="input-glass-premium w-full h-8 pl-9 pr-3 rounded-md bg-white/[0.03] border border-white/[0.08] text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-emerald-500/40 transition-all"
         />
       </div>
 
@@ -274,8 +273,8 @@ export default function IndicatorsView() {
           const config = categoryConfig[cat];
           const summary = getCategorySignalSummary(cat);
           return (
-            <Card key={cat} className={`glass-card card-hover ${config.accent}`}>
-              <CardContent className="p-3">
+            <div key={cat} className={`glass-card-premium rounded-xl card-hover-lift ${config.accent}`}>
+              <div className="p-3">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5">
                     <span className={config.color}>{config.icon}</span>
@@ -311,8 +310,8 @@ export default function IndicatorsView() {
                   <span className="text-[9px] text-emerald-500/70">{summary.bullish} bull</span>
                   <span className="text-[9px] text-red-500/70">{summary.bearish} bear</span>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           );
         })}
       </div>
@@ -326,9 +325,9 @@ export default function IndicatorsView() {
         return (
           <div key={cat}>
             {/* Enhanced category header with summary bar */}
-            <div className={`flex items-center gap-3 mb-3 p-2 rounded-lg glass-card ${config.accent}`}>
+            <div className={`flex items-center gap-3 mb-3 p-2 rounded-lg glass-card border-l-2 ${config.borderAccent} ${config.accent}`}>
               <span className={config.color}>{config.icon}</span>
-              <h3 className={`section-title-accent text-sm font-semibold ${config.color}`}>{config.label} Indicators</h3>
+              <h3 className={`section-title-accent text-base font-semibold ${config.color}`}>{config.label} Indicators</h3>
               {/* Summary counts */}
               <div className="flex items-center gap-1.5 text-[10px]">
                 <span className="text-emerald-500 font-medium">{summary.bullish} Bull</span>
@@ -352,13 +351,13 @@ export default function IndicatorsView() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.02 }}
                   >
-                    <Card
-                      className={`glass-card card-hover border-b-2 cursor-pointer transition-all hover:border-border ${
-                        isEnabled ? 'border-primary/20' : ''
+                    <div
+  className={`glass-card-premium rounded-xl card-hover-lift border-b-2 cursor-pointer transition-all hover:border-border ${
+                        isEnabled ? 'border-primary/20 shadow-[0_0_12px_rgba(16,185,129,0.15)]' : ''
                       } ${getSignalBorder(display.signal)}`}
                       onClick={() => setSelectedIndicator(display)}
                     >
-                      <CardContent className="p-3">
+                      <div className="p-3">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             {getSignalIcon(display.signal)}
@@ -377,15 +376,15 @@ export default function IndicatorsView() {
                         </div>
                         {/* Large value with trend arrow */}
                         <div className="flex items-center gap-1.5 mb-2">
-                          <span className={`text-xl font-bold tabular-nums ${getSignalColor(display.signal)}`}>
+                          <span className={`text-xl font-bold tabular-nums ${display.signal === 'bullish' ? 'text-emerald-400' : display.signal === 'bearish' ? 'text-red-400' : 'text-muted-foreground'}`}>
                             {display.value.toFixed(1)}
                           </span>
                           {getTrendArrow(display.signal)}
                         </div>
                         {/* Signal badge - more prominent */}
                         <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold ${
-                          display.signal === 'bullish' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' :
-                          display.signal === 'bearish' ? 'bg-red-500/15 text-red-400 border border-red-500/30' :
+                          display.signal === 'bullish' ? 'badge-glow-emerald bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' :
+                          display.signal === 'bearish' ? 'badge-glow-red bg-red-500/15 text-red-400 border border-red-500/30' :
                           'bg-slate-500/15 text-slate-400 border border-slate-500/30'
                         }`}>
                           {getSignalIcon(display.signal)}
@@ -404,8 +403,8 @@ export default function IndicatorsView() {
                             ))}
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   </motion.div>
                 );
               })}
@@ -424,8 +423,8 @@ export default function IndicatorsView() {
                 {selectedIndicator.name}
                 <Badge
                   className={`text-[10px] ml-1 ${
-                    selectedIndicator.signal === 'bullish' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                    selectedIndicator.signal === 'bearish' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                    selectedIndicator.signal === 'bullish' ? 'badge-glow-emerald bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                    selectedIndicator.signal === 'bearish' ? 'badge-glow-red bg-red-500/20 text-red-400 border border-red-500/30' :
                     'bg-slate-500/20 text-slate-400 border border-slate-500/30'
                   }`}
                 >

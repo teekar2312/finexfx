@@ -1,0 +1,1131 @@
+     1→'use client';
+     2→
+     3→import { useState, useMemo } from 'react';
+     4→import { useTradingStore, type JournalEntry } from '@/store/trading-store';
+     5→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+     6→import { Badge } from '@/components/ui/badge';
+     7→import { Button } from '@/components/ui/button';
+     8→import { Input } from '@/components/ui/input';
+     9→import { Label } from '@/components/ui/label';
+    10→import { Textarea } from '@/components/ui/textarea';
+    11→import { Separator } from '@/components/ui/separator';
+    12→import {
+    13→  Dialog,
+    14→  DialogContent,
+    15→  DialogHeader,
+    16→  DialogTitle,
+    17→  DialogTrigger,
+    18→} from '@/components/ui/dialog';
+    19→import {
+    20→  Select,
+    21→  SelectContent,
+    22→  SelectItem,
+    23→  SelectTrigger,
+    24→  SelectValue,
+    25→} from '@/components/ui/select';
+    26→import { motion, AnimatePresence } from 'framer-motion';
+    27→import {
+    28→  BookOpen,
+    29→  Plus,
+    30→  Search,
+    31→  TrendingUp,
+    32→  TrendingDown,
+    33→  DollarSign,
+    34→  Target,
+    35→  Star,
+    36→  ChevronDown,
+    37→  ChevronUp,
+    38→  Pencil,
+    39→  Trash2,
+    40→  X,
+    41→  Filter,
+    42→  BarChart3,
+    43→  Smile,
+    44→  Meh,
+    45→  Frown,
+    46→  Angry,
+    47→  Clock,
+    48→  Tag,
+    49→  Lightbulb,
+    50→  AlertTriangle,
+    51→  Trophy,
+    52→  Percent,
+    53→  ArrowUpRight,
+    54→  ArrowDownRight,
+    55→  CalendarDays,
+    56→} from 'lucide-react';
+    57→import {
+    58→  BarChart,
+    59→  Bar,
+    60→  XAxis,
+    61→  YAxis,
+    62→  Tooltip as RechartsTooltip,
+    63→  ResponsiveContainer,
+    64→  PieChart,
+    65→  Pie,
+    66→  Cell,
+    67→} from 'recharts';
+    68→
+    69→const MOOD_CONFIG = {
+    70→  great: { emoji: '🏆', label: 'Great', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', Icon: Trophy },
+    71→  good: { emoji: '😊', label: 'Good', color: 'text-emerald-300', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', Icon: Smile },
+    72→  neutral: { emoji: '😐', label: 'Neutral', color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', Icon: Meh },
+    73→  bad: { emoji: '😟', label: 'Bad', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20', Icon: Frown },
+    74→  terrible: { emoji: '💀', label: 'Terrible', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20', Icon: Angry },
+    75→} as const;
+    76→
+    77→const STRATEGIES = [
+    78→  'EMA Crossover', 'MA Ribbon', 'Momentum Scalping', 'Pivot Points',
+    79→  'RMI Trend Sync', 'Linear Regression', 'EMA/RSI Filter', 'Manual',
+    80→];
+    81→
+    82→const SYMBOLS_LIST = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD'];
+    83→
+    84→const SYMBOL_DISPLAY: Record<string, string> = {
+    85→  EURUSD: 'EUR/USD', GBPUSD: 'GBP/USD', USDJPY: 'USD/JPY', XAUUSD: 'XAU/USD',
+    86→};
+    87→
+    88→const MOOD_COLORS = ['#10b981', '#34d399', '#f59e0b', '#f97316', '#ef4444'];
+    89→
+    90→function formatPrice(price: number, symbol: string) {
+    91→  if (symbol === 'XAUUSD') return price.toFixed(2);
+    92→  if (symbol === 'USDJPY') return price.toFixed(3);
+    93→  return price.toFixed(5);
+    94→}
+    95→
+    96→function formatDate(dateStr: string) {
+    97→  const d = new Date(dateStr);
+    98→  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    99→}
+   100→
+   101→function formatTime(dateStr: string) {
+   102→  const d = new Date(dateStr);
+   103→  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+   104→}
+   105→
+   106→function StarRating({ rating, onChange, size = 'sm' }: { rating: number; onChange?: (r: number) => void; size?: 'sm' | 'md' }) {
+   107→  const sz = size === 'sm' ? 'h-3.5 w-3.5' : 'h-5 w-5';
+   108→  return (
+   109→    <div className="flex gap-0.5">
+   110→      {[1, 2, 3, 4, 5].map((star) => (
+   111→        <button
+   112→          key={star}
+   113→          type="button"
+   114→          onClick={() => onChange?.(star)}
+   115→          className={`${onChange ? 'cursor-pointer hover:scale-110' : 'cursor-default'} transition-transform`}
+   116→        >
+   117→          <Star
+   118→            className={`${sz} ${star <= rating ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/30'}`}
+   119→          />
+   120→        </button>
+   121→      ))}
+   122→    </div>
+   123→  );
+   124→}
+   125→
+   126→// --- Journal Entry Form ---
+   127→function JournalEntryForm({
+   128→  entry,
+   129→  onSave,
+   130→  onCancel,
+   131→}: {
+   132→  entry?: JournalEntry;
+   133→  onSave: (data: Omit<JournalEntry, 'id' | 'createdAt'>) => void;
+   134→  onCancel: () => void;
+   135→}) {
+   136→  const isEdit = !!entry;
+   137→  const [symbol, setSymbol] = useState(entry?.symbol || 'EURUSD');
+   138→  const [direction, setDirection] = useState<'BUY' | 'SELL'>(entry?.direction || 'BUY');
+   139→  const [entryPrice, setEntryPrice] = useState(entry?.entryPrice.toString() || '');
+   140→  const [exitPrice, setExitPrice] = useState(entry?.exitPrice.toString() || '');
+   141→  const [lotSize, setLotSize] = useState(entry?.lotSize.toString() || '0.1');
+   142→  const [pips, setPips] = useState(entry?.pips.toString() || '');
+   143→  const [pnl, setPnl] = useState(entry?.pnl.toString() || '');
+   144→  const [strategy, setStrategy] = useState(entry?.strategy || 'EMA Crossover');
+   145→  const [openTime, setOpenTime] = useState(entry?.openTime ? entry.openTime.slice(0, 16) : '');
+   146→  const [closeTime, setCloseTime] = useState(entry?.closeTime ? entry.closeTime.slice(0, 16) : '');
+   147→  const [duration, setDuration] = useState(entry?.duration || '');
+   148→  const [notes, setNotes] = useState(entry?.notes || '');
+   149→  const [tagsStr, setTagsStr] = useState(entry?.tags.join(', ') || '');
+   150→  const [mood, setMood] = useState<JournalEntry['mood']>(entry?.mood || 'neutral');
+   151→  const [mistakesStr, setMistakesStr] = useState(entry?.mistakes.join(', ') || '');
+   152→  const [lessons, setLessons] = useState(entry?.lessons || '');
+   153→  const [rating, setRating] = useState(entry?.rating || 3);
+   154→
+   155→  const handleSubmit = (e: React.FormEvent) => {
+   156→    e.preventDefault();
+   157→    onSave({
+   158→      tradeId: entry?.tradeId || `t-${Date.now()}`,
+   159→      symbol,
+   160→      direction,
+   161→      entryPrice: parseFloat(entryPrice) || 0,
+   162→      exitPrice: parseFloat(exitPrice) || 0,
+   163→      pips: parseFloat(pips) || 0,
+   164→      pnl: parseFloat(pnl) || 0,
+   165→      lotSize: parseFloat(lotSize) || 0.01,
+   166→      strategy,
+   167→      openTime: openTime ? new Date(openTime).toISOString() : new Date().toISOString(),
+   168→      closeTime: closeTime ? new Date(closeTime).toISOString() : new Date().toISOString(),
+   169→      duration: duration || 'N/A',
+   170→      notes,
+   171→      tags: tagsStr.split(',').map((t) => t.trim()).filter(Boolean),
+   172→      mood,
+   173→      mistakes: mistakesStr.split(',').map((m) => m.trim()).filter(Boolean),
+   174→      lessons,
+   175→      rating,
+   176→    });
+   177→  };
+   178→
+   179→  return (
+   180→    <form onSubmit={handleSubmit} className="space-y-4">
+   181→      <div className="grid grid-cols-2 gap-3">
+   182→        <div className="space-y-1.5">
+   183→          <Label className="text-xs text-muted-foreground">Symbol</Label>
+   184→          <Select value={symbol} onValueChange={setSymbol}>
+   185→            <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+   186→            <SelectContent>
+   187→              {SYMBOLS_LIST.map((s) => (
+   188→                <SelectItem key={s} value={s} className="text-xs">{SYMBOL_DISPLAY[s]}</SelectItem>
+   189→              ))}
+   190→            </SelectContent>
+   191→          </Select>
+   192→        </div>
+   193→        <div className="space-y-1.5">
+   194→          <Label className="text-xs text-muted-foreground">Direction</Label>
+   195→          <div className="flex gap-2">
+   196→            <Button
+   197→              type="button"
+   198→              size="sm"
+   199→              variant={direction === 'BUY' ? 'default' : 'outline'}
+   200→              className={`flex-1 h-9 text-xs ${direction === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+   201→              onClick={() => setDirection('BUY')}
+   202→            >BUY</Button>
+   203→            <Button
+   204→              type="button"
+   205→              size="sm"
+   206→              variant={direction === 'SELL' ? 'default' : 'outline'}
+   207→              className={`flex-1 h-9 text-xs ${direction === 'SELL' ? 'bg-red-600 hover:bg-red-700' : ''}`}
+   208→              onClick={() => setDirection('SELL')}
+   209→            >SELL</Button>
+   210→          </div>
+   211→        </div>
+   212→      </div>
+   213→
+   214→      <div className="grid grid-cols-2 gap-3">
+   215→        <div className="space-y-1.5">
+   216→          <Label className="text-xs text-muted-foreground">Entry Price</Label>
+   217→          <Input type="number" step="any" value={entryPrice} onChange={(e) => setEntryPrice(e.target.value)} className="h-9 text-xs" />
+   218→        </div>
+   219→        <div className="space-y-1.5">
+   220→          <Label className="text-xs text-muted-foreground">Exit Price</Label>
+   221→          <Input type="number" step="any" value={exitPrice} onChange={(e) => setExitPrice(e.target.value)} className="h-9 text-xs" />
+   222→        </div>
+   223→      </div>
+   224→
+   225→      <div className="grid grid-cols-3 gap-3">
+   226→        <div className="space-y-1.5">
+   227→          <Label className="text-xs text-muted-foreground">Pips</Label>
+   228→          <Input type="number" step="any" value={pips} onChange={(e) => setPips(e.target.value)} className="h-9 text-xs" />
+   229→        </div>
+   230→        <div className="space-y-1.5">
+   231→          <Label className="text-xs text-muted-foreground">P&L ($)</Label>
+   232→          <Input type="number" step="any" value={pnl} onChange={(e) => setPnl(e.target.value)} className="h-9 text-xs" />
+   233→        </div>
+   234→        <div className="space-y-1.5">
+   235→          <Label className="text-xs text-muted-foreground">Lot Size</Label>
+   236→          <Input type="number" step="0.01" value={lotSize} onChange={(e) => setLotSize(e.target.value)} className="h-9 text-xs" />
+   237→        </div>
+   238→      </div>
+   239→
+   240→      <div className="grid grid-cols-2 gap-3">
+   241→        <div className="space-y-1.5">
+   242→          <Label className="text-xs text-muted-foreground">Strategy</Label>
+   243→          <Select value={strategy} onValueChange={setStrategy}>
+   244→            <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+   245→            <SelectContent>
+   246→              {STRATEGIES.map((s) => (
+   247→                <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+   248→              ))}
+   249→            </SelectContent>
+   250→          </Select>
+   251→        </div>
+   252→        <div className="space-y-1.5">
+   253→          <Label className="text-xs text-muted-foreground">Duration</Label>
+   254→          <Input value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="e.g. 1h 30m" className="h-9 text-xs" />
+   255→        </div>
+   256→      </div>
+   257→
+   258→      <div className="grid grid-cols-2 gap-3">
+   259→        <div className="space-y-1.5">
+   260→          <Label className="text-xs text-muted-foreground">Open Time</Label>
+   261→          <Input type="datetime-local" value={openTime} onChange={(e) => setOpenTime(e.target.value)} className="h-9 text-xs" />
+   262→        </div>
+   263→        <div className="space-y-1.5">
+   264→          <Label className="text-xs text-muted-foreground">Close Time</Label>
+   265→          <Input type="datetime-local" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} className="h-9 text-xs" />
+   266→        </div>
+   267→      </div>
+   268→
+   269→      <div className="space-y-1.5">
+   270→        <Label className="text-xs text-muted-foreground">Tags (comma-separated)</Label>
+   271→        <Input value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} placeholder="trending, London session, breakout" className="h-9 text-xs" />
+   272→      </div>
+   273→
+   274→      <div className="space-y-1.5">
+   275→        <Label className="text-xs text-muted-foreground">Trade Notes</Label>
+   276→        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="text-xs resize-none" placeholder="Describe what happened in this trade..." />
+   277→      </div>
+   278→
+   279→      <div className="space-y-2">
+   280→        <Label className="text-xs text-muted-foreground">Mood</Label>
+   281→        <div className="flex gap-2">
+   282→          {(Object.keys(MOOD_CONFIG) as Array<JournalEntry['mood']>).map((m) => {
+   283→            const cfg = MOOD_CONFIG[m];
+   284→            return (
+   285→              <button
+   286→                key={m}
+   287→                type="button"
+   288→                onClick={() => setMood(m)}
+   289→                className={`flex-1 flex flex-col items-center gap-1 p-2 rounded-lg border transition-all text-xs
+   290→                  ${mood === m ? `${cfg.bg} ${cfg.border} ${cfg.color} ring-1 ring-current/30` : 'border-border hover:bg-accent text-muted-foreground'}`}
+   291→              >
+   292→                <span className="text-base">{cfg.emoji}</span>
+   293→                <span>{cfg.label}</span>
+   294→              </button>
+   295→            );
+   296→          })}
+   297→        </div>
+   298→      </div>
+   299→
+   300→      <div className="space-y-1.5">
+   301→        <Label className="text-xs text-muted-foreground">Mistakes (comma-separated)</Label>
+   302→        <Textarea value={mistakesStr} onChange={(e) => setMistakesStr(e.target.value)} rows={2} className="text-xs resize-none" placeholder="What went wrong?" />
+   303→      </div>
+   304→
+   305→      <div className="space-y-1.5">
+   306→        <Label className="text-xs text-muted-foreground">Lessons Learned</Label>
+   307→        <Textarea value={lessons} onChange={(e) => setLessons(e.target.value)} rows={2} className="text-xs resize-none" placeholder="What did you learn from this trade?" />
+   308→      </div>
+   309→
+   310→      <div className="space-y-1.5">
+   311→        <Label className="text-xs text-muted-foreground">Trade Rating</Label>
+   312→        <StarRating rating={rating} onChange={setRating} size="md" />
+   313→      </div>
+   314→
+   315→      <div className="flex gap-2 pt-2">
+   316→        <Button type="button" variant="outline" size="sm" onClick={onCancel} className="flex-1 h-9 text-xs">
+   317→          Cancel
+   318→        </Button>
+   319→        <Button type="submit" size="sm" className="flex-1 h-9 text-xs">
+   320→          {isEdit ? 'Update Entry' : 'Add Entry'}
+   321→        </Button>
+   322→      </div>
+   323→    </form>
+   324→  );
+   325→}
+   326→
+   327→// --- Journal Entry Card ---
+   328→function JournalEntryCard({
+   329→  entry,
+   330→  index,
+   331→  onEdit,
+   332→  onDelete,
+   333→}: {
+   334→  entry: JournalEntry;
+   335→  index: number;
+   336→  onEdit: (entry: JournalEntry) => void;
+   337→  onDelete: (id: string) => void;
+   338→}) {
+   339→  const [expanded, setExpanded] = useState(false);
+   340→  const isWin = entry.pnl >= 0;
+   341→  const moodCfg = MOOD_CONFIG[entry.mood];
+   342→
+   343→  return (
+   344→    <motion.div
+   345→      initial={{ opacity: 0, y: 8 }}
+   346→      animate={{ opacity: 1, y: 0 }}
+   347→      transition={{ delay: index * 0.04, duration: 0.2 }}
+   348→      className="glass-card rounded-lg overflow-hidden parallax-hover"
+   349→    >
+   350→      {/* Card Header */}
+   351→      <div className="p-4">
+   352→        <div className="flex items-start justify-between gap-3">
+   353→          <div className="flex items-center gap-3 min-w-0">
+   354→            {/* Direction indicator */}
+   355→            <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center
+   356→              ${entry.direction === 'BUY' ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
+   357→              {entry.direction === 'BUY'
+   358→                ? <ArrowUpRight className={`h-5 w-5 text-emerald-400`} />
+   359→                : <ArrowDownRight className={`h-5 w-5 text-red-400`} />
+   360→              }
+   361→            </div>
+   362→
+   363→            <div className="min-w-0 flex-1">
+   364→              <div className="flex items-center gap-2 flex-wrap">
+   365→                <span className="text-sm font-semibold">{SYMBOL_DISPLAY[entry.symbol] || entry.symbol}</span>
+   366→                <Badge
+   367→                  variant="outline"
+   368→                  className={`text-[10px] px-1.5 py-0 font-semibold
+   369→                    ${entry.direction === 'BUY' ? 'border-emerald-500/40 text-emerald-400' : 'border-red-500/40 text-red-400'}`}
+   370→                >
+   371→                  {entry.direction}
+   372→                </Badge>
+   373→                <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+   374→                  {entry.strategy}
+   375→                </Badge>
+   376→              </div>
+   377→              <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground">
+   378→                <span className="flex items-center gap-1">
+   379→                  <CalendarDays className="h-3 w-3" />
+   380→                  {formatDate(entry.openTime)}
+   381→                </span>
+   382→                <span className="flex items-center gap-1">
+   383→                  <Clock className="h-3 w-3" />
+   384→                  {entry.duration}
+   385→                </span>
+   386→              </div>
+   387→            </div>
+   388→          </div>
+   389→
+   390→          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+   391→            <span className={`text-sm font-bold tabular-nums ${isWin ? 'text-emerald-400' : 'text-red-400'}`}>
+   392→              {isWin ? '+' : ''}{entry.pnl.toFixed(2)}
+   393→            </span>
+   394→            <span className={`text-[11px] tabular-nums ${isWin ? 'text-emerald-400/70' : 'text-red-400/70'}`}>
+   395→              {isWin ? '+' : ''}{entry.pips} pips
+   396→            </span>
+   397→          </div>
+   398→        </div>
+   399→
+   400→        {/* Price info row */}
+   401→        <div className="flex items-center gap-4 mt-3 text-[11px] text-muted-foreground">
+   402→          <span>Entry: <span className="text-foreground font-medium tabular-nums">{formatPrice(entry.entryPrice, entry.symbol)}</span></span>
+   403→          <span className="text-muted-foreground/40">→</span>
+   404→          <span>Exit: <span className="text-foreground font-medium tabular-nums">{formatPrice(entry.exitPrice, entry.symbol)}</span></span>
+   405→          <span className="ml-auto">Lot: <span className="text-foreground font-medium tabular-nums">{entry.lotSize}</span></span>
+   406→        </div>
+   407→
+   408→        {/* Mood, rating, tags row */}
+   409→        <div className="flex items-center gap-3 mt-3 flex-wrap">
+   410→          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium ${moodCfg.bg} ${moodCfg.color} border ${moodCfg.border}`}>
+   411→            <span>{moodCfg.emoji}</span>
+   412→            <span>{moodCfg.label}</span>
+   413→          </div>
+   414→          <StarRating rating={entry.rating} />
+   415→          <div className="flex items-center gap-1 ml-auto flex-wrap">
+   416→            {entry.tags.slice(0, 3).map((tag) => (
+   417→              <Badge key={tag} variant="secondary" className="text-[9px] px-1.5 py-0 h-5 font-normal">
+   418→                {tag}
+   419→              </Badge>
+   420→            ))}
+   421→            {entry.tags.length > 3 && (
+   422→              <span className="text-[10px] text-muted-foreground">+{entry.tags.length - 3}</span>
+   423→            )}
+   424→          </div>
+   425→        </div>
+   426→
+   427→        {/* Preview of notes */
+   428→          !expanded && entry.notes && (
+   429→            <p className="text-[11px] text-muted-foreground mt-3 line-clamp-2 leading-relaxed">
+   430→              {entry.notes}
+   431→            </p>
+   432→          )
+   433→        }
+   434→      </div>
+   435→
+   436→      {/* Expand/Collapse Button */
+   437→        <button
+   438→          onClick={() => setExpanded(!expanded)}
+   439→          className="w-full flex items-center justify-center gap-1 py-2 text-[11px] text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors border-t border-border/50"
+   440→        >
+   441→          {expanded ? (
+   442→            <><ChevronUp className="h-3 w-3" /> Show less</>
+   443→          ) : (
+   444→            <><ChevronDown className="h-3 w-3" /> Show details</>
+   445→          )}
+   446→        </button>
+   447→      }
+   448→
+   449→      {/* Expanded Content */
+   450→        <AnimatePresence>
+   451→          {expanded && (
+   452→            <motion.div
+   453→              initial={{ height: 0, opacity: 0 }}
+   454→              animate={{ height: 'auto', opacity: 1 }}
+   455→              exit={{ height: 0, opacity: 0 }}
+   456→              transition={{ duration: 0.2 }}
+   457→              className="overflow-hidden"
+   458→            >
+   459→              <div className="px-4 pb-4 space-y-4">
+   460→                <Separator />
+   461→
+   462→                {/* Full Notes */}
+   463→                {entry.notes && (
+   464→                  <div>
+   465→                    <div className="flex items-center gap-1.5 mb-1.5">
+   466→                      <BookOpen className="h-3 w-3 text-muted-foreground" />
+   467→                      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Notes</span>
+   468→                    </div>
+   469→                    <p className="text-xs text-foreground/80 leading-relaxed bg-accent/30 rounded-lg p-3">
+   470→                      {entry.notes}
+   471→                    </p>
+   472→                  </div>
+   473→                )}
+   474→
+   475→                {/* Mistakes */}
+   476→                {entry.mistakes.length > 0 && (
+   477→                  <div>
+   478→                    <div className="flex items-center gap-1.5 mb-1.5">
+   479→                      <AlertTriangle className="h-3 w-3 text-amber-400" />
+   480→                      <span className="text-[11px] font-medium text-amber-400 uppercase tracking-wider">Mistakes</span>
+   481→                    </div>
+   482→                    <ul className="space-y-1">
+   483→                      {entry.mistakes.map((m, i) => (
+   484→                        <li key={i} className="text-xs text-foreground/70 flex items-start gap-2">
+   485→                          <span className="text-amber-400 mt-0.5">•</span>
+   486→                          {m}
+   487→                        </li>
+   488→                      ))}
+   489→                    </ul>
+   490→                  </div>
+   491→                )}
+   492→
+   493→                {/* Lessons */}
+   494→                {entry.lessons && (
+   495→                  <div>
+   496→                    <div className="flex items-center gap-1.5 mb-1.5">
+   497→                      <Lightbulb className="h-3 w-3 text-emerald-400" />
+   498→                      <span className="text-[11px] font-medium text-emerald-400 uppercase tracking-wider">Lessons</span>
+   499→                    </div>
+   500→                    <p className="text-xs text-foreground/80 leading-relaxed bg-emerald-500/5 border border-emerald-500/10 rounded-lg p-3">
+   501→                      {entry.lessons}
+   502→                    </p>
+   503→                  </div>
+   504→                )}
+   505→
+   506→                {/* All Tags */}
+   507→                {entry.tags.length > 0 && (
+   508→                  <div>
+   509→                    <div className="flex items-center gap-1.5 mb-1.5">
+   510→                      <Tag className="h-3 w-3 text-muted-foreground" />
+   511→                      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Tags</span>
+   512→                    </div>
+   513→                    <div className="flex flex-wrap gap-1.5">
+   514→                      {entry.tags.map((tag) => (
+   515→                        <Badge key={tag} variant="outline" className="text-[10px] px-2 py-0.5 font-normal">
+   516→                          {tag}
+   517→                        </Badge>
+   518→                      ))}
+   519→                    </div>
+   520→                  </div>
+   521→                )}
+   522→
+   523→                {/* Time Details */}
+   524→                <div className="grid grid-cols-2 gap-3">
+   525→                  <div className="bg-accent/30 rounded-lg p-2.5">
+   526→                    <span className="text-[10px] text-muted-foreground block">Opened</span>
+   527→                    <span className="text-xs font-medium tabular-nums">{formatDate(entry.openTime)} {formatTime(entry.openTime)}</span>
+   528→                  </div>
+   529→                  <div className="bg-accent/30 rounded-lg p-2.5">
+   530→                    <span className="text-[10px] text-muted-foreground block">Closed</span>
+   531→                    <span className="text-xs font-medium tabular-nums">{formatDate(entry.closeTime)} {formatTime(entry.closeTime)}</span>
+   532→                  </div>
+   533→                </div>
+   534→
+   535→                {/* Actions */}
+   536→                <div className="flex gap-2">
+   537→                  <Button
+   538→                    variant="outline"
+   539→                    size="sm"
+   540→                    className="flex-1 h-8 text-xs gap-1.5"
+   541→                    onClick={() => onEdit(entry)}
+   542→                  >
+   543→                    <Pencil className="h-3 w-3" /> Edit
+   544→                  </Button>
+   545→                  <Button
+   546→                    variant="outline"
+   547→                    size="sm"
+   548→                    className="h-8 text-xs gap-1.5 text-red-400 hover:text-red-300 border-red-500/20 hover:bg-red-500/10"
+   549→                    onClick={() => onDelete(entry.id)}
+   550→                  >
+   551→                    <Trash2 className="h-3 w-3" /> Delete
+   552→                  </Button>
+   553→                </div>
+   554→              </div>
+   555→            </motion.div>
+   556→          )}
+   557→        </AnimatePresence>
+   558→    }
+   559→    </motion.div>
+   560→  );
+   561→}
+   562→
+   563→// --- Analytics Section ---
+   564→function JournalAnalytics({ entries }: { entries: JournalEntry[] }) {
+   565→  const wins = entries.filter((e) => e.pnl >= 0);
+   566→  const losses = entries.filter((e) => e.pnl < 0);
+   567→  const winRate = entries.length > 0 ? (wins.length / entries.length) * 100 : 0;
+   568→  const totalPnl = entries.reduce((s, e) => s + e.pnl, 0);
+   569→  const avgPnl = entries.length > 0 ? totalPnl / entries.length : 0;
+   570→  const avgRating = entries.length > 0 ? entries.reduce((s, e) => s + e.rating, 0) / entries.length : 0;
+   571→  const avgWin = wins.length > 0 ? wins.reduce((s, e) => s + e.pnl, 0) / wins.length : 0;
+   572→  const avgLoss = losses.length > 0 ? losses.reduce((s, e) => s + e.pnl, 0) / losses.length : 0;
+   573→
+   574→  // Strategy performance
+   575→  const strategyMap = new Map<string, { count: number; pnl: number; wins: number }>();
+   576→  entries.forEach((e) => {
+   577→    const s = strategyMap.get(e.strategy) || { count: 0, pnl: 0, wins: 0 };
+   578→    s.count++;
+   579→    s.pnl += e.pnl;
+   580→    if (e.pnl >= 0) s.wins++;
+   581→    strategyMap.set(e.strategy, s);
+   582→  });
+   583→  const strategyData = Array.from(strategyMap.entries()).map(([name, data]) => ({
+   584→    name,
+   585→    trades: data.count,
+   586→    pnl: parseFloat(data.pnl.toFixed(2)),
+   587→    winRate: parseFloat(((data.wins / data.count) * 100).toFixed(0)),
+   588→  }));
+   589→
+   590→  // Mood distribution
+   591→  const moodMap = new Map<string, number>();
+   592→  entries.forEach((e) => moodMap.set(e.mood, (moodMap.get(e.mood) || 0) + 1));
+   593→  const moodData = (Object.keys(MOOD_CONFIG) as Array<JournalEntry['mood']>).map((m) => ({
+   594→    name: MOOD_CONFIG[m].label,
+   595→    value: moodMap.get(m) || 0,
+   596→  })).filter((d) => d.value > 0);
+   597→
+   598→  // P&L by symbol
+   599→  const symbolMap = new Map<string, number>();
+   600→  entries.forEach((e) => symbolMap.set(e.symbol, (symbolMap.get(e.symbol) || 0) + e.pnl));
+   601→  const symbolPnlData = Array.from(symbolMap.entries()).map(([sym, pnl]) => ({
+   602→    name: SYMBOL_DISPLAY[sym] || sym,
+   603→    pnl: parseFloat(pnl.toFixed(2)),
+   604→  }));
+   605→
+   606→  return (
+   607→    <div className="space-y-4 elevated-card rounded-xl p-4">
+   608→      {/* Summary Stats */}
+   609→      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
+   610→        <Card className="glass-card border-0 p-0 card-hover">
+   611→          <CardContent className="p-4">
+   612→            <div className="flex items-center gap-2 mb-1">
+   613→              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+   614→                <Target className="h-3.5 w-3.5 text-primary" />
+   615→              </div>
+   616→              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Win Rate</span>
+   617→            </div>
+   618→            <div className="text-xl font-bold tabular-nums">{winRate.toFixed(0)}%</div>
+   619→            <div className="text-[10px] text-muted-foreground mt-0.5">{wins.length}W / {losses.length}L</div>
+   620→          </CardContent>
+   621→        </Card>
+   622→
+   623→        <Card className="glass-card border-0 p-0 card-hover">
+   624→          <CardContent className="p-4">
+   625→            <div className="flex items-center gap-2 mb-1">
+   626→              <div className={`w-7 h-7 rounded-lg ${totalPnl >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10'} flex items-center justify-center`}>
+   627→                <DollarSign className={`h-3.5 w-3.5 ${totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`} />
+   628→              </div>
+   629→              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Total P&L</span>
+   630→            </div>
+   631→            <div className={`text-xl font-bold tabular-nums ${totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+   632→              {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}
+   633→            </div>
+   634→            <div className={`text-[10px] mt-0.5 ${avgPnl >= 0 ? 'text-emerald-400/70' : 'text-red-400/70'}`}
+   635→            >Avg: {avgPnl >= 0 ? '+' : ''}{avgPnl.toFixed(2)}/trade</div>
+   636→          </CardContent>
+   637→        </Card>
+   638→
+   639→        <Card className="glass-card border-0 p-0 card-hover">
+   640→          <CardContent className="p-4">
+   641→            <div className="flex items-center gap-2 mb-1">
+   642→              <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center">
+   643→                <Star className="h-3.5 w-3.5 text-amber-400" />
+   644→              </div>
+   645→              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Rating</span>
+   646→            </div>
+   647→            <div className="text-xl font-bold tabular-nums">{avgRating.toFixed(1)}</div>
+   648→            <div className="text-[10px] text-muted-foreground mt-0.5">out of 5.0</div>
+   649→          </CardContent>
+   650→        </Card>
+   651→
+   652→        <Card className="glass-card border-0 p-0 card-hover">
+   653→          <CardContent className="p-4">
+   654→            <div className="flex items-center gap-2 mb-1">
+   655→              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+   656→                <TrendingUp className="h-3.5 w-3.5 text-primary" />
+   657→              </div>
+   658→              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg W/L</span>
+   659→            </div>
+   660→            <div className="flex items-baseline gap-2">
+   661→              <span className="text-sm font-bold tabular-nums text-emerald-400">+{avgWin.toFixed(2)}</span>
+   662→              <span className="text-[10px] text-muted-foreground">/</span>
+   663→              <span className="text-sm font-bold tabular-nums text-red-400">{avgLoss.toFixed(2)}</span>
+   664→            </div>
+   665→            <div className="text-[10px] text-muted-foreground mt-0.5">Win avg / Loss avg</div>
+   666→          </CardContent>
+   667→        </Card>
+   668→      </div>
+   669→
+   670→      {/* Charts Row */}
+   671→      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 stagger-children">
+   672→        {/* P&L by Strategy */}
+   673→        <Card className="glass-card border-0 p-0 card-hover md:col-span-2">
+   674→          <CardHeader className="pb-2 pt-4 px-4">
+   675→            <span className="section-title-accent"><CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+   676→              <BarChart3 className="h-3.5 w-3.5" /> P&L by Strategy
+   677→            </CardTitle></span>
+   678→          </CardHeader>
+   679→          <CardContent className="px-4 pb-4">
+   680→            <div className="h-48">
+   681→              <ResponsiveContainer width="100%" height="100%">
+   682→                <BarChart data={strategyData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+   683→                  <XAxis
+   684→                    dataKey="name"
+   685→                    tick={{ fontSize: 10, fill: '#94a3b8' }}
+   686→                    axisLine={{ stroke: 'rgba(255,255,255,0.06)' }}
+   687→                    tickLine={false}
+   688→                  />
+   689→                  <YAxis
+   690→                    tick={{ fontSize: 10, fill: '#94a3b8' }}
+   691→                    axisLine={false}
+   692→                    tickLine={false}
+   693→                    tickFormatter={(v) => `$${v}`}
+   694→                  />
+   695→                  <RechartsTooltip
+   696→                    contentStyle={{
+   697→                      background: 'rgba(17,24,39,0.9)',
+   698→                      border: '1px solid rgba(255,255,255,0.1)',
+   699→                      borderRadius: '8px',
+   700→                      fontSize: '11px',
+   701→                    }}
+   702→                    formatter={(value: number) => [`$${value.toFixed(2)}`, 'P&L']}
+   703→                    labelStyle={{ color: '#e2e8f0' }}
+   704→                  />
+   705→                  <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
+   706→                    {strategyData.map((entry, i) => (
+   707→                      <Cell
+   708→                        key={`cell-${i}`}
+   709→                        fill={entry.pnl >= 0 ? '#10b981' : '#ef4444'}
+   710→                        fillOpacity={0.8}
+   711→                      />
+   712→                    ))}
+   713→                  </Bar>
+   714→                </BarChart>
+   715→              </ResponsiveContainer>
+   716→            </div>
+   717→          </CardContent>
+   718→        </Card>
+   719→
+   720→        {/* Mood Distribution */}
+   721→        <Card className="glass-card border-0 p-0 card-hover">
+   722→          <CardHeader className="pb-2 pt-4 px-4">
+   723→            <span className="section-title-accent"><CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+   724→              <Smile className="h-3.5 w-3.5" /> Mood Distribution
+   725→            </CardTitle></span>
+   726→          </CardHeader>
+   727→          <CardContent className="px-4 pb-4">
+   728→            <div className="h-48 flex items-center justify-center">
+   729→              <ResponsiveContainer width="100%" height="100%">
+   730→                <PieChart>
+   731→                  <Pie
+   732→                    data={moodData}
+   733→                    cx="50%"
+   734→                    cy="50%"
+   735→                    innerRadius={40}
+   736→                    outerRadius={65}
+   737→                    paddingAngle={3}
+   738→                    dataKey="value"
+   739→                  >
+   740→                    {moodData.map((_, i) => (
+   741→                      <Cell key={`mood-${i}`} fill={MOOD_COLORS[i]} fillOpacity={0.8} />
+   742→                    ))}
+   743→                  </Pie>
+   744→                  <RechartsTooltip
+   745→                    contentStyle={{
+   746→                      background: 'rgba(17,24,39,0.9)',
+   747→                      border: '1px solid rgba(255,255,255,0.1)',
+   748→                      borderRadius: '8px',
+   749→                      fontSize: '11px',
+   750→                    }}
+   751→                    formatter={(value: number) => [`${value} trades`, 'Count']}
+   752→                    labelStyle={{ color: '#e2e8f0' }}
+   753→                  />
+   754→                </PieChart>
+   755→              </ResponsiveContainer>
+   756→            </div>
+   757→            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 justify-center">
+   758→              {moodData.map((d, i) => (
+   759→                <div key={d.name} className="flex items-center gap-1 text-[10px]">
+   760→                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: MOOD_COLORS[i] }} />
+   761→                  <span className="text-muted-foreground">{d.name} ({d.value})</span>
+   762→                </div>
+   763→              ))}
+   764→            </div>
+   765→          </CardContent>
+   766→        </Card>
+   767→      </div>
+   768→
+   769→      {/* P&L by Symbol */}
+   770→      <Card className="glass-card border-0 p-0 card-hover">
+   771→        <CardHeader className="pb-2 pt-4 px-4">
+   772→          <span className="section-title-accent"><CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+   773→            <DollarSign className="h-3.5 w-3.5" /> P&L by Symbol
+   774→          </CardTitle></span>
+   775→        </CardHeader>
+   776→        <CardContent className="px-4 pb-4">
+   777→          <div className="flex flex-wrap gap-3">
+   778→            {symbolPnlData.map((s) => (
+   779→              <div key={s.name} className="flex items-center gap-2 bg-accent/30 rounded-lg px-3 py-2">
+   780→                <span className="text-xs font-medium">{s.name}</span>
+   781→                <span className={`text-xs font-bold tabular-nums ${s.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+   782→                  {s.pnl >= 0 ? '+' : ''}{s.pnl.toFixed(2)}
+   783→                </span>
+   784→              </div>
+   785→            ))}
+   786→          </div>
+   787→        </CardContent>
+   788→      </Card>
+   789→    </div>
+   790→  );
+   791→}
+   792→
+   793→// --- Main Journal View ---
+   794→export default function TradeJournalView() {
+   795→  const { journalEntries, addJournalEntry, updateJournalEntry, deleteJournalEntry, addNotification } = useTradingStore();
+   796→
+   797→  const [searchQuery, setSearchQuery] = useState('');
+   798→  const [filterSymbol, setFilterSymbol] = useState<string>('all');
+   799→  const [filterMood, setFilterMood] = useState<string>('all');
+   800→  const [filterStrategy, setFilterStrategy] = useState<string>('all');
+   801→  const [sortBy, setSortBy] = useState<'date' | 'pnl' | 'pips' | 'rating'>('date');
+   802→  const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
+   803→  const [showAnalytics, setShowAnalytics] = useState(false);
+   804→  const [dialogOpen, setDialogOpen] = useState(false);
+   805→  const [editingEntry, setEditingEntry] = useState<JournalEntry | undefined>(undefined);
+   806→  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+   807→
+   808→  // Extract unique strategies from entries for filter
+   809→  const allStrategies = useMemo(() => {
+   810→    const set = new Set(journalEntries.map((e) => e.strategy));
+   811→    return Array.from(set).sort();
+   812→  }, [journalEntries]);
+   813→
+   814→  // Filter and sort entries
+   815→  const filteredEntries = useMemo(() => {
+   816→    let result = [...journalEntries];
+   817→
+   818→    if (searchQuery) {
+   819→      const q = searchQuery.toLowerCase();
+   820→      result = result.filter(
+   821→        (e) =>
+   822→          e.symbol.toLowerCase().includes(q) ||
+   823→          e.strategy.toLowerCase().includes(q) ||
+   824→          e.notes.toLowerCase().includes(q) ||
+   825→          e.tags.some((t) => t.toLowerCase().includes(q)) ||
+   826→          e.lessons.toLowerCase().includes(q)
+   827→      );
+   828→    }
+   829→
+   830→    if (filterSymbol !== 'all') {
+   831→      result = result.filter((e) => e.symbol === filterSymbol);
+   832→    }
+   833→    if (filterMood !== 'all') {
+   834→      result = result.filter((e) => e.mood === filterMood);
+   835→    }
+   836→    if (filterStrategy !== 'all') {
+   837→      result = result.filter((e) => e.strategy === filterStrategy);
+   838→    }
+   839→
+   840→    result.sort((a, b) => {
+   841→      const dir = sortDir === 'desc' ? -1 : 1;
+   842→      switch (sortBy) {
+   843→        case 'date': return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+   844→        case 'pnl': return dir * (a.pnl - b.pnl);
+   845→        case 'pips': return dir * (a.pips - b.pips);
+   846→        case 'rating': return dir * (a.rating - b.rating);
+   847→        default: return 0;
+   848→      }
+   849→    });
+   850→
+   851→    return result;
+   852→  }, [journalEntries, searchQuery, filterSymbol, filterMood, filterStrategy, sortBy, sortDir]);
+   853→
+   854→  const handleAddEntry = (data: Omit<JournalEntry, 'id' | 'createdAt'>) => {
+   855→    addJournalEntry({
+   856→      ...data,
+   857→      id: `j-${Date.now()}`,
+   858→      createdAt: new Date().toISOString(),
+   859→    });
+   860→    setDialogOpen(false);
+   861→    setEditingEntry(undefined);
+   862→    addNotification({ type: 'success', title: 'Journal Entry Added', message: `${data.direction} ${data.symbol} logged in journal` });
+   863→  };
+   864→
+   865→  const handleUpdateEntry = (data: Omit<JournalEntry, 'id' | 'createdAt'>) => {
+   866→    if (editingEntry) {
+   867→      updateJournalEntry(editingEntry.id, data);
+   868→      setDialogOpen(false);
+   869→      setEditingEntry(undefined);
+   870→      addNotification({ type: 'success', title: 'Entry Updated', message: 'Journal entry has been updated' });
+   871→    }
+   872→  };
+   873→
+   874→  const handleEdit = (entry: JournalEntry) => {
+   875→    setEditingEntry(entry);
+   876→    setDialogOpen(true);
+   877→  };
+   878→
+   879→  const handleDelete = (id: string) => {
+   880→    deleteJournalEntry(id);
+   881→    setDeleteConfirm(null);
+   882→    addNotification({ type: 'info', title: 'Entry Deleted', message: 'Journal entry removed' });
+   883→  };
+   884→
+   885→  const handleSave = editingEntry ? handleUpdateEntry : handleAddEntry;
+   886→
+   887→  const handleToggleSort = (field: typeof sortBy) => {
+   888→    if (sortBy === field) {
+   889→      setSortDir(sortDir === 'desc' ? 'asc' : 'desc');
+   890→    } else {
+   891→      setSortBy(field);
+   892→      setSortDir('desc');
+   893→    }
+   894→  };
+   895→
+   896→  const hasActiveFilters = searchQuery || filterSymbol !== 'all' || filterMood !== 'all' || filterStrategy !== 'all';
+   897→
+   898→  return (
+   899→    <div className="p-4 md:p-6 space-y-6">
+   900→      {/* Header */}
+   901→      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+   902→        <div>
+   903→          <div className="flex items-center gap-2.5">
+   904→            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+   905→              <BookOpen className="h-5 w-5 text-primary" />
+   906→            </div>
+   907→            <div>
+   908→              <h1 className="text-lg font-bold">Trade Journal</h1>
+   909→              <p className="text-xs text-muted-foreground">Review, annotate, and learn from your closed trades</p>
+   910→            </div>
+   911→          </div>
+   912→        </div>
+   913→        <div className="flex items-center gap-2">
+   914→          <Button
+   915→            variant={showAnalytics ? 'default' : 'outline'}
+   916→            size="sm"
+   917→            className="h-8 text-xs gap-1.5"
+   918→            onClick={() => setShowAnalytics(!showAnalytics)}
+   919→          >
+   920→            <BarChart3 className="h-3.5 w-3.5" />
+   921→            Analytics
+   922→          </Button>
+   923→          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setEditingEntry(undefined); }}>
+   924→            <DialogTrigger asChild>
+   925→              <Button size="sm" className="h-8 text-xs gap-1.5">
+   926→                <Plus className="h-3.5 w-3.5" />
+   927→                New Entry
+   928→              </Button>
+   929→            </DialogTrigger>
+   930→            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+   931→              <DialogHeader>
+   932→                <DialogTitle className="text-sm">{editingEntry ? 'Edit Journal Entry' : 'New Journal Entry'}</DialogTitle>
+   933→              </DialogHeader>
+   934→              <JournalEntryForm
+   935→                entry={editingEntry}
+   936→                onSave={handleSave}
+   937→                onCancel={() => { setDialogOpen(false); setEditingEntry(undefined); }}
+   938→              />
+   939→            </DialogContent>
+   940→          </Dialog>
+   941→        </div>
+   942→      </div>
+   943→
+   944→      {/* Analytics Panel */}
+   945→      <AnimatePresence>
+   946→        {showAnalytics && (
+   947→          <motion.div
+   948→            initial={{ height: 0, opacity: 0 }}
+   949→            animate={{ height: 'auto', opacity: 1 }}
+   950→            exit={{ height: 0, opacity: 0 }}
+   951→            transition={{ duration: 0.3 }}
+   952→            className="overflow-hidden"
+   953→          >
+   954→            <JournalAnalytics entries={journalEntries} />
+   955→          </motion.div>
+   956→        )}
+   957→      </AnimatePresence>
+   958→
+   959→      {/* Filters Bar */}
+   960→      <Card className="glass-card border-0 p-0 card-hover">
+   961→        <CardContent className="p-3">
+   962→          <div className="flex flex-col md:flex-row gap-3">
+   963→            {/* Search */}
+   964→            <div className="relative flex-1 min-w-0">
+   965→              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+   966→              <Input
+   967→                value={searchQuery}
+   968→                onChange={(e) => setSearchQuery(e.target.value)}
+   969→                placeholder="Search notes, tags, strategies..."
+   970→                className="h-8 pl-8 text-xs"
+   971→              />
+   972→              {searchQuery && (
+   973→                <button
+   974→                  onClick={() => setSearchQuery('')}
+   975→                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+   976→                >
+   977→                  <X className="h-3 w-3" />
+   978→                </button>
+   979→              )}
+   980→            </div>
+   981→
+   982→            {/* Symbol Filter */}
+   983→            <Select value={filterSymbol} onValueChange={setFilterSymbol}>
+   984→              <SelectTrigger className="h-8 w-full md:w-[130px] text-xs">
+   985→                <SelectValue placeholder="Symbol" />
+   986→              </SelectTrigger>
+   987→              <SelectContent>
+   988→                <SelectItem value="all" className="text-xs">All Symbols</SelectItem>
+   989→                {SYMBOLS_LIST.map((s) => (
+   990→                  <SelectItem key={s} value={s} className="text-xs">{SYMBOL_DISPLAY[s]}</SelectItem>
+   991→                ))}
+   992→              </SelectContent>
+   993→            </Select>
+   994→
+   995→            {/* Mood Filter */}
+   996→            <Select value={filterMood} onValueChange={setFilterMood}>
+   997→              <SelectTrigger className="h-8 w-full md:w-[120px] text-xs">
+   998→                <SelectValue placeholder="Mood" />
+   999→              </SelectTrigger>
+  1000→              <SelectContent>
+  1001→                <SelectItem value="all" className="text-xs">All Moods</SelectItem>
+  1002→                {(Object.keys(MOOD_CONFIG) as Array<JournalEntry['mood']>).map((m) => (
+  1003→                  <SelectItem key={m} value={m} className="text-xs">
+  1004→                    {MOOD_CONFIG[m].emoji} {MOOD_CONFIG[m].label}
+  1005→                  </SelectItem>
+  1006→                ))}
+  1007→              </SelectContent>
+  1008→            </Select>
+  1009→
+  1010→            {/* Strategy Filter */}
+  1011→            <Select value={filterStrategy} onValueChange={setFilterStrategy}>
+  1012→              <SelectTrigger className="h-8 w-full md:w-[150px] text-xs">
+  1013→                <SelectValue placeholder="Strategy" />
+  1014→              </SelectTrigger>
+  1015→              <SelectContent>
+  1016→                <SelectItem value="all" className="text-xs">All Strategies</SelectItem>
+  1017→                {allStrategies.map((s) => (
+  1018→                  <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+  1019→                ))}
+  1020→              </SelectContent>
+  1021→            </Select>
+  1022→          </div>
+  1023→
+  1024→          {/* Sort Options + Clear */}
+  1025→          <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-border/50">
+  1026→            <div className="flex items-center gap-1">
+  1027→              <Filter className="h-3 w-3 text-muted-foreground" />
+  1028→              <span className="text-[10px] text-muted-foreground mr-1">Sort:</span>
+  1029→              {([['date', 'Date'], ['pnl', 'P&L'], ['pips', 'Pips'], ['rating', 'Rating']] as const).map(([key, label]) => (
+  1030→                <button
+  1031→                  key={key}
+  1032→                  onClick={() => handleToggleSort(key)}
+  1033→                  className={`text-[10px] px-2 py-0.5 rounded-md transition-colors
+  1034→                    ${sortBy === key
+  1035→                      ? 'bg-primary/10 text-primary font-medium'
+  1036→                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}
+  1037→                >
+  1038→                  {label}
+  1039→                  {sortBy === key && (
+  1040→                    <span className="ml-0.5">{sortDir === 'desc' ? '↓' : '↑'}</span>
+  1041→                  )}
+  1042→                </button>
+  1043→              ))}
+  1044→            </div>
+  1045→            <div className="flex items-center gap-2">
+  1046→              {hasActiveFilters && (
+  1047→                <button
+  1048→                  onClick={() => { setSearchQuery(''); setFilterSymbol('all'); setFilterMood('all'); setFilterStrategy('all'); }}
+  1049→                  className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+  1050→                >
+  1051→                  Clear filters
+  1052→                </button>
+  1053→              )}
+  1054→              <span className="text-[10px] text-muted-foreground">
+  1055→                {filteredEntries.length} {filteredEntries.length === 1 ? 'entry' : 'entries'}
+  1056→              </span>
+  1057→            </div>
+  1058→          </div>
+  1059→        </CardContent>
+  1060→      </Card>
+  1061→
+  1062→      {/* Journal Entries List */}
+  1063→      <div className="space-y-3 stagger-children">
+  1064→        {filteredEntries.length === 0 ? (
+  1065→          <div className="glass-card rounded-lg p-12 text-center">
+  1066→            <BookOpen className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+  1067→            <h3 className="text-sm font-medium text-muted-foreground mb-1">
+  1068→              {hasActiveFilters ? 'No matching entries' : 'No journal entries yet'}
+  1069→            </h3>
+  1070→            <p className="text-xs text-muted-foreground">
+  1071→              {hasActiveFilters
+  1072→                ? 'Try adjusting your filters to find what you\'re looking for.'
+  1073→                : 'Start documenting your trades to build a trading diary and improve your performance.'}
+  1074→            </p>
+  1075→            {!hasActiveFilters && (
+  1076→              <Button
+  1077→                size="sm"
+  1078→                className="mt-4 h-8 text-xs gap-1.5"
+  1079→                onClick={() => setDialogOpen(true)}
+  1080→              >
+  1081→                <Plus className="h-3.5 w-3.5" />
+  1082→                Add First Entry
+  1083→              </Button>
+  1084→            )}
+  1085→          </div>
+  1086→        ) : (
+  1087→          filteredEntries.map((entry, i) => (
+  1088→            <JournalEntryCard
+  1089→              key={entry.id}
+  1090→              entry={entry}
+  1091→              index={i}
+  1092→              onEdit={handleEdit}
+  1093→              onDelete={(id) => setDeleteConfirm(id)}
+  1094→            />
+  1095→          ))
+  1096→        )}
+  1097→      </div>
+  1098→
+  1099→      {/* Delete Confirmation Dialog */}
+  1100→      <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+  1101→        <DialogContent className="max-w-sm">
+  1102→          <DialogHeader>
+  1103→            <DialogTitle className="text-sm">Delete Journal Entry</DialogTitle>
+  1104→          </DialogHeader>
+  1105→          <p className="text-xs text-muted-foreground">
+  1106→            Are you sure you want to delete this journal entry? This action cannot be undone.
+  1107→          </p>
+  1108→          <div className="flex gap-2 mt-3">
+  1109→            <Button
+  1110→              variant="outline"
+  1111→              size="sm"
+  1112→              className="flex-1 h-8 text-xs"
+  1113→              onClick={() => setDeleteConfirm(null)}
+  1114→            >
+  1115→              Cancel
+  1116→            </Button>
+  1117→            <Button
+  1118→              variant="destructive"
+  1119→              size="sm"
+  1120→              className="flex-1 h-8 text-xs"
+  1121→              onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+  1122→            >
+  1123→              Delete
+  1124→            </Button>
+  1125→          </div>
+  1126→        </DialogContent>
+  1127→      </Dialog>
+  1128→    </div>
+  1129→  );
+  1130→}
+  1131→

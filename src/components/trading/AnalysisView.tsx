@@ -3,7 +3,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTradingStore } from '@/store/trading-store';
 import { SYMBOLS, SYMBOL_INFO, MARKET_CONDITION_CONFIG, STRATEGIES, type Symbol, type MarketCondition, type StrategyName } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -277,8 +276,8 @@ export default function AnalysisView() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: SYMBOLS.indexOf(sym) * 0.05 }}
             >
-              <Card className={`glass-card card-hover card-hover-lift${sig && highestConfidenceSignal && sig.id === highestConfidenceSignal.id ? ' shimmer-border' : ''}`}>
-                <CardContent className="p-4">
+              <div className={`glass-card-premium rounded-xl card-hover-lift${sig && highestConfidenceSignal && sig.id === highestConfidenceSignal.id ? ' shimmer-border' : ''}`}>
+                <div className="p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       {getTrendArrow(condition)}
@@ -383,8 +382,8 @@ export default function AnalysisView() {
                       </div>
                     </>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </motion.div>
           );
         })}
@@ -392,12 +391,12 @@ export default function AnalysisView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* AI Analysis */}
-        <Card className="glass-card card-hover-lift lg:col-span-2">
-          <CardHeader className="pb-2 pt-3 px-4">
+        <div className="glass-card-premium rounded-xl card-hover-lift lg:col-span-2">
+          <div className="flex items-center gap-2 mb-3 pb-2 pt-3 px-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Brain className="h-4 w-4 text-primary" />
-                <CardTitle className="text-sm font-semibold">AI Market Analysis</CardTitle>
+                <span className="text-sm font-semibold section-title-accent">AI Market Analysis</span>
                 <Sparkles className="h-3.5 w-3.5 text-amber-500" />
               </div>
               {/* Confidence score gauge */}
@@ -409,8 +408,8 @@ export default function AnalysisView() {
                 <div className="text-[10px] text-muted-foreground">Overall<br/>Confidence</div>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
+          </div>
+          <div className="px-4 pb-4">
             <div className="space-y-4">
               {/* Source Tags */}
               <div className="flex flex-wrap gap-1.5">
@@ -551,18 +550,18 @@ export default function AnalysisView() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Signal History - Enhanced with confidence gauge, prices, R:R, copy, time ago */}
-        <Card className="glass-card card-hover-lift">
-          <CardHeader className="pb-2 pt-3 px-4">
+        <div className="glass-card-premium rounded-xl card-hover-lift">
+          <div className="flex items-center gap-2 mb-3 pb-2 pt-3 px-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold">Signal History</CardTitle>
+              <span className="text-sm font-semibold section-title-accent">Signal History</span>
               <Badge variant="outline" className="text-[10px]">{signals.length} total</Badge>
             </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-3">
+          </div>
+          <div className="px-4 pb-3">
             {signals.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-sm">
                 No signals generated yet
@@ -590,8 +589,8 @@ export default function AnalysisView() {
                             <span className="text-xs font-semibold">{signal.symbol}</span>
                             <Badge
                               className={`text-[9px] px-1.5 py-0 font-semibold ${
-                                signal.direction === 'BUY' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                                signal.direction === 'SELL' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                                signal.direction === 'BUY' ? 'badge-glow-emerald bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                                signal.direction === 'SELL' ? 'badge-glow-red bg-red-500/20 text-red-400 border border-red-500/30' :
                                 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
                               }`}
                             >
@@ -698,22 +697,22 @@ export default function AnalysisView() {
                 </div>
               </ScrollArea>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Multi-Timeframe Analysis */}
       <MultiTimeframePanel />
 
       {/* Strategy Reference Grid */}
-      <Card className="glass-card card-hover-lift">
-        <CardHeader className="pb-2 pt-3 px-4">
+      <div className="glass-card-premium rounded-xl card-hover-lift">
+        <div className="flex items-center gap-2 mb-3 pb-2 pt-3 px-4">
           <div className="flex items-center gap-2">
             <Award className="h-4 w-4 text-primary" />
-            <CardTitle className="text-sm font-semibold">Strategy Reference</CardTitle>
+            <span className="text-sm font-semibold section-title-accent">Strategy Reference</span>
           </div>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
+        </div>
+        <div className="px-4 pb-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {(Object.keys(STRATEGIES) as StrategyName[]).map((strat, idx) => {
               const s = STRATEGIES[strat];
@@ -750,8 +749,8 @@ export default function AnalysisView() {
               );
             })}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Signal Detail Modal */}
       <SignalDetailModal

@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import { useTradingStore, type JournalEntry } from '@/store/trading-store';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -366,7 +365,7 @@ function JournalEntryCard({
                 <Badge
                   variant="outline"
                   className={`text-[10px] px-1.5 py-0 font-semibold
-                    ${entry.direction === 'BUY' ? 'border-emerald-500/40 text-emerald-400' : 'border-red-500/40 text-red-400'}`}
+                    ${entry.direction === 'BUY' ? 'badge-glow-emerald border-emerald-500/40 text-emerald-400' : 'badge-glow-red border-red-500/40 text-red-400'}`}
                 >
                   {entry.direction}
                 </Badge>
@@ -388,7 +387,7 @@ function JournalEntryCard({
           </div>
 
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <span className={`text-sm font-bold tabular-nums ${isWin ? 'text-emerald-400' : 'text-red-400'}`}>
+            <span className={`text-sm font-bold tabular-nums ${isWin ? 'text-emerald-400 neon-text-emerald' : 'text-red-400 neon-text-red'}`}>
               {isWin ? '+' : ''}{entry.pnl.toFixed(2)}
             </span>
             <span className={`text-[11px] tabular-nums ${isWin ? 'text-emerald-400/70' : 'text-red-400/70'}`}>
@@ -607,8 +606,8 @@ function JournalAnalytics({ entries }: { entries: JournalEntry[] }) {
     <div className="space-y-4 elevated-card rounded-xl p-4">
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
-        <Card className="glass-card border-0 p-0 card-hover">
-          <CardContent className="p-4">
+        <div className="glass-card-premium rounded-xl border-0 p-0 card-hover-lift metric-card-animated">
+          <div className="p-4">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Target className="h-3.5 w-3.5 text-primary" />
@@ -617,27 +616,27 @@ function JournalAnalytics({ entries }: { entries: JournalEntry[] }) {
             </div>
             <div className="text-xl font-bold tabular-nums">{winRate.toFixed(0)}%</div>
             <div className="text-[10px] text-muted-foreground mt-0.5">{wins.length}W / {losses.length}L</div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="glass-card border-0 p-0 card-hover">
-          <CardContent className="p-4">
+        <div className="glass-card-premium rounded-xl border-0 p-0 card-hover-lift metric-card-animated">
+          <div className="p-4">
             <div className="flex items-center gap-2 mb-1">
               <div className={`w-7 h-7 rounded-lg ${totalPnl >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10'} flex items-center justify-center`}>
                 <DollarSign className={`h-3.5 w-3.5 ${totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`} />
               </div>
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Total P&L</span>
             </div>
-            <div className={`text-xl font-bold tabular-nums ${totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            <div className={`text-xl font-bold tabular-nums ${totalPnl >= 0 ? 'text-emerald-400 neon-text-emerald' : 'text-red-400 neon-text-red'}`}>
               {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}
             </div>
             <div className={`text-[10px] mt-0.5 ${avgPnl >= 0 ? 'text-emerald-400/70' : 'text-red-400/70'}`}
             >Avg: {avgPnl >= 0 ? '+' : ''}{avgPnl.toFixed(2)}/trade</div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="glass-card border-0 p-0 card-hover">
-          <CardContent className="p-4">
+        <div className="glass-card-premium rounded-xl border-0 p-0 card-hover-lift metric-card-animated">
+          <div className="p-4">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center">
                 <Star className="h-3.5 w-3.5 text-amber-400" />
@@ -646,11 +645,11 @@ function JournalAnalytics({ entries }: { entries: JournalEntry[] }) {
             </div>
             <div className="text-xl font-bold tabular-nums">{avgRating.toFixed(1)}</div>
             <div className="text-[10px] text-muted-foreground mt-0.5">out of 5.0</div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="glass-card border-0 p-0 card-hover">
-          <CardContent className="p-4">
+        <div className="glass-card-premium rounded-xl border-0 p-0 card-hover-lift metric-card-animated">
+          <div className="p-4">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
                 <TrendingUp className="h-3.5 w-3.5 text-primary" />
@@ -658,25 +657,25 @@ function JournalAnalytics({ entries }: { entries: JournalEntry[] }) {
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg W/L</span>
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-sm font-bold tabular-nums text-emerald-400">+{avgWin.toFixed(2)}</span>
+              <span className="text-sm font-bold tabular-nums text-emerald-400 neon-text-emerald">+{avgWin.toFixed(2)}</span>
               <span className="text-[10px] text-muted-foreground">/</span>
-              <span className="text-sm font-bold tabular-nums text-red-400">{avgLoss.toFixed(2)}</span>
+              <span className="text-sm font-bold tabular-nums text-red-400 neon-text-red">{avgLoss.toFixed(2)}</span>
             </div>
             <div className="text-[10px] text-muted-foreground mt-0.5">Win avg / Loss avg</div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 stagger-children">
         {/* P&L by Strategy */}
-        <Card className="glass-card border-0 p-0 card-hover md:col-span-2">
-          <CardHeader className="pb-2 pt-4 px-4">
-            <span className="section-title-accent"><CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <BarChart3 className="h-3.5 w-3.5" /> P&L by Strategy
-            </CardTitle></span>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
+        <div className="glass-card-premium rounded-xl border-0 p-0 card-hover-lift md:col-span-2">
+          <div className="flex items-center gap-2 mb-3 pb-2 pt-4 px-4">
+            <span className="section-title-accent text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+<BarChart3 className="h-3.5 w-3.5" /> P&L by Strategy
+            </span>
+          </div>
+          <div className="px-4 pb-4">
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={strategyData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
@@ -714,17 +713,17 @@ function JournalAnalytics({ entries }: { entries: JournalEntry[] }) {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Mood Distribution */}
-        <Card className="glass-card border-0 p-0 card-hover">
-          <CardHeader className="pb-2 pt-4 px-4">
-            <span className="section-title-accent"><CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <Smile className="h-3.5 w-3.5" /> Mood Distribution
-            </CardTitle></span>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
+        <div className="glass-card-premium rounded-xl border-0 p-0 card-hover-lift">
+          <div className="flex items-center gap-2 mb-3 pb-2 pt-4 px-4">
+            <span className="section-title-accent text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+<Smile className="h-3.5 w-3.5" /> Mood Distribution
+            </span>
+          </div>
+          <div className="px-4 pb-4">
             <div className="h-48 flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -762,30 +761,30 @@ function JournalAnalytics({ entries }: { entries: JournalEntry[] }) {
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* P&L by Symbol */}
-      <Card className="glass-card border-0 p-0 card-hover">
-        <CardHeader className="pb-2 pt-4 px-4">
-          <span className="section-title-accent"><CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-            <DollarSign className="h-3.5 w-3.5" /> P&L by Symbol
-          </CardTitle></span>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
+      <div className="glass-card-premium rounded-xl border-0 p-0 card-hover-lift">
+        <div className="flex items-center gap-2 mb-3 pb-2 pt-4 px-4">
+          <span className="section-title-accent text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+<DollarSign className="h-3.5 w-3.5" /> P&L by Symbol
+          </span>
+        </div>
+        <div className="px-4 pb-4">
           <div className="flex flex-wrap gap-3">
             {symbolPnlData.map((s) => (
               <div key={s.name} className="flex items-center gap-2 bg-accent/30 rounded-lg px-3 py-2">
                 <span className="text-xs font-medium">{s.name}</span>
-                <span className={`text-xs font-bold tabular-nums ${s.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                <span className={`text-xs font-bold tabular-nums ${s.pnl >= 0 ? 'text-emerald-400 neon-text-emerald' : 'text-red-400 neon-text-red'}`}>
                   {s.pnl >= 0 ? '+' : ''}{s.pnl.toFixed(2)}
                 </span>
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
@@ -957,8 +956,8 @@ export default function TradeJournalView() {
       </AnimatePresence>
 
       {/* Filters Bar */}
-      <Card className="glass-card border-0 p-0 card-hover">
-        <CardContent className="p-3">
+      <div className="glass-card-premium rounded-xl border-0 p-0 card-hover-lift">
+        <div className="p-3">
           <div className="flex flex-col md:flex-row gap-3">
             {/* Search */}
             <div className="relative flex-1 min-w-0">
@@ -1056,8 +1055,8 @@ export default function TradeJournalView() {
               </span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Journal Entries List */}
       <div className="space-y-3 stagger-children">

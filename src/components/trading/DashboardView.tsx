@@ -13,6 +13,8 @@ import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import WatchlistPanel from './WatchlistPanel';
 import ActivityFeed from './ActivityFeed';
 import SessionOverlapScanner from './SessionOverlapScanner';
+import MarketHeatmap from './MarketHeatmap';
+import TradingPsychologyPanel from './TradingPsychologyPanel';
 
 function getConditionIcon(condition: MarketCondition) {
   switch (condition) {
@@ -830,8 +832,14 @@ export default function DashboardView() {
         </div>
       </div>
 
+      {/* Market Heatmap */}
+      <MarketHeatmap />
+
       {/* Session Overlap Scanner */}
       <SessionOverlapScanner />
+
+      {/* Trading Psychology Panel */}
+      <TradingPsychologyPanel />
 
       {/* Activity Feed */}
       <ActivityFeed />

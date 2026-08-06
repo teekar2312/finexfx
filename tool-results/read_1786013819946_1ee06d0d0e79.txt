@@ -1,0 +1,480 @@
+     1→'use client';
+     2→
+     3→import { useState, useMemo, useEffect } from 'react';
+     4→import { useTradingStore } from '@/store/trading-store';
+     5→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+     6→import { Badge } from '@/components/ui/badge';
+     7→import { Button } from '@/components/ui/button';
+     8→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+     9→import { ScrollArea } from '@/components/ui/scroll-area';
+    10→import { Separator } from '@/components/ui/separator';
+    11→import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+    12→import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+    13→import { motion, AnimatePresence } from 'framer-motion';
+    14→import { Newspaper, AlertTriangle, Clock, Globe, Filter, X, Radio, ArrowUpRight, ArrowDownRight, Minus, Flame, TrendingUp, Building2, BarChart3, Landmark, Percent } from 'lucide-react';
+    15→import EconomicCalendar from './EconomicCalendar';
+    16→
+    17→const MOCK_NEWS: Array<{
+    18→  id: string;
+    19→  source: string;
+    20→  title: string;
+    21→  summary: string;
+    22→  category: string;
+    23→  impact: 'high' | 'medium' | 'low';
+    24→  currency: string;
+    25→  publishedAt: string;
+    26→}> = [
+    27→  { id: 'n1', source: 'Reuters', title: 'ECB Holds Rates Steady, Signals Potential Cut in September', summary: 'The European Central Bank kept interest rates unchanged at 3.75% but hinted at possible rate reductions in the coming months as inflation continues to ease toward the 2% target.', category: 'Central Bank', impact: 'high', currency: 'EUR', publishedAt: new Date(Date.now() - 3600000).toISOString() },
+    28→  { id: 'n2', source: 'Bloomberg', title: 'US Non-Farm Payrolls Beat Expectations at 215K', summary: 'The US labor market showed resilience with NFP coming in at 215K versus the expected 180K, suggesting the Federal Reserve may maintain its current monetary policy stance.', category: 'Employment', impact: 'high', currency: 'USD', publishedAt: new Date(Date.now() - 7200000).toISOString() },
+    29→  { id: 'n3', source: 'FX Street', title: 'GBPUSD Breaks Above 1.2700 Resistance Level', summary: 'Cable surged past the key 1.2700 resistance level as dollar weakness and UK economic data support further upside potential.', category: 'Technical', impact: 'medium', currency: 'GBP', publishedAt: new Date(Date.now() - 10800000).toISOString() },
+    30→  { id: 'n4', source: 'MarketWatch', title: 'Gold Prices Rally Amid Geopolitical Tensions', summary: 'XAUUSD rose to new weekly highs as escalating geopolitical tensions in the Middle East drove safe-haven demand.', category: 'Commodities', impact: 'high', currency: 'XAU', publishedAt: new Date(Date.now() - 14400000).toISOString() },
+    31→  { id: 'n5', source: 'CNBC', title: 'Japan Yen Weakens Past 155 Level', summary: 'USDJPY extended gains beyond 155 as the Bank of Japan maintained its ultra-loose monetary policy despite government pressure.', category: 'Central Bank', impact: 'medium', currency: 'JPY', publishedAt: new Date(Date.now() - 18000000).toISOString() },
+    32→  { id: 'n6', source: 'Financial Times', title: 'US CPI Data Shows Inflation Cooling to 2.5%', summary: 'Consumer prices in the US rose 2.5% year-over-year in the latest reading, down from 2.9%, supporting expectations for Fed rate cuts.', category: 'Inflation', impact: 'high', currency: 'USD', publishedAt: new Date(Date.now() - 21600000).toISOString() },
+    33→  { id: 'n7', source: 'Reuters', title: 'UK GDP Growth Exceeds Forecasts at 0.4% QoQ', summary: 'The UK economy grew 0.4% quarter-over-quarter, beating the 0.2% forecast, driven by strong services sector performance.', category: 'GDP', impact: 'medium', currency: 'GBP', publishedAt: new Date(Date.now() - 25200000).toISOString() },
+    34→  { id: 'n8', source: 'Bloomberg', title: 'Eurozone PMI Indicates Manufacturing Recovery', summary: 'The eurozone manufacturing PMI rose to 48.5 from 47.3, suggesting the sector may be nearing a return to expansion territory.', category: 'Economic', impact: 'low', currency: 'EUR', publishedAt: new Date(Date.now() - 28800000).toISOString() },
+    35→  // Additional breaking news for marquee
+    36→  { id: 'n9', source: 'CNBC', title: 'Federal Reserve Officials Signal Cautious Approach to Rate Cuts', summary: 'Multiple Fed governors expressed a preference for waiting on more data before adjusting rates, pushing market expectations for cuts further into the year.', category: 'Central Bank', impact: 'high', currency: 'USD', publishedAt: new Date(Date.now() - 1800000).toISOString() },
+    37→  { id: 'n10', source: 'Reuters', title: 'Oil Prices Surge on OPEC+ Production Cut Extension', summary: 'Brent crude jumped 3% after OPEC+ members agreed to extend production cuts through Q3, raising inflation concerns across currency markets.', category: 'Commodities', impact: 'high', currency: 'USD', publishedAt: new Date(Date.now() - 900000).toISOString() },
+    38→];
+    39→
+    40→const MOCK_EVENTS: Array<{
+    41→  id: string;
+    42→  event: string;
+    43→  currency: string;
+    44→  impact: 'high' | 'medium' | 'low';
+    45→  actual: string;
+    46→  forecast: string;
+    47→  previous: string;
+    48→  date: string;
+    49→}> = [
+    50→  { id: 'e1', event: 'Non-Farm Payrolls', currency: 'USD', impact: 'high', actual: '215K', forecast: '180K', previous: '187K', date: '2025-01-10 13:30' },
+    51→  { id: 'e2', event: 'ECB Interest Rate Decision', currency: 'EUR', impact: 'high', actual: '3.75%', forecast: '3.75%', previous: '3.75%', date: '2025-01-10 12:45' },
+    52→  { id: 'e3', event: 'CPI YoY', currency: 'USD', impact: 'high', actual: '2.5%', forecast: '2.6%', previous: '2.9%', date: '2025-01-10 08:30' },
+    53→  { id: 'e4', event: 'UK GDP QoQ', currency: 'GBP', impact: 'medium', actual: '0.4%', forecast: '0.2%', previous: '0.1%', date: '2025-01-10 07:00' },
+    54→  { id: 'e5', event: 'Japan GDP QoQ', currency: 'JPY', impact: 'medium', actual: '0.1%', forecast: '0.2%', previous: '-0.7%', date: '2025-01-10 00:50' },
+    55→  { id: 'e6', event: 'Unemployment Claims', currency: 'USD', impact: 'medium', actual: '201K', forecast: '215K', previous: '210K', date: '2025-01-09 13:30' },
+    56→  { id: 'e7', event: 'Eurozone PMI Manufacturing', currency: 'EUR', impact: 'low', actual: '48.5', forecast: '47.8', previous: '47.3', date: '2025-01-09 09:00' },
+    57→  { id: 'e8', event: 'BoJ Policy Statement', currency: 'JPY', impact: 'high', actual: '-0.10%', forecast: '-0.10%', previous: '-0.10%', date: '2025-01-09 03:00' },
+    58→  { id: 'e9', event: 'UK Retail Sales MoM', currency: 'GBP', impact: 'low', actual: '0.3%', forecast: '0.2%', previous: '-0.1%', date: '2025-01-09 07:00' },
+    59→  { id: 'e10', event: 'US ISM Services PMI', currency: 'USD', impact: 'high', actual: '54.1', forecast: '52.5', previous: '52.7', date: '2025-01-08 15:00' },
+    60→];
+    61→
+    62→function ImpactDots({ impact }: { impact: 'high' | 'medium' | 'low' }) {
+    63→  const count = impact === 'high' ? 3 : impact === 'medium' ? 2 : 1;
+    64→  const color = impact === 'high' ? 'bg-red-500' : impact === 'medium' ? 'bg-amber-500' : 'bg-green-500';
+    65→  return (
+    66→    <div className="flex items-center gap-0.5">
+    67→      {Array.from({ length: 3 }).map((_, i) => (
+    68→        <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < count ? color : 'bg-slate-700'}`} />
+    69→      ))}
+    70→    </div>
+    71→  );
+    72→}
+    73→
+    74→function getActualVsForecast(actual: string, forecast: string): 'better' | 'worse' | 'same' {
+    75→  const a = parseFloat(actual.replace('%', '').replace('K', ''));
+    76→  const f = parseFloat(forecast.replace('%', '').replace('K', ''));
+    77→  if (isNaN(a) || isNaN(f)) return 'same';
+    78→  if (a > f) return 'better';
+    79→  if (a < f) return 'worse';
+    80→  return 'same';
+    81→}
+    82→
+    83→function getActualColor(actual: string, forecast: string): string {
+    84→  const comparison = getActualVsForecast(actual, forecast);
+    85→  return comparison === 'better' ? 'text-emerald-500' : comparison === 'worse' ? 'text-red-500' : 'text-foreground';
+    86→}
+    87→
+    88→function ActualVsForecastArrow({ actual, forecast }: { actual: string; forecast: string }) {
+    89→  const comparison = getActualVsForecast(actual, forecast);
+    90→  if (comparison === 'better') return <ArrowUpRight className="h-3 w-3 text-emerald-500" />;
+    91→  if (comparison === 'worse') return <ArrowDownRight className="h-3 w-3 text-red-500" />;
+    92→  return <Minus className="h-3 w-3 text-slate-500" />;
+    93→}
+    94→
+    95→function timeAgo(dateStr: string): string {
+    96→  const now = Date.now();
+    97→  const then = new Date(dateStr).getTime();
+    98→  const diff = Math.floor((now - then) / 1000);
+    99→  if (diff < 60) return `${diff}s ago`;
+   100→  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+   101→  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+   102→  return `${Math.floor(diff / 86400)}d ago`;
+   103→}
+   104→
+   105→function getCategoryIcon(category: string) {
+   106→  switch (category) {
+   107→    case 'Central Bank': return <Landmark className="h-3 w-3 text-violet-400" />;
+   108→    case 'Employment': return <Building2 className="h-3 w-3 text-cyan-400" />;
+   109→    case 'Technical': return <BarChart3 className="h-3 w-3 text-amber-400" />;
+   110→    case 'Commodities': return <Flame className="h-3 w-3 text-orange-400" />;
+   111→    case 'Inflation': return <Percent className="h-3 w-3 text-red-400" />;
+   112→    case 'GDP': return <TrendingUp className="h-3 w-3 text-emerald-400" />;
+   113→    case 'Economic': return <Globe className="h-3 w-3 text-blue-400" />;
+   114→    default: return <Newspaper className="h-3 w-3 text-slate-400" />;
+   115→  }
+   116→}
+   117→
+   118→function getCategoryColor(category: string): string {
+   119→  switch (category) {
+   120→    case 'Central Bank': return 'border-violet-500/30 text-violet-400 bg-violet-500/10';
+   121→    case 'Employment': return 'border-cyan-500/30 text-cyan-400 bg-cyan-500/10';
+   122→    case 'Technical': return 'border-amber-500/30 text-amber-400 bg-amber-500/10';
+   123→    case 'Commodities': return 'border-orange-500/30 text-orange-400 bg-orange-500/10';
+   124→    case 'Inflation': return 'border-red-500/30 text-red-400 bg-red-500/10';
+   125→    case 'GDP': return 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10';
+   126→    case 'Economic': return 'border-blue-500/30 text-blue-400 bg-blue-500/10';
+   127→    default: return 'border-slate-500/30 text-slate-400 bg-slate-500/10';
+   128→  }
+   129→}
+   130→
+   131→function getReadingTime(text: string): string {
+   132→  const words = text.split(/\s+/).length;
+   133→  const minutes = Math.max(1, Math.ceil(words / 200));
+   134→  return `${minutes} min read`;
+   135→}
+   136→
+   137→function SourceCircle({ source }: { source: string }) {
+   138→  const colors: Record<string, string> = {
+   139→    'Reuters': 'bg-orange-500',
+   140→    'Bloomberg': 'bg-blue-500',
+   141→    'FX Street': 'bg-emerald-500',
+   142→    'MarketWatch': 'bg-violet-500',
+   143→    'CNBC': 'bg-cyan-500',
+   144→    'Financial Times': 'bg-pink-500',
+   145→  };
+   146→  const bgColor = colors[source] || 'bg-slate-500';
+   147→  return (
+   148→    <div className={`w-6 h-6 rounded-full ${bgColor} flex items-center justify-center flex-shrink-0 ring-2 ring-white/10`}>
+   149→      <span className="text-[9px] font-bold text-white">{source.charAt(0)}</span>
+   150→    </div>
+   151→  );
+   152→}
+   153→
+   154→export default function NewsView() {
+   155→  const { newsItems } = useTradingStore();
+   156→  const allNews = newsItems.length > 0 ? newsItems : MOCK_NEWS;
+   157→  const [currencyFilter, setCurrencyFilter] = useState<string>('all');
+   158→  const [impactFilter, setImpactFilter] = useState<string>('all');
+   159→  const [showBreaking, setShowBreaking] = useState(true);
+   160→  const [marqueeIndex, setMarqueeIndex] = useState(0);
+   161→
+   162→  const filteredNews = allNews.filter(n => {
+   163→    if (currencyFilter !== 'all' && n.currency !== currencyFilter) return false;
+   164→    if (impactFilter !== 'all' && n.impact !== impactFilter) return false;
+   165→    return true;
+   166→  });
+   167→
+   168→  const filteredEvents = MOCK_EVENTS.filter(e => {
+   169→    if (currencyFilter !== 'all' && e.currency !== currencyFilter) return false;
+   170→    if (impactFilter !== 'all' && e.impact !== impactFilter) return false;
+   171→    return true;
+   172→  });
+   173→
+   174→  const breakingNews = allNews.filter(n => n.impact === 'high');
+   175→
+   176→  // Currency strength summary: count high-impact events per currency
+   177→  const currencyStrength = useMemo(() => {
+   178→    const counts: Record<string, number> = {};
+   179→    MOCK_EVENTS.filter(e => e.impact === 'high').forEach(e => {
+   180→      counts[e.currency] = (counts[e.currency] || 0) + 1;
+   181→    });
+   182→    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+   183→  }, []);
+   184→
+   185→  // Auto-rotate marquee
+   186→  useEffect(() => {
+   187→    if (breakingNews.length <= 1) return;
+   188→    const interval = setInterval(() => {
+   189→      setMarqueeIndex(prev => (prev + 1) % breakingNews.length);
+   190→    }, 5000);
+   191→    return () => clearInterval(interval);
+   192→  }, [breakingNews.length]);
+   193→
+   194→  const currentBreaking = breakingNews[marqueeIndex % breakingNews.length];
+   195→
+   196→  return (
+   197→    <div className="p-4 space-y-4">
+   198→      {/* Enhanced Breaking News Banner with marquee, pulsing dot, timestamp */}
+   199→      <AnimatePresence>
+   200→        {showBreaking && breakingNews.length > 0 && currentBreaking && (
+   201→          <motion.div
+   202→            initial={{ opacity: 0, y: -10 }}
+   203→            animate={{ opacity: 1, y: 0 }}
+   204→            exit={{ opacity: 0, y: -10 }}
+   205→            className="relative overflow-hidden rounded-lg bg-red-500/10 border border-red-500/30 shimmer-border-red"
+   206→          >
+   207→            {/* CSS animations for marquee and pulse */}
+   208→            <style dangerouslySetInnerHTML={{ __html: `
+   209→              @keyframes pulse-dot {
+   210→                0%, 100% { opacity: 1; transform: scale(1); }
+   211→                50% { opacity: 0.3; transform: scale(0.8); }
+   212→              }
+   213→              .pulse-dot-anim {
+   214→                animation: pulse-dot 1.5s ease-in-out infinite;
+   215→              }
+   216→            ` }} />
+   217→            <div className="flex items-center gap-3 p-3">
+   218→              <div className="flex items-center gap-2 flex-shrink-0">
+   219→                {/* Pulsing red dot */}
+   220→                <div className="relative">
+   221→                  <div className="w-2.5 h-2.5 rounded-full bg-red-500 pulse-dot-anim" />
+   222→                </div>
+   223→                <Badge className="bg-red-500 text-white text-[10px] px-2.5 py-0 font-bold flex items-center gap-1 time-fade">
+   224→                  <Radio className="h-2.5 w-2.5" />
+   225→                  BREAKING
+   226→                </Badge>
+   227→              </div>
+   228→              <div className="flex-1 min-w-0 overflow-hidden relative">
+   229→                <AnimatePresence mode="wait">
+   230→                  <motion.div
+   231→                    key={currentBreaking.id}
+   232→                    initial={{ opacity: 0, y: 8 }}
+   233→                    animate={{ opacity: 1, y: 0 }}
+   234→                    exit={{ opacity: 0, y: -8 }}
+   235→                    transition={{ duration: 0.3 }}
+   236→                    className="flex items-center gap-3"
+   237→                  >
+   238→                    <span className="text-sm font-medium text-red-400 truncate block flex-1">{currentBreaking.title}</span>
+   239→                    {currentBreaking.publishedAt && (
+   240→                      <span className="text-[10px] text-red-500/60 flex-shrink-0 flex items-center gap-1">
+   241→                        <Clock className="h-2.5 w-2.5" />
+   242→                        {timeAgo(currentBreaking.publishedAt)}
+   243→                      </span>
+   244→                    )}
+   245→                  </motion.div>
+   246→                </AnimatePresence>
+   247→              </div>
+   248→              {/* Indicator dots for multiple breaking news */}
+   249→              {breakingNews.length > 1 && (
+   250→                <div className="flex items-center gap-1 flex-shrink-0">
+   251→                  {breakingNews.map((_, i) => (
+   252→                    <div
+   253→                      key={i}
+   254→                      className={`w-1.5 h-1.5 rounded-full transition-colors ${
+   255→                        i === marqueeIndex % breakingNews.length ? 'bg-red-500' : 'bg-red-500/30'
+   256→                      }`}
+   257→                    />
+   258→                  ))}
+   259→                </div>
+   260→              )}
+   261→              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground flex-shrink-0" onClick={() => setShowBreaking(false)}>
+   262→                <X className="h-3 w-3" />
+   263→              </Button>
+   264→            </div>
+   265→          </motion.div>
+   266→        )}
+   267→      </AnimatePresence>
+   268→
+   269→      {/* Filters */}
+   270→      <div className="flex flex-wrap items-center gap-3">
+   271→        <div className="flex items-center gap-2">
+   272→          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+   273→          <span className="text-xs text-muted-foreground">Filters:</span>
+   274→        </div>
+   275→        <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
+   276→          <SelectTrigger className="w-[100px] h-8 text-xs">
+   277→            <SelectValue />
+   278→          </SelectTrigger>
+   279→          <SelectContent>
+   280→            <SelectItem value="all">All</SelectItem>
+   281→            <SelectItem value="EUR">EUR</SelectItem>
+   282→            <SelectItem value="USD">USD</SelectItem>
+   283→            <SelectItem value="GBP">GBP</SelectItem>
+   284→            <SelectItem value="JPY">JPY</SelectItem>
+   285→          </SelectContent>
+   286→        </Select>
+   287→        <Select value={impactFilter} onValueChange={setImpactFilter}>
+   288→          <SelectTrigger className="w-[100px] h-8 text-xs">
+   289→            <SelectValue />
+   290→          </SelectTrigger>
+   291→          <SelectContent>
+   292→            <SelectItem value="all">All Impact</SelectItem>
+   293→            <SelectItem value="high">High</SelectItem>
+   294→            <SelectItem value="medium">Medium</SelectItem>
+   295→            <SelectItem value="low">Low</SelectItem>
+   296→          </SelectContent>
+   297→        </Select>
+   298→        <div className="flex-1" />
+   299→        <span className="text-[10px] text-muted-foreground">{filteredNews.length} articles • {filteredEvents.length} events</span>
+   300→      </div>
+   301→
+   302→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
+   303→        {/* News Feed - Enhanced */}
+   304→        <Card className="glass-card card-hover">
+   305→          <CardHeader className="pb-2 pt-3 px-4">
+   306→            <div className="flex items-center gap-2">
+   307→              <Newspaper className="h-4 w-4 text-primary" />
+   308→              <CardTitle className="text-sm font-semibold"><span className="section-title-accent">News Feed</span></CardTitle>
+   309→            </div>
+   310→          </CardHeader>
+   311→          <CardContent className="px-4 pb-3">
+   312→            <ScrollArea className="h-[600px]">
+   313→              <div className="space-y-3 stagger-children">
+   314→                {filteredNews.map((news, i) => {
+   315→                  const isNew = news.publishedAt ? (Date.now() - new Date(news.publishedAt).getTime()) < 1800000 : false;
+   316→                  const summary = (news as any).summary || '';
+   317→                  const isFirst = i === 0;
+   318→                  return (
+   319→                    <motion.div
+   320→                      key={news.id}
+   321→                      initial={{ opacity: 0, y: 10 }}
+   322→                      animate={{ opacity: 1, y: 0 }}
+   323→                      transition={{ delay: i * 0.03 }}
+   324→                      className={`p-3 rounded-lg border transition-all border-l-4 hover:bg-accent/30 group card-hover ${isFirst ? 'shimmer-border ' : ''}
+   325→                        news.impact === 'high' ? 'border-l-red-500 border-red-500/20 hover:border-l-red-400 hover:shadow-[0_0_12px_rgba(239,68,68,0.1)]' :
+   326→                        news.impact === 'medium' ? 'border-l-amber-500 border-amber-500/20 hover:border-l-amber-400 hover:shadow-[0_0_12px_rgba(245,158,11,0.1)]' :
+   327→                        'border-l-slate-500 border-border hover:border-l-slate-400'
+   328→                      }`}
+   329→                    >
+   330→                      <div className="flex items-start gap-2 mb-1.5">
+   331→                        {/* Source logo circle */}
+   332→                        <SourceCircle source={(news as any).source || 'News'} />
+   333→                        <div className="flex-1 min-w-0">
+   334→                          <div className="flex items-start justify-between gap-2">
+   335→                            <h4 className={`font-semibold leading-tight ${news.impact === 'high' ? 'text-sm' : 'text-xs'}`}>{news.title}</h4>
+   336→                            <div className="flex items-center gap-1.5 flex-shrink-0">
+   337→                              {isNew && (
+   338→                                <Badge className="bg-red-500 text-white text-[8px] px-1 py-0 font-bold">
+   339→                                  NEW
+   340→                                </Badge>
+   341→                              )}
+   342→                              <ImpactDots impact={news.impact} />
+   343→                            </div>
+   344→                          </div>
+   345→                        </div>
+   346→                      </div>
+   347→                      {summary && (
+   348→                        <p className="text-[11px] text-muted-foreground mb-2 line-clamp-2 pl-7">{summary}</p>
+   349→                      )}
+   350→                      <div className="flex items-center justify-between pl-7">
+   351→                        <div className="flex items-center gap-2">
+   352→                          <Badge variant="outline" className="text-[9px] px-1.5 py-0">{news.currency}</Badge>
+   353→                          {(news as any).category && (
+   354→                            <Badge variant="outline" className={`text-[9px] px-1.5 py-0 flex items-center gap-1 ${getCategoryColor((news as any).category)}`}>
+   355→                              {getCategoryIcon((news as any).category)}
+   356→                              {(news as any).category}
+   357→                            </Badge>
+   358→                          )}
+   359→                          {/* Reading time */}
+   360→                          {summary && (
+   361→                            <span className="text-[9px] text-muted-foreground">{getReadingTime(summary)}</span>
+   362→                          )}
+   363→                        </div>
+   364→                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+   365→                          <span>{(news as any).source || 'News'}</span>
+   366→                          <span>•</span>
+   367→                          <div className="flex items-center gap-1">
+   368→                            <Clock className="h-2.5 w-2.5" />
+   369→                            {timeAgo(news.publishedAt || '')}
+   370→                          </div>
+   371→                        </div>
+   372→                      </div>
+   373→                    </motion.div>
+   374→                  );
+   375→                })}
+   376→                {filteredNews.length === 0 && (
+   377→                  <div className="text-center py-8 text-muted-foreground text-sm">
+   378→                    No news matching filters
+   379→                  </div>
+   380→                )}
+   381→              </div>
+   382→            </ScrollArea>
+   383→          </CardContent>
+   384→        </Card>
+   385→
+   386→        {/* Economic Calendar - Enhanced with timeline, color-coded actual vs forecast */}
+   387→        <Card className="glass-card card-hover">
+   388→          <CardHeader className="pb-2 pt-3 px-4">
+   389→            <div className="flex items-center justify-between">
+   390→              <div className="flex items-center gap-2">
+   391→                <Globe className="h-4 w-4 text-primary" />
+   392→                <CardTitle className="text-sm font-semibold"><span className="section-title-accent">Economic Calendar</span></CardTitle>
+   393→              </div>
+   394→              {/* Currency Strength summary */}
+   395→              <div className="flex items-center gap-2 elevated-card px-2 py-1 rounded-lg">
+   396→                <Flame className="h-3 w-3 text-red-500" />
+   397→                <div className="flex items-center gap-1.5">
+   398→                  {currencyStrength.slice(0, 4).map(([currency, count]) => (
+   399→                    <TooltipProvider key={currency} delayDuration={100}>
+   400→                      <Tooltip>
+   401→                        <TooltipTrigger asChild>
+   402→                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 cursor-default border-red-500/20 text-red-400 hover:bg-red-500/10">
+   403→                            {currency} <span className="font-bold">{count}</span>
+   404→                          </Badge>
+   405→                        </TooltipTrigger>
+   406→                        <TooltipContent>
+   407→                          <span className="text-[10px]">{count} high-impact {currency} event{count > 1 ? 's' : ''} today</span>
+   408→                        </TooltipContent>
+   409→                      </Tooltip>
+   410→                    </TooltipProvider>
+   411→                  ))}
+   412→                </div>
+   413→              </div>
+   414→            </div>
+   415→          </CardHeader>
+   416→          <CardContent className="px-4 pb-3">
+   417→            <ScrollArea className="h-[600px]">
+   418→              <div className="relative">
+   419→                {/* Vertical timeline line */}
+   420→                <div className="absolute left-[19px] top-0 bottom-0 w-px bg-border" />
+   421→                <div className="space-y-0">
+   422→                  {filteredEvents.map((event, idx) => {
+   423→                    const comparison = getActualVsForecast(event.actual, event.forecast);
+   424→                    return (
+   425→                      <motion.div
+   426→                        key={event.id}
+   427→                        initial={{ opacity: 0, x: 10 }}
+   428→                        animate={{ opacity: 1, x: 0 }}
+   429→                        transition={{ delay: idx * 0.02 }}
+   430→                        className="flex items-stretch"
+   431→                      >
+   432→                        {/* Timeline dot */}
+   433→                        <div className="flex flex-col items-center mr-3 pt-2 flex-shrink-0" style={{ width: 24 }}>
+   434→                          <div className={`w-2.5 h-2.5 rounded-full border-2 z-10 ${
+   435→                            event.impact === 'high' ? 'bg-red-500 border-red-400' :
+   436→                            event.impact === 'medium' ? 'bg-amber-500 border-amber-400' :
+   437→                            'bg-green-500 border-green-400'
+   438→                          }`} />
+   439→                          {idx < filteredEvents.length - 1 && <div className="flex-1 w-px bg-border" />}
+   440→                        </div>
+   441→                        {/* Event row content */}
+   442→                        <div className="flex-1 flex items-center py-2 border-b border-border/50 min-w-0">
+   443→                          <div className="flex items-center gap-2 flex-1 min-w-0">
+   444→                            <span className="text-[10px] tabular-nums text-muted-foreground whitespace-nowrap w-10">{event.date.split(' ')[1]}</span>
+   445→                            <span className="text-[10px] font-medium truncate">{event.event}</span>
+   446→                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 flex-shrink-0">{event.currency}</Badge>
+   447→                            <ImpactDots impact={event.impact} />
+   448→                          </div>
+   449→                          <div className="flex items-center gap-2 flex-shrink-0">
+   450→                            <div className="text-right">
+   451→                              <div className={`text-[10px] tabular-nums font-semibold ${getActualColor(event.actual, event.forecast)}`}>{event.actual}</div>
+   452→                              <div className="text-[9px] text-muted-foreground tabular-nums">F: {event.forecast}</div>
+   453→                            </div>
+   454→                            <ActualVsForecastArrow actual={event.actual} forecast={event.forecast} />
+   455→                            <div className="text-right pl-1">
+   456→                              <div className="text-[9px] text-muted-foreground tabular-nums">P: {event.previous}</div>
+   457→                            </div>
+   458→                          </div>
+   459→                        </div>
+   460→                      </motion.div>
+   461→                    );
+   462→                  })}
+   463→                  {filteredEvents.length === 0 && (
+   464→                    <div className="text-center py-8 text-sm text-muted-foreground">
+   465→                      No events matching filters
+   466→                    </div>
+   467→                  )}
+   468→                </div>
+   469→              </div>
+   470→            </ScrollArea>
+   471→          </CardContent>
+   472→        </Card>
+   473→      </div>
+   474→
+   475→      {/* Economic Calendar */}
+   476→      <EconomicCalendar />
+   477→    </div>
+   478→  );
+   479→}
+   480→
