@@ -1,0 +1,580 @@
+   232→                  <div className="flex items-center justify-between gap-2">
+   233→                    <TabsList className="h-8 bg-slate-800/50">
+   234→                      <TabsTrigger value="open" className="text-xs h-6 data-[state=active]:bg-emerald-600/20 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.15)]">
+   235→                        Open ({openTrades.length})
+   236→                      </TabsTrigger>
+   237→                      <TabsTrigger value="history" className="text-xs h-6 data-[state=active]:bg-emerald-600/20 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.15)]">
+   238→                        History ({closedTrades.length})
+   239→                      </TabsTrigger>
+   240→                    </TabsList>
+   241→                    <TradeExportButton />
+   242→                  </div>
+   243→                </CardHeader>
+   244→
+   245→                <TabsContent value="open" className="mt-0">
+   246→                  <CardContent className="px-4 pb-3">
+   247→                    {openTrades.length === 0 ? (
+   248→                      <div className="text-center py-6 text-muted-foreground text-sm">
+   249→                        No open positions. Use the panel to place a trade.
+   250→                      </div>
+   251→                    ) : (
+   252→                      <div className="overflow-x-auto">
+   253→                        <Table>
+   254→                          <TableHeader>
+   255→                            <TableRow className="border-border hover:bg-transparent">
+   256→                              <TableHead className="text-[10px] h-8">Symbol</TableHead>
+   257→                              <TableHead className="text-[10px] h-8">Dir</TableHead>
+   258→                              <TableHead className="text-[10px] h-8 text-right">Lots</TableHead>
+   259→                              <TableHead className="text-[10px] h-8 text-right">Entry</TableHead>
+   260→                              <TableHead className="text-[10px] h-8 text-right">SL</TableHead>
+   261→                              <TableHead className="text-[10px] h-8 text-right">TP</TableHead>
+   262→                              <TableHead className="text-[10px] h-8 text-right">Pips</TableHead>
+   263→                              <TableHead className="text-[10px] h-8 text-right">P&L</TableHead>
+   264→                              <TableHead className="text-[10px] h-8">Time</TableHead>
+   265→                              <TableHead className="text-[10px] h-8 text-center">Trail</TableHead>
+   266→                              <TableHead className="text-[10px] h-8 text-center">Action</TableHead>
+   267→                            </TableRow>
+   268→                          </TableHeader>
+   269→                          <TableBody>
+   270→                            {openTrades.map((trade) => {
+   271→                              const maxProfit = Math.max(...openTrades.map(t => Math.abs(t.profit)), 1);
+   272→                              return (
+   273→                              <TableRow key={trade.id} className={`border-border compact-row ${trade.direction === 'BUY' ? 'trade-row-buy' : 'trade-row-sell'}`}>
+   274→                                <TableCell className="text-xs font-medium">{trade.symbol}</TableCell>
+   275→                                <TableCell>
+   276→                                  <div className={`flex items-center gap-1 text-xs font-bold ${trade.direction === 'BUY' ? 'text-emerald-500' : 'text-red-500'}`}>
+   277→                                    {trade.direction === 'BUY' ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+   278→                                    {trade.direction}
+   279→                                  </div>
+   280→                                </TableCell>
+   281→                                <TableCell className="text-xs text-right tabular-nums">{trade.lotSize}</TableCell>
+   282→                                <TableCell className="text-xs text-right tabular-nums">{trade.entryPrice.toFixed(SYMBOL_INFO[trade.symbol].digits)}</TableCell>
+   283→                                <TableCell className="text-xs text-right tabular-nums text-red-400">
+   284→                                  {trade.stopLoss?.toFixed(SYMBOL_INFO[trade.symbol].digits) || '—'}
+   285→                                </TableCell>
+   286→                                <TableCell className="text-xs text-right tabular-nums text-emerald-400">
+   287→                                  {trade.takeProfit?.toFixed(SYMBOL_INFO[trade.symbol].digits) || '—'}
+   288→                                </TableCell>
+   289→                                <TableCell className={`text-xs text-right tabular-nums font-semibold ${trade.pips >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   290→                                  {trade.pips >= 0 ? '+' : ''}{trade.pips.toFixed(1)}
+   291→                                </TableCell>
+   292→                                <TableCell className="text-right">
+   293→                                  <div className={`text-sm font-bold tabular-nums ${trade.profit >= 0 ? 'gradient-text-profit' : 'gradient-text-loss'}`}>
+   294→                                    {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
+   295→                                  </div>
+   296→                                  <div className="pnl-bar-track mt-0.5">
+   297→                                    <div
+   298→                                      className={`pnl-bar-fill ${trade.profit >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}
+   299→                                      style={{ width: `${Math.min((Math.abs(trade.profit) / maxProfit) * 100, 100)}%` }}
+   300→                                    />
+   301→                                  </div>
+   302→                                </TableCell>
+   303→                                <TableCell className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+   304→                                  <div className="flex items-center gap-1">
+   305→                                    <Timer className="h-2.5 w-2.5 opacity-50" />
+   306→                                    {formatDuration(trade.openedAt)}
+   307→                                  </div>
+   308→                                </TableCell>
+   309→                                <TableCell className="text-center">
+   310→                                  {trade.isTrailingStop ? (
+   311→                                    <Tooltip>
+   312→                                      <TooltipTrigger>
+   313→                                        <div className="trail-animate inline-flex">
+   314→                                          <Activity className="h-3.5 w-3.5 text-emerald-500" />
+   315→                                        </div>
+   316→                                      </TooltipTrigger>
+   317→                                      <TooltipContent className="text-[10px]">Trailing {trade.trailingStop} pips</TooltipContent>
+   318→                                    </Tooltip>
+   319→                                  ) : (
+   320→                                    <Switch
+   321→                                      checked={trade.isTrailingStop}
+   322→                                      onCheckedChange={(checked) => handleToggleTrailing(trade.id, checked)}
+   323→                                      className="scale-75 data-[state=checked]:bg-emerald-600"
+   324→                                    />
+   325→                                  )}
+   326→                                </TableCell>
+   327→                                <TableCell className="text-center">
+   328→                                  <AnimatePresence>
+   329→                                    {confirmClose === trade.id ? (
+   330→                                      <motion.div
+   331→                                        initial={{ opacity: 0, scale: 0.8 }}
+   332→                                        animate={{ opacity: 1, scale: 1 }}
+   333→                                        exit={{ opacity: 0, scale: 0.8 }}
+   334→                                        className="flex items-center gap-1"
+   335→                                      >
+   336→                                        <Button
+   337→                                          size="sm"
+   338→                                          variant="destructive"
+   339→                                          className="h-6 px-2 text-[10px]"
+   340→                                          onClick={() => { closeTrade(trade.id); setConfirmClose(null); }}
+   341→                                        >
+   342→                                          Confirm
+   343→                                        </Button>
+   344→                                        <Button
+   345→                                          size="sm"
+   346→                                          variant="ghost"
+   347→                                          className="h-6 px-2 text-[10px]"
+   348→                                          onClick={() => setConfirmClose(null)}
+   349→                                        >
+   350→                                          <X className="h-3 w-3" />
+   351→                                        </Button>
+   352→                                      </motion.div>
+   353→                                    ) : (
+   354→                                      <Button
+   355→                                        size="sm"
+   356→                                        variant="ghost"
+   357→                                        className="h-6 px-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/15 transition-colors duration-200"
+   358→                                        onClick={() => setConfirmClose(trade.id)}
+   359→                                      >
+   360→                                        <Square className="h-3 w-3" />
+   361→                                      </Button>
+   362→                                    )}
+   363→                                  </AnimatePresence>
+   364→                                </TableCell>
+   365→                              </TableRow>
+   366→                              );
+   367→                            })}
+   368→                          </TableBody>
+   369→                        </Table>
+   370→                      </div>
+   371→                    )}
+   372→                  </CardContent>
+   373→                </TabsContent>
+   374→
+   375→                <TabsContent value="history" className="mt-0">
+   376→                  <CardContent className="px-4 pb-3">
+   377→                    {closedTrades.length === 0 ? (
+   378→                      <div className="text-center py-10 text-muted-foreground">
+   379→                        <History className="h-8 w-8 mx-auto mb-2 opacity-30" />
+   380→                        <p className="text-sm">No trade history yet</p>
+   381→                        <p className="text-[11px] mt-1 opacity-60">Closed trades will appear here</p>
+   382→                      </div>
+   383→                    ) : (
+   384→                      <>
+   385→                        {/* Summary Stats + Win/Loss Ratio Bar + Avg Comparison */}
+   386→                        {historyStats && (() => {
+   387→                          const wins = closedTrades.filter(t => t.profit > 0);
+   388→                          const losses = closedTrades.filter(t => t.profit <= 0);
+   389→                          const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.profit, 0) / wins.length : 0;
+   390→                          const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.profit, 0) / losses.length) : 0;
+   391→                          const maxAvg = Math.max(avgWin, avgLoss, 1);
+   392→                          return (
+   393→                            <>
+   394→                            <div className="grid grid-cols-5 gap-2 mb-3">
+   395→                              <div className="text-center p-2 rounded-lg bg-slate-800/30 stat-card-pattern">
+   396→                                <div className="text-[10px] text-muted-foreground uppercase">Trades</div>
+   397→                                <div className="text-sm font-bold tabular-nums count-up">{historyStats.totalTrades}</div>
+   398→                              </div>
+   399→                              <div className="text-center p-2 rounded-lg bg-slate-800/30 stat-card-pattern">
+   400→                                <div className="text-[10px] text-muted-foreground uppercase">Win Rate</div>
+   401→                                <div className={`text-sm font-bold tabular-nums ${historyStats.winRate >= 50 ? 'text-emerald-500' : 'text-red-500'}`}>
+   402→                                  {historyStats.winRate.toFixed(0)}%
+   403→                                </div>
+   404→                              </div>
+   405→                              <div className="text-center p-2 rounded-lg bg-slate-800/30 stat-card-pattern">
+   406→                                <div className="text-[10px] text-muted-foreground uppercase">Total P&L</div>
+   407→                                <div className={`text-sm font-bold tabular-nums ${historyStats.totalPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   408→                                  {historyStats.totalPnl >= 0 ? '+' : ''}${historyStats.totalPnl.toFixed(2)}
+   409→                                </div>
+   410→                              </div>
+   411→                              <div className="text-center p-2 rounded-lg bg-slate-800/30 stat-card-pattern">
+   412→                                <div className="text-[10px] text-muted-foreground uppercase">Best</div>
+   413→                                <div className="text-sm font-bold tabular-nums text-emerald-500">
+   414→                                  +${historyStats.bestTrade.profit.toFixed(2)}
+   415→                                </div>
+   416→                              </div>
+   417→                              <div className="text-center p-2 rounded-lg bg-slate-800/30 stat-card-pattern">
+   418→                                <div className="text-[10px] text-muted-foreground uppercase">Worst</div>
+   419→                                <div className="text-sm font-bold tabular-nums text-red-500">
+   420→                                  ${historyStats.worstTrade.profit.toFixed(2)}
+   421→                                </div>
+   422→                              </div>
+   423→                            </div>
+   424→                            {/* Win/Loss Ratio Visual Bar */}
+   425→                            <div className="mb-3">
+   426→                              <div className="flex items-center justify-between text-[10px] mb-1.5">
+   427→                                <span className="text-emerald-500 font-medium">{wins.length} Wins</span>
+   428→                                <span className="text-muted-foreground">{historyStats.winRate.toFixed(0)}%</span>
+   429→                                <span className="text-red-500 font-medium">{losses.length} Losses</span>
+   430→                              </div>
+   431→                              <div className="winloss-bar">
+   432→                                <div
+   433→                                  className="bg-gradient-to-r from-emerald-600 to-emerald-400 animate-progress rounded-l-[4px]"
+   434→                                  style={{ width: `${historyStats.winRate}%` }}
+   435→                                />
+   436→                                <div
+   437→                                  className="bg-gradient-to-r from-red-400 to-red-600 animate-progress rounded-r-[4px]"
+   438→                                  style={{ width: `${100 - historyStats.winRate}%` }}
+   439→                                />
+   440→                              </div>
+   441→                            </div>
+   442→                            {/* Avg Win vs Avg Loss Comparison */}
+   443→                            <div className="mb-3 space-y-1.5">
+   444→                              <div className="flex items-center gap-2">
+   445→                                <span className="text-[10px] text-emerald-500 w-12 shrink-0">Avg Win</span>
+   446→                                <div className="flex-1 h-2 rounded-full bg-slate-800/50 overflow-hidden">
+   447→                                  <div
+   448→                                    className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full animate-progress"
+   449→                                    style={{ width: `${(avgWin / maxAvg) * 100}%` }}
+   450→                                  />
+   451→                                </div>
+   452→                                <span className="text-[10px] text-emerald-500 tabular-nums font-medium w-16 text-right">
+   453→                                  +${avgWin.toFixed(2)}
+   454→                                </span>
+   455→                              </div>
+   456→                              <div className="flex items-center gap-2">
+   457→                                <span className="text-[10px] text-red-500 w-12 shrink-0">Avg Loss</span>
+   458→                                <div className="flex-1 h-2 rounded-full bg-slate-800/50 overflow-hidden">
+   459→                                  <div
+   460→                                    className="h-full bg-gradient-to-r from-red-400 to-red-600 rounded-full animate-progress"
+   461→                                    style={{ width: `${(avgLoss / maxAvg) * 100}%` }}
+   462→                                  />
+   463→                                </div>
+   464→                                <span className="text-[10px] text-red-500 tabular-nums font-medium w-16 text-right">
+   465→                                  -${avgLoss.toFixed(2)}
+   466→                                </span>
+   467→                              </div>
+   468→                            </div>
+   469→                            </>
+   470→                          );
+   471→                        })()}
+   472→                        <div className="overflow-x-auto">
+   473→                          <Table>
+   474→                            <TableHeader>
+   475→                              <TableRow className="border-border hover:bg-transparent">
+   476→                                <TableHead className="text-[10px] h-7">Symbol</TableHead>
+   477→                                <TableHead className="text-[10px] h-7">Dir</TableHead>
+   478→                                <TableHead className="text-[10px] h-7 text-right">Lots</TableHead>
+   479→                                <TableHead className="text-[10px] h-7 text-right">Entry</TableHead>
+   480→                                <TableHead className="text-[10px] h-7 text-right">Close</TableHead>
+   481→                                <TableHead className="text-[10px] h-7 text-right">Pips</TableHead>
+   482→                                <TableHead className="text-[10px] h-7 text-right">P&L</TableHead>
+   483→                                <TableHead className="text-[10px] h-7">Duration</TableHead>
+   484→                                <TableHead className="text-[10px] h-7">Strategy</TableHead>
+   485→                              </TableRow>
+   486→                            </TableHeader>
+   487→                            <TableBody>
+   488→                              {closedTrades.map((trade) => (
+   489→                                <TableRow key={trade.id} className={`border-border compact-row ${trade.direction === 'BUY' ? 'trade-row-buy' : 'trade-row-sell'}`}>
+   490→                                  <TableCell className="text-xs font-medium">{trade.symbol}</TableCell>
+   491→                                  <TableCell>
+   492→                                    <div className={`flex items-center gap-1 text-[11px] font-bold ${trade.direction === 'BUY' ? 'text-emerald-500' : 'text-red-500'}`}>
+   493→                                      {trade.direction === 'BUY' ? <ArrowUpRight className="h-2.5 w-2.5" /> : <ArrowDownRight className="h-2.5 w-2.5" />}
+   494→                                      {trade.direction}
+   495→                                    </div>
+   496→                                  </TableCell>
+   497→                                  <TableCell className="text-[11px] text-right tabular-nums">{trade.lotSize}</TableCell>
+   498→                                  <TableCell className="text-[11px] text-right tabular-nums">{trade.entryPrice.toFixed(SYMBOL_INFO[trade.symbol].digits)}</TableCell>
+   499→                                  <TableCell className="text-[11px] text-right tabular-nums">{trade.currentPrice.toFixed(SYMBOL_INFO[trade.symbol].digits)}</TableCell>
+   500→                                  <TableCell className={`text-[11px] text-right tabular-nums font-semibold ${trade.pips >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   501→                                    {trade.pips >= 0 ? '+' : ''}{trade.pips.toFixed(1)}
+   502→                                  </TableCell>
+   503→                                  <TableCell className={`text-sm text-right tabular-nums font-bold ${trade.profit >= 0 ? 'gradient-text-profit' : 'gradient-text-loss'}`}>
+   504→                                    {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
+   505→                                  </TableCell>
+   506→                                  <TableCell className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+   507→                                    <div className="flex items-center gap-1">
+   508→                                      <Timer className="h-2.5 w-2.5 opacity-40" />
+   509→                                      {formatDuration(trade.openedAt, trade.closedAt)}
+   510→                                    </div>
+   511→                                  </TableCell>
+   512→                                  <TableCell className="text-[10px] text-muted-foreground">
+   513→                                    {trade.strategy || '—'}
+   514→                                  </TableCell>
+   515→                                </TableRow>
+   516→                              ))}
+   517→                            </TableBody>
+   518→                          </Table>
+   519→                        </div>
+   520→                      </>
+   521→                    )}
+   522→                  </CardContent>
+   523→                </TabsContent>
+   524→              </Tabs>
+   525→            </Card>
+   526→          </div>
+   527→
+   528→          {/* Trading Panel */}
+   529→          <div className="space-y-4">
+   530→            {/* (b) Better Price Display Card */}
+   531→            <Card className="glass-card">
+   532→              <CardContent className="p-4 space-y-3">
+   533→                <div className="text-center">
+   534→                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-medium">{SYMBOL_INFO[selectedSymbol].name}</div>
+   535→                  {price ? (
+   536→                    <>
+   537→                      <div className={`text-2xl md:text-3xl font-bold tabular-nums count-up ${priceFlash[selectedSymbol] === 'up' ? 'flash-green' : priceFlash[selectedSymbol] === 'down' ? 'flash-red' : ''}`}>
+   538→                        {price.bid.toFixed(SYMBOL_INFO[selectedSymbol].digits)}
+   539→                      </div>
+   540→                      <div className={`text-xs tabular-nums flex items-center justify-center gap-1 mt-0.5 ${price.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   541→                        {price.change >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+   542→                        <span className="font-medium">{price.change >= 0 ? '+' : ''}{price.change.toFixed(SYMBOL_INFO[selectedSymbol].digits)}</span>
+   543→                        <span>({price.change >= 0 ? '+' : ''}{price.changePercent.toFixed(3)}%)</span>
+   544→                      </div>
+   545→                    </>
+   546→                  ) : (
+   547→                    <div className="text-lg text-muted-foreground">—</div>
+   548→                  )}
+   549→                </div>
+   550→
+   551→                <div className="grid grid-cols-2 gap-2">
+   552→                  <div className="text-center p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+   553→                    <div className="text-[10px] text-emerald-500/70 uppercase font-medium">Bid</div>
+   554→                    <div className="text-2xl md:text-3xl font-bold text-emerald-500 tabular-nums">
+   555→                      {price ? price.bid.toFixed(SYMBOL_INFO[selectedSymbol].digits) : '—'}
+   556→                    </div>
+   557→                  </div>
+   558→                  <div className="text-center p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+   559→                    <div className="text-[10px] text-red-500/70 uppercase font-medium">Ask</div>
+   560→                    <div className="text-2xl md:text-3xl font-bold text-red-500 tabular-nums">
+   561→                      {price ? price.ask.toFixed(SYMBOL_INFO[selectedSymbol].digits) : '—'}
+   562→                    </div>
+   563→                  </div>
+   564→                </div>
+   565→
+   566→                {/* High/Low for the day + range bar */}
+   567→                {price && (
+   568→                  <div className="space-y-1.5">
+   569→                    <div className="flex items-center justify-between text-[10px] tabular-nums">
+   570→                      <span className="text-red-400 font-medium">L: {price.low.toFixed(SYMBOL_INFO[selectedSymbol].digits)}</span>
+   571→                      <span className="text-muted-foreground">Daily Range</span>
+   572→                      <span className="text-emerald-400 font-medium">H: {price.high.toFixed(SYMBOL_INFO[selectedSymbol].digits)}</span>
+   573→                    </div>
+   574→                    <div className="relative h-2.5 w-full rounded-full bg-slate-800 overflow-hidden">
+   575→                      <div
+   576→                        className="absolute top-0 h-full w-1 bg-foreground rounded-sm shadow-[0_0_6px_rgba(255,255,255,0.5)]"
+   577→                        style={{
+   578→                          left: `${price.high !== price.low ? ((price.bid - price.low) / (price.high - price.low)) * 100 : 50}%`,
+   579→                          transform: 'translateX(-50%)',
+   580→                        }}
+   581→                      />
+   582→                      <div
+   583→                        className="absolute top-0 h-full bg-gradient-to-r from-red-500/30 via-slate-600/30 to-emerald-500/30"
+   584→                        style={{ left: '0%', width: '100%' }}
+   585→                      />
+   586→                    </div>
+   587→                    <div className="text-center">
+   588→                      <span className="text-[10px] text-muted-foreground">Spread: </span>
+   589→                      <span className="text-[10px] font-medium tabular-nums">{price.spread.toFixed(1)} pips</span>
+   590→                    </div>
+   591→                  </div>
+   592→                )}
+   593→              </CardContent>
+   594→            </Card>
+   595→
+   596→            {/* (c) Better Order Panel */}
+   597→            <Card className={`glass-card card-hover ${oneClickMode ? 'pulsing-border-amber' : ''}`}>
+   598→              <CardHeader className="pb-2 pt-3 px-4">
+   599→                <div className="section-header-accent">
+   600→                  <CardTitle className="text-sm font-semibold">New Order</CardTitle>
+   601→                </div>
+   602→              </CardHeader>
+   603→              <CardContent className="px-4 pb-4 space-y-3">
+   604→                <div>
+   605→                  <Label className="text-[11px] text-muted-foreground font-medium">Lot Size</Label>
+   606→                  <div className="flex flex-wrap gap-1.5 mt-1.5 mb-1.5">
+   607→                    {quickLots.map((lot) => (
+   608→                      <button
+   609→                        key={lot}
+   610→                        onClick={() => setLotSize(lot.toString())}
+   611→                        className={`lot-chip text-[10px] px-2.5 py-1 rounded-full border ${
+   612→                          parseFloat(lotSize) === lot
+   613→                            ? 'active'
+   614→                            : 'border-border/60 text-muted-foreground'
+   615→                        } tabular-nums`}
+   616→                      >
+   617→                        {lot}
+   618→                      </button>
+   619→                    ))}
+   620→                  </div>
+   621→                  <Input
+   622→                    type="number"
+   623→                    value={lotSize}
+   624→                    onChange={(e) => setLotSize(e.target.value)}
+   625→                    step="0.01"
+   626→                    min={BROKER_CONFIG.minLotSize}
+   627→                    max={BROKER_CONFIG.maxLotSize}
+   628→                    className="h-9 text-sm tabular-nums"
+   629→                  />
+   630→                </div>
+   631→                <div className="grid grid-cols-2 gap-2">
+   632→                  <div>
+   633→                    <div className="flex items-center justify-between mb-1">
+   634→                      <Label className="text-[11px] text-muted-foreground font-medium">SL (pips)</Label>
+   635→                      <span className="text-[9px] text-muted-foreground tabular-nums">
+   636→                        ${orderMetrics.riskAmount.toFixed(2)}
+   637→                      </span>
+   638→                    </div>
+   639→                    <Input
+   640→                      type="number"
+   641→                      value={stopLoss}
+   642→                      onChange={(e) => setStopLoss(e.target.value)}
+   643→                      step="1"
+   644→                      min="0"
+   645→                      className="h-9 text-sm tabular-nums"
+   646→                    />
+   647→                  </div>
+   648→                  <div>
+   649→                    <div className="flex items-center justify-between mb-1">
+   650→                      <Label className="text-[11px] text-muted-foreground font-medium">TP (pips)</Label>
+   651→                      <span className="text-[9px] text-muted-foreground tabular-nums">
+   652→                        ${orderMetrics.potentialProfit.toFixed(2)}
+   653→                      </span>
+   654→                    </div>
+   655→                    <Input
+   656→                      type="number"
+   657→                      value={takeProfit}
+   658→                      onChange={(e) => setTakeProfit(e.target.value)}
+   659→                      step="1"
+   660→                      min="0"
+   661→                      className="h-9 text-sm tabular-nums"
+   662→                    />
+   663→                  </div>
+   664→                </div>
+   665→
+   666→                {/* Risk:Reward Ratio */}
+   667→                {(() => {
+   668→                  const slPips = parseFloat(stopLoss) || 0;
+   669→                  const tpPips = parseFloat(takeProfit) || 0;
+   670→                  const rr = slPips > 0 && tpPips > 0 ? (tpPips / slPips).toFixed(1) : null;
+   671→                  return rr ? (
+   672→                    <div className="flex items-center justify-center gap-2 py-1.5 px-2 rounded-lg bg-slate-800/30 border border-border/30">
+   673→                      <Target className="h-3 w-3 text-muted-foreground" />
+   674→                      <span className="text-[10px] text-muted-foreground">Risk:Reward</span>
+   675→                      <span className={`text-xs font-bold tabular-nums ${parseFloat(rr) >= 2 ? 'text-emerald-500' : parseFloat(rr) >= 1 ? 'text-amber-500' : 'text-red-500'}`}>
+   676→                        1:{rr}
+   677→                      </span>
+   678→                    </div>
+   679→                  ) : null;
+   680→                })()}
+   681→
+   682→                {/* Calculated Margin / Risk / Profit */}
+   683→                <div className="space-y-1.5 p-2.5 rounded-lg bg-slate-800/30 border border-border/50">
+   684→                  <div className="flex justify-between text-[11px]">
+   685→                    <span className="text-muted-foreground flex items-center gap-1">
+   686→                      <Shield className="h-3 w-3" /> Calculated Margin
+   687→                    </span>
+   688→                    <span className="font-medium tabular-nums text-amber-500">${orderMetrics.margin.toFixed(2)}</span>
+   689→                  </div>
+   690→                  <div className="flex justify-between text-[11px]">
+   691→                    <span className="text-muted-foreground flex items-center gap-1">
+   692→                      <AlertTriangle className="h-3 w-3" /> Risk Amount
+   693→                    </span>
+   694→                    <span className={`font-bold tabular-nums ${orderMetrics.riskAmount > 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+   695→                      ${orderMetrics.riskAmount.toFixed(2)}
+   696→                    </span>
+   697→                  </div>
+   698→                  <div className="flex justify-between text-[11px]">
+   699→                    <span className="text-muted-foreground flex items-center gap-1">
+   700→                      <Target className="h-3 w-3" /> Potential Profit
+   701→                    </span>
+   702→                    <span className={`font-bold tabular-nums ${orderMetrics.potentialProfit > 0 ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+   703→                      +${orderMetrics.potentialProfit.toFixed(2)}
+   704→                    </span>
+   705→                  </div>
+   706→                </div>
+   707→
+   708→                <Separator className="opacity-50" />
+   709→
+   710→                {oneClickMode ? (
+   711→                  <div className="space-y-1.5">
+   712→                    <div className="flex items-center gap-1.5 text-[10px] text-amber-500 font-medium">
+   713→                      <AlertTriangle className="h-3 w-3" />
+   714→                      One-Click Trading Active
+   715→                    </div>
+   716→                    <div className="grid grid-cols-2 gap-2">
+   717→                      <Button
+   718→                        className="gradient-buy-btn text-white h-12 font-bold text-base scale-click rounded-xl"
+   719→                        onClick={() => handleOpenTrade('BUY')}
+   720→                        disabled={!isConnected}
+   721→                      >
+   722→                        <ArrowUpRight className="h-5 w-5 mr-1" />
+   723→                        BUY
+   724→                      </Button>
+   725→                      <Button
+   726→                        className="gradient-sell-btn text-white h-12 font-bold text-base scale-click rounded-xl"
+   727→                        onClick={() => handleOpenTrade('SELL')}
+   728→                        disabled={!isConnected}
+   729→                      >
+   730→                        <ArrowDownRight className="h-5 w-5 mr-1" />
+   731→                        SELL
+   732→                      </Button>
+   733→                    </div>
+   734→                  </div>
+   735→                ) : (
+   736→                  <div className="grid grid-cols-2 gap-2">
+   737→                    <Button
+   738→                      className="gradient-buy-btn text-white h-12 font-bold text-base scale-click rounded-xl"
+   739→                      onClick={() => handleOpenTrade('BUY')}
+   740→                      disabled={!isConnected}
+   741→                    >
+   742→                      <ArrowUpRight className="h-5 w-5 mr-1" />
+   743→                      BUY
+   744→                    </Button>
+   745→                    <Button
+   746→                      className="gradient-sell-btn text-white h-12 font-bold text-base scale-click rounded-xl"
+   747→                      onClick={() => handleOpenTrade('SELL')}
+   748→                      disabled={!isConnected}
+   749→                    >
+   750→                      <ArrowDownRight className="h-5 w-5 mr-1" />
+   751→                      SELL
+   752→                    </Button>
+   753→                  </div>
+   754→                )}
+   755→
+   756→                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-800/20 border border-border/30">
+   757→                  <div className="flex items-center gap-2">
+   758→                    <Label className="text-[11px] text-muted-foreground font-medium">One-Click Trading</Label>
+   759→                    {oneClickMode && (
+   760→                      <Badge className="text-[9px] px-1.5 py-0 bg-amber-500/20 text-amber-400 border-amber-500/30 badge-pulse">
+   761→                        LIVE
+   762→                      </Badge>
+   763→                    )}
+   764→                  </div>
+   765→                  <Switch
+   766→                    checked={oneClickMode}
+   767→                    onCheckedChange={setOneClickMode}
+   768→                    className="data-[state=checked]:bg-amber-600"
+   769→                  />
+   770→                </div>
+   771→              </CardContent>
+   772→            </Card>
+   773→
+   774→            {/* Market Info */}
+   775→            <Card className="glass-card">
+   776→              <CardContent className="p-3 space-y-1.5">
+   777→                <div className="flex justify-between text-[11px]">
+   778→                  <span className="text-muted-foreground">Leverage</span>
+   779→                  <span className="font-medium">1:{BROKER_CONFIG.leverage}</span>
+   780→                </div>
+   781→                <div className="flex justify-between text-[11px]">
+   782→                  <span className="text-muted-foreground">Commission</span>
+   783→                  <span className="font-medium">${BROKER_CONFIG.commission}/lot</span>
+   784→                </div>
+   785→                <div className="flex justify-between text-[11px]">
+   786→                  <span className="text-muted-foreground">Margin Call</span>
+   787→                  <span className="font-medium">{BROKER_CONFIG.marginCall}%</span>
+   788→                </div>
+   789→                <div className="flex justify-between text-[11px]">
+   790→                  <span className="text-muted-foreground">Stop Out</span>
+   791→                  <span className="font-medium text-red-500">{BROKER_CONFIG.stopOut}%</span>
+   792→                </div>
+   793→              </CardContent>
+   794→            </Card>
+   795→          </div>
+   796→        </div>
+   797→
+   798→        {/* Order Book & Market Sentiment */}
+   799→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   800→          <OrderBookDepth
+   801→            symbol={selectedSymbol}
+   802→            bid={price?.bid ?? SYMBOL_INFO[selectedSymbol].pipSize}
+   803→            ask={price?.ask ?? SYMBOL_INFO[selectedSymbol].pipSize * 2}
+   804→          />
+   805→          <MarketSentiment />
+   806→        </div>
+   807→      </div>
+   808→    </TooltipProvider>
+   809→  );
+   810→};
+   811→

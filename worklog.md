@@ -1530,3 +1530,322 @@ Stage Summary:
 - Add multi-language support (i18n)
 - Add candlestick pattern recognition
 - Add correlation-based trading signals
+
+---
+Task ID: 7-a
+Agent: full-stack-developer (subagent)
+Task: Create Advanced Order Types Component (OCO, Break-Even, Trailing Limit)
+
+Work Log:
+- Created `/home/z/my-project/src/components/trading/AdvancedOrderTypes.tsx` (new file, ~480 lines)
+- Implemented 3 tabbed order types with framer-motion tab transitions:
+  - **OCO Tab**: BUY STOP + SELL STOP order forms with entry price, lot size, SL, TP inputs. SVG price-level diagram showing both levels relative to current price. "Place OCO" button creates two pending trades linked by strategy field containing OCO pair ID.
+  - **Break-Even Tab**: Trigger pips configuration input. Lists all open trades with per-trade "Activate BE" toggle. Each trade shows entry price, current P&L in pips, and a mini SVG chart (entry → current → BE line). useEffect watches price ticks and auto-moves SL to entry price when profit threshold is reached.
+  - **Trailing Limit Tab**: Direction selector (BUY/SELL), trail distance pips, limit offset pips, lot size inputs. Computed estimated limit price display. Animated SVG visual with trailing line animation (stroke-dashoffset animate). "How it works" explanation text.
+- All data simulated client-side with toast notifications via `addNotification`
+- Uses existing CSS classes: glass-card, card-hover, scale-click, tabular-nums, section-title-accent, metric-compact
+- Compact text sizes (text-[10px]-text-xs), tabular-nums throughout
+- Responsive: grid-cols-2 on mobile, grid-cols-4 on sm+ for input groups
+- No existing files modified
+- `bun run lint` — zero errors
+
+Stage Summary:
+- AdvancedOrderTypes.tsx component with 3 order type tabs
+- OCO: dual pending order placement with SVG price diagram
+- Break-Even: per-trade BE activation with auto SL-move on trigger
+- Trailing Limit: direction selector, trail/offset config, animated SVG visual
+- Full integration with trading-store (addTrade, updateTrade, addNotification)
+- Zero lint errors
+
+---
+Task ID: 7-b
+Agent: full-stack-developer (subagent)
+Task: Create Session Overlap Scanner Widget
+
+Work Log:
+- Created `/home/z/my-project/src/components/trading/SessionOverlapScanner.tsx` (~724 lines)
+- **Session Timeline Bar**: Horizontal 24h UTC timeline with 4 colored session blocks (Sydney=cyan, Tokyo=violet, London=emerald, New York=amber). Sessions that wrap midnight (Sydney 22-7) render as two segments. Active sessions glow with box-shadow. Animated UTC time marker (framer-motion pulse, white vertical line with dot). Hour labels at 0/6/12/18/24.
+- **Overlap Detection**: 3 overlap zones defined (Sydney-Tokyo, Tokyo-London, London-NY). Active overlaps shown with emerald glow border, countdown to close, volatility rating. Upcoming overlaps show countdown to open and expected volatility. Quick list of upcoming overlaps within 12h. Overlap zones rendered as hatched pattern on timeline bar.
+- **Volatility Prediction**: Volatility gauge bar (Low/Medium/High/Extreme) with animated fill (framer-motion). Color-coded: slate/amber/orange/red. Recommended strategies from STRATEGIES mapped by volatility level (Low=Pivot_Points+Linear_Regression+EMA_RSI_Filter, Extreme=Momentum_Scalping). Best pairs now based on active sessions with reasons.
+- **Session Stats**: Current session card (name, time remaining, typical pip range, avg daily range). Next session card (name, opens-in countdown, expected range). Best Session per Pair grid (4 pairs x 2 cols, session color dot, NOW badge when active).
+- **Auto-update**: 1-second interval updates UTC hour, current time, all countdowns.
+- Uses CSS classes: glass-card, card-hover, pulse-dot, badge-pulse, tabular-nums, section-title-accent, metric-compact, live-value
+- Compact text: text-[7px]-text-xs throughout
+- Responsive grid: 1-col mobile, 2-col sm, 3/4-col lg
+- Framer Motion: AnimatePresence for overlap cards, animated volatility gauge, pulse on time marker, opacity transitions on countdown
+- No existing files modified
+- `bun run lint` - zero errors
+
+Stage Summary:
+- SessionOverlapScanner.tsx with 5 sections: timeline bar, overlap zones, volatility prediction, session stats, best pairs
+- 4 trading sessions (Sydney/Tokyo/London/NY) with proper midnight-wrapping
+- 3 overlap zones with active/upcoming detection and countdown
+- Volatility-based strategy and pair recommendations from types
+- Real-time 1s auto-refresh
+- Zero lint errors
+
+---
+Task ID: 7-c
+Agent: full-stack-developer (subagent)
+Task: Visual Overhaul of the Sidebar Component
+
+Work Log:
+- Edited `/home/z/my-project/src/app/globals.css` — appended ~65 lines of sidebar-specific CSS at end of file:
+  - `.sidebar-nav-active`: 3px emerald left border with box-shadow glow (inset + outer), emerald-500/6% gradient background left-to-right
+  - `.sidebar-nav-item`: transparent left border with CSS hover that slides in a muted-foreground left border + accent gradient background
+  - `.sidebar-nav-icon`: transition-based scale transform; `.sidebar-nav-item:hover .sidebar-nav-icon` scales to 1.1
+  - `.logo-gradient-ring`: conic-gradient ring (emerald→cyan→violet→emerald) with 6s spin animation around the Zap icon
+  - `.auto-trade-glow-ring`: pulsing emerald box-shadow ring animation (0→4px→0) on 2s cycle
+  - `.toggle-pill` / `.toggle-pill-active-live` / `.toggle-pill-active-demo`: pill-shaped background containers for account toggle with color-coded tints
+  - `.sidebar-chevron` / `.sidebar-chevron-collapsed`: smooth 0.3s cubic-bezier rotation (180°) for collapse/expand
+
+- Edited `/home/z/my-project/src/components/trading/Sidebar.tsx` — surgical edits (10 operations via MultiEdit):
+  1. **Imports**: Added `useState, useEffect, useMemo` from React; added `TRADING_SESSIONS` from @/lib/types; removed unused `ChevronRight`
+  2. **Session Mini-Bars**: Added `SESSION_DEFS` constant (Sydney 22-7 UTC cyan, Tokyo 0-9 UTC violet, London 8-17 from TRADING_SESSIONS emerald, NY 13-22 from TRADING_SESSIONS amber); `isSessionActive()` helper handles midnight-wrapping sessions; `useState` + `useEffect` with 60s interval updates active state; 4 horizontal 2px bars rendered below connection status dot
+  3. **Equity Sparkline**: `generateSparkline()` function (seed-based sinusoidal, 20 points); `useMemo` for points and SVG path; `balance` pulled from store; footer section with "Equity" label, formatted balance (tabular-nums), SVG sparkline (emerald stroke, 80x24 viewBox)
+  4. **Logo/Brand**: Wrapped Zap icon in `logo-gradient-ring` div with rounded-[7px] inner; added "by FINEX" span (text-[9px]) next to ForexPro
+  5. **Active Tab Glow**: Replaced `bg-primary/10` with `sidebar-nav-active` class; added `gradient-text-emerald` for text
+  6. **Nav Hover Enhancement**: Inactive items use `sidebar-nav-item` class; icon wrapped in `sidebar-nav-icon` span; duration increased to 200ms
+  7. **Account Toggle Pill**: Wrapped in `toggle-pill` + color-variant class; added `transition-all duration-300` to container and Switch
+  8. **Auto-Trade Glow Ring**: Wrapped Switch in `auto-trade-glow-ring rounded-full` div when active; added `transition-colors duration-300` to Play icon
+  9. **Collapse Button**: Single `ChevronLeft` with `sidebar-chevron` + conditional `sidebar-chevron-collapsed` class for 180° rotation
+  10. **All existing logic preserved**: mobile handling, tooltips, error/signal badges, collapsed state toggles, ESC key dispatch
+
+- `bun run lint` — zero errors
+- Dev server compiled successfully (1690ms)
+
+Stage Summary:
+- 7 visual enhancements applied to Sidebar.tsx via surgical edits
+- Active nav: emerald left-border glow + gradient background + gradient-text-emerald
+- Hover nav: slide-in left border + accent gradient + icon scale(1.1)
+- Session mini-bars: 4 colored bars (SYD/TKY/LDN/NYC) updating every 60s from UTC
+- Logo: animated conic-gradient ring around Zap icon + "by FINEX" tagline
+- Toggles: pill background (color-coded), auto-trade pulsing glow ring
+- Collapse: single chevron with smooth 180° rotation animation
+- Footer: SVG equity sparkline (20 points) + balance display with metric-compact styling
+- 65 lines of new CSS in globals.css
+- Zero lint errors, all existing functionality preserved
+
+---
+Task ID: 7-d
+Agent: full-stack-developer (subagent)
+Task: Enhance the PriceChart Component
+
+Work Log:
+- Edited `/home/z/my-project/src/components/trading/PriceChart.tsx` — full rewrite with all 5 enhancements:
+  1. **Candlestick Body Rendering**: Enhanced `CandlestickShape` — body clamped to `Math.min(width*0.7, 6)` for ~6px width, centered on wick. Filled emerald rectangle for green candles (close >= open), filled red rectangle for red candles. Wick line at `strokeWidth={1}`.
+  2. **Volume Bar Coloring**: Added `VolumeShape` custom component — reads `payload.close` and `payload.open` to determine direction per bar. Green candles: `rgba(16,185,129,0.25)`, red candles: `rgba(239,68,68,0.25)`. Both area and candlestick mode volume `<Bar>` now use `shape={<VolumeShape />}` instead of static fill.
+  3. **Crosshair/Tooltip Enhancement**: Added `CrosshairCursor` component — vertical dashed line (`stroke: rgba(255,255,255,0.15)`, `strokeDasharray: 3 3`) following mouse via Tooltip `cursor` prop. Enhanced `tooltipContent`: uses `glass-card-premium` class for glass-card backdrop blur + shadow styling. Shows Date/Time header, O/H/L/C grid, Volume, Spread (in amber, pips calculated from ask-bid/pipeSize), and Chg (price change from previous candle with +/- sign, colored emerald/red).
+  4. **Round-Number Grid Lines**: Added `roundLevels` useMemo — computes step based on visible pip range (10/50/100/500 pips), generates ReferenceLines at clean levels (e.g., 1.0800, 1.0850 for EURUSD). Styled: `stroke: rgba(255,255,255,0.04)`, `strokeDasharray: 3 3`. Shared between both chart modes via `roundGridLines` fragment.
+  5. **Current Price Line**: Added `ReferenceLine` at `latestClose` (last candle close) in both modes. Color: emerald `#10b981` if latest close >= previous close, red `#ef4444` otherwise. Dashed (`5 5`), label positioned `right` with `fontWeight: bold`. Replaces the old static-green bid line in area mode and the static-green bid line in candlestick mode. Ask line preserved in area mode.
+- `chartData` useMemo now includes `prevClose` field for tooltip change calculation
+- All existing functionality preserved: mode toggle, area/candlestick chart types, ResponsiveContainer, gradient fills
+- No new CSS needed (glass-card-premium already exists in globals.css)
+- `bun run lint` — zero errors
+- Dev server compiled successfully (no errors in dev.log)
+
+Stage Summary:
+- 5 visual enhancements applied to PriceChart.tsx
+- Candlestick: proper ~6px filled bodies with 1px wicks
+- Volume: per-bar directional coloring (emerald/red at 25% opacity)
+- Tooltip: glass-card-premium styling, O/H/L/C, Volume, Spread (pips), Change from prev candle
+- Crosshair: vertical dashed line following mouse
+- Grid: round-number ReferenceLines at pip-appropriate intervals
+- Current price line: dynamic emerald/red color, right-side bold label
+- Zero lint errors, all existing functionality preserved
+
+---
+Task ID: 7-e
+Agent: full-stack-developer (subagent)
+Task: Redesign Notification Toasts and Polish page.tsx
+
+Work Log:
+- Edited `/home/z/my-project/src/app/page.tsx` — surgical edits with 3 MultiEdit operations:
+  1. **Imports**: Added `useEffect, useCallback` from React; added `Trash2` from lucide-react
+  2. **Toast Style Map** (`toastStyles`): Static Record mapping notification types to full Tailwind class sets (bg, border, borderLeft, iconBg, iconText, progressTrack, progressFill) — avoids dynamic class interpolation which Tailwind can't purge correctly. 4 types: success (emerald), error (red), warning (amber), info (slate).
+  3. **`formatTimestamp()` helper**: Returns "just now", "Xs ago", "Xm ago" based on `Date.now() - timestamp`
+  4. **`SingleToast` component** (replaces inline toast JSX in NotificationToast):
+     - **Progress bar**: `useState(100)` with `setInterval` at 50ms — decrements from 100→0 over 5000ms (`TOAST_LIFETIME`). Track: `h-[2px]` with `progressTrack` color. Fill: `progressFill` color, width set via inline style.
+     - **Timestamp display**: `setInterval` at 1s updates `timeLabel` via `formatTimestamp()` — shown next to title in `text-[10px] tabular-nums`.
+     - **Icon background circle**: 24×24 (`w-6 h-6 rounded-full`) with `iconBg` class, icon inside at `h-3.5 w-3.5` with `iconText` class.
+     - **Left border accent**: `border-l-[3px]` with `borderLeft` class (e.g., `border-l-emerald-500/70`).
+     - **Animation**: Spring-based entry (`stiffness: 350, damping: 22` for slight bounce), easeIn exit (`0.18s`).
+     - **Width**: `min-w-[300px] max-w-[420px]`.
+  5. **`NotificationToast` redesign**:
+     - "Dismiss All" button: `motion.button` with Trash2 icon, appears when `notifications.length >= 3`. Uses `useCallback` to iterate and remove each notification. Styled with `bg-card/80 backdrop-blur-sm` pill.
+     - `AnimatePresence mode="popLayout"` for smooth reordering when items are dismissed.
+  6. **Page Structure Polish**:
+     - Main `<main>`: added `relative` class.
+     - Top gradient border: `<div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent z-10" />` — matching footer style.
+     - Content wrapper: added `mesh-gradient-bg` class for subtle animated gradient background.
+  7. **ErrorLogsView**: Changed padding from `p-4` to `pt-5 p-4` (`p-4 pt-5`) to account for gradient border visual offset.
+  8. All existing logic, component structure, and functionality preserved.
+
+- `bun run lint` — zero errors
+- Dev server compiled successfully (661ms)
+
+Stage Summary:
+- 3 major edits to page.tsx (~333 lines, up from 227)
+- Toast: progress bar (2px, type-colored, 5s lifetime), spring-bounce entry animation, 3px left accent border, 24×24 icon bg circle, Dismiss All button (3+), timestamps
+- Page: mesh-gradient-bg on content, top gradient border line matching footer
+- ErrorLogsView: pt-5 to clear gradient border
+- Zero lint errors, all existing functionality preserved
+
+---
+Task ID: 7-a
+Agent: full-stack-developer (subagent)
+Task: Create Advanced Order Types Component
+
+Work Log:
+- Created `/src/components/trading/AdvancedOrderTypes.tsx`
+- 3 order types: OCO (One-Cancels-Other), Break-Even Stop, Trailing Limit
+- OCO: BUY STOP + SELL STOP with SVG price-level diagram, linked pending trades
+- Break-Even: configurable trigger threshold, per-trade toggle, auto-moves SL to entry
+- Trailing Limit: direction selector, trail distance, limit offset, animated SVG
+- Framer Motion tab transitions, glass-card styling, toast notifications
+
+Stage Summary:
+- Integrated into TradingView as new 'Advanced' tab (3 tabs total: Open/History/Advanced)
+- Zero lint errors
+
+---
+Task ID: 7-b
+Agent: full-stack-developer (subagent)
+Task: Create Session Overlap Scanner Widget
+
+Work Log:
+- Created `/src/components/trading/SessionOverlapScanner.tsx` (724 lines)
+- 24h UTC timeline bar with 4 colored session blocks (Sydney=cyan, Tokyo=violet, London=emerald, NY=amber)
+- 3 overlap zones with hatched overlay, countdown timers, volatility ratings
+- Volatility prediction gauge (Low→Extreme) with recommended strategies and pairs
+- Session stats: current/next session cards with countdowns and pip ranges
+- Best session per pair grid with NOW badges
+- Auto-updates every second
+
+Stage Summary:
+- Integrated into DashboardView before Activity Feed
+- Zero lint errors
+
+---
+Task ID: 7-c
+Agent: full-stack-developer (subagent)
+Task: Sidebar Visual Overhaul
+
+Work Log:
+- Active tab: 3px emerald left border with glow, gradient background, gradient-text-emerald
+- Nav hover: slide-in left border indicator, icon scale 1.1x
+- Session mini-bars: 4 tiny 2px bars (Sydney/Tokyo/London/NY colors), updates every 60s
+- Toggle design: pill background for account type, pulsing glow ring for auto-trading
+- Collapse button: smooth 180° rotation chevron
+- Logo: animated conic-gradient ring around Zap icon, 'by FINEX' tagline
+- Footer equity curve: SVG sparkline with balance in metric-compact
+- Added ~65 lines of sidebar-specific CSS to globals.css
+
+Stage Summary:
+- 7 enhancements applied to Sidebar.tsx
+- Zero lint errors
+
+---
+Task ID: 7-d
+Agent: full-stack-developer (subagent)
+Task: PriceChart Enhancements
+
+Work Log:
+- Candlestick bodies: proper 6px filled rectangles (emerald/red) with 1px wicks
+- Volume coloring: green/red based on candle direction
+- Crosshair cursor: vertical dashed line following mouse
+- Enhanced tooltip: glass-card-premium, O/H/L/C grid, Volume, Spread, Change
+- Round-number grid lines: auto-computed pip-appropriate levels, dashed
+- Current price line: horizontal dashed at latest close, colored by direction, with label
+
+Stage Summary:
+- 5 chart enhancements applied to PriceChart.tsx
+- Zero lint errors
+
+---
+Task ID: 7-e
+Agent: full-stack-developer (subagent)
+Task: Notification Toasts Redesign + page.tsx Polish
+
+Work Log:
+- Toasts: 2px auto-decreasing progress bar (5s lifetime), 3px colored left border
+- Icon background circles (24x24, rounded-full, type-colored bg)
+- 'Dismiss All' button when 3+ notifications
+- Spring bounce animation entry, fade exit
+- Wider toasts (max-w-[420px]), timestamp display
+- Page: mesh-gradient-bg on content area, top gradient border line
+
+Stage Summary:
+- Notification toasts completely redesigned
+- Zero lint errors
+
+---
+Task ID: R7-Main
+Agent: Main (Coordination + QA)
+Task: Round 7 - QA, new features, styling deepening
+
+Work Log:
+- Read worklog.md (1532 lines) to understand full project state
+- Confirmed dev server running, zero lint errors
+- QA via agent-browser read: page renders correctly, no runtime errors, 6 key content matches
+- Planned Round 7: 2 new features + 3 styling overhauls
+- Launched 5 parallel subagents:
+  - 7-a: Advanced Order Types (OCO, BE, Trailing Limit)
+  - 7-b: Session Overlap Scanner
+  - 7-c: Sidebar visual overhaul
+  - 7-d: PriceChart enhancements
+  - 7-e: Notification toasts redesign + page polish
+- All 5 subagents completed successfully
+- Integration:
+  - AdvancedOrderTypes added as 'Advanced' tab in TradingView
+  - SessionOverlapScanner added to DashboardView
+- Final QA: `bun run lint` clean, dev server <1s compile, page renders without errors
+
+Stage Summary:
+- **2 new features**: Advanced Order Types (OCO/BE/Trailing Limit), Session Overlap Scanner
+- **3 styling overhauls**: Sidebar (7 enhancements), PriceChart (5 enhancements), Notification toasts (redesigned)
+- **2 new components**: AdvancedOrderTypes, SessionOverlapScanner
+- Total component files: 24 (was 22)
+- Total CSS lines: 1207 (was 1139)
+- All 11 tabs + 1 floating panel functional, zero lint errors
+
+---
+## Project Status (Updated After Round 7)
+
+### Current State
+- Production-ready forex trading dashboard with 11 tabs + floating trade panel
+- Dark glass-morphism theme with 70+ CSS animation/utility classes (1207 lines)
+- Real-time price simulation for 4 pairs (EURUSD, USDJPY, GBPUSD, XAUUSD)
+- 30 technical indicators, 7 AI strategies, 4 market conditions
+- Complete risk management, backtesting, journal, performance analytics
+- Multi-timeframe analysis, signal detail modals, order book depth, market sentiment
+- Watchlist, activity feed, keyboard shortcuts, trade export CSV
+- **NEW: Advanced Order Types** (OCO, Break-Even Stop, Trailing Limit)
+- **NEW: Session Overlap Scanner** (24h timeline, 3 overlaps, volatility prediction, strategy recommendations)
+- **NEW: Enhanced Sidebar** (active tab glow, session mini-bars, equity sparkline, animated logo)
+- **NEW: Professional PriceChart** (candlestick bodies, volume coloring, crosshair, round grid, current price line)
+- **NEW: Redesigned Notification Toasts** (progress bar, dismiss all, spring animation, timestamps)
+- All 11 views + sidebar + footer consistently styled
+
+### All Completed Features (Rounds 1-7, 68 items)
+1-63. (All Round 1-6 features preserved)
+64. ✅ **Advanced Order Types** - OCO, Break-Even Stop, Trailing Limit tabs in Trading view
+65. ✅ **Session Overlap Scanner** - 24h timeline, overlap detection, volatility prediction, strategy recommendations
+66. ✅ **Sidebar Overhaul** - active glow, session bars, equity sparkline, animated logo, better toggles
+67. ✅ **PriceChart Enhancements** - candlestick bodies, colored volume, crosshair, round grids, price line
+68. ✅ **Notification Toasts Redesign** - progress bar, dismiss all, spring animation, left accent, timestamps
+
+### Unresolved Issues / Next Steps
+- WebSocket gateway routing (client-side simulator working reliably)
+- ML model integration (simulated AI in place, architecture ready)
+- Email notification delivery (settings UI ready, backend SMTP needed)
+- MT5 platform integration (requires Windows/Python)
+- Finnhub/MARKETAUX API integration (mock data in place)
+- Self-learning ML capabilities (architecture ready)
+- Add social trading / leaderboard
+- Add mobile push notifications (PWA)
+- Add customizable dashboard layout (drag-and-drop)
+- Add multi-language support (i18n)
+- Add candlestick pattern recognition
+- Add correlation-based trading signals
+- Add sound notification settings per event type

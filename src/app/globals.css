@@ -1137,3 +1137,71 @@
   pointer-events: none;
 }
 
+/* ===== Sidebar Visual Enhancements ===== */
+
+/* Active nav item glow border */
+.sidebar-nav-active {
+  border-left: 3px solid rgb(16 185 129);
+  box-shadow: -3px 0 8px -1px rgba(16, 185, 129, 0.3), inset 4px 0 12px -4px rgba(16, 185, 129, 0.08);
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.06), transparent) !important;
+}
+
+/* Nav item hover - slide-in left border */
+.sidebar-nav-item {
+  border-left: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+.sidebar-nav-item:hover {
+  border-left-color: oklch(var(--muted-foreground) / 0.3);
+  background: linear-gradient(90deg, oklch(var(--accent) / 0.4), transparent) !important;
+}
+.sidebar-nav-item:hover .sidebar-nav-icon {
+  transform: scale(1.1);
+}
+.sidebar-nav-icon {
+  transition: transform 0.2s ease;
+}
+
+/* Logo gradient ring */
+@keyframes logo-ring-spin {
+  0% { --ring-angle: 0deg; }
+  100% { --ring-angle: 360deg; }
+}
+.logo-gradient-ring {
+  background: conic-gradient(from 0deg, #10b981, #06b6d4, #8b5cf6, #10b981);
+  padding: 1.5px;
+  border-radius: 0.625rem;
+  animation: logo-ring-spin 6s linear infinite;
+}
+
+/* Auto-trading pulse glow ring */
+@keyframes auto-trade-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  50% { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0); }
+}
+.auto-trade-glow-ring {
+  animation: auto-trade-glow 2s ease-in-out infinite;
+}
+
+/* Toggle pill background */
+.toggle-pill {
+  background: oklch(var(--muted) / 0.4);
+  border-radius: 9999px;
+  padding: 3px 4px;
+  transition: background 0.3s ease;
+}
+.toggle-pill-active-live {
+  background: rgba(16, 185, 129, 0.1);
+}
+.toggle-pill-active-demo {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+/* Collapse chevron rotation */
+.sidebar-chevron {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sidebar-chevron-collapsed {
+  transform: rotate(180deg);
+}
+

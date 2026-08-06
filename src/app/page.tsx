@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, CheckCircle, AlertTriangle, Info, AlertCircle, Menu } from 'lucide-react';
+import { X, CheckCircle, AlertTriangle, Info, AlertCircle, Menu, Trash2 } from 'lucide-react';
 import { useTradingStore } from '@/store/trading-store';
 import Sidebar from '@/components/trading/Sidebar';
 import DashboardView from '@/components/trading/DashboardView';
@@ -24,44 +24,147 @@ import { usePriceSimulator } from '@/hooks/use-price-simulator';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 
+const TOAST_LIFETIME = 5000;
+
+const toastStyles: Record<string, { bg: string; border: string; borderLeft: string; iconBg: string; iconText: string; progressTrack: string; progressFill: string }> = {
+  success: {
+    bg: 'bg-emerald-500/[0.07]',
+    border: 'border-emerald-500/25',
+    borderLeft: 'border-l-emerald-500/70',
+    iconBg: 'bg-emerald-500/10',
+    iconText: 'text-emerald-500',
+    progressTrack: 'bg-emerald-500/15',
+    progressFill: 'bg-emerald-500/60',
+  },
+  error: {
+    bg: 'bg-red-500/[0.07]',
+    border: 'border-red-500/25',
+    borderLeft: 'border-l-red-500/70',
+    iconBg: 'bg-red-500/10',
+    iconText: 'text-red-500',
+    progressTrack: 'bg-red-500/15',
+    progressFill: 'bg-red-500/60',
+  },
+  warning: {
+    bg: 'bg-amber-500/[0.07]',
+    border: 'border-amber-500/25',
+    borderLeft: 'border-l-amber-500/70',
+    iconBg: 'bg-amber-500/10',
+    iconText: 'text-amber-500',
+    progressTrack: 'bg-amber-500/15',
+    progressFill: 'bg-amber-500/60',
+  },
+  info: {
+    bg: 'bg-slate-500/[0.07]',
+    border: 'border-slate-500/25',
+    borderLeft: 'border-l-slate-500/70',
+    iconBg: 'bg-slate-500/10',
+    iconText: 'text-slate-400',
+    progressTrack: 'bg-slate-500/15',
+    progressFill: 'bg-slate-500/60',
+  },
+};
+
+function formatTimestamp(ts: number): string {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 2) return 'just now';
+  if (diff < 60) return `${diff}s ago`;
+  return `${Math.floor(diff / 60)}m ago`;
+}
+
+function SingleToast({ notif, removeNotification }: {
+  notif: { id: string; type: 'success' | 'error' | 'warning' | 'info'; title: string; message: string; timestamp: number };
+  removeNotification: (id: string) => void;
+}) {
+  const [progress, setProgress] = useState(100);
+  const [timeLabel, setTimeLabel] = useState('just now');
+  const style = toastStyles[notif.type] || toastStyles.info;
+
+  useEffect(() => {
+    const start = Date.now();
+    const progressInterval = setInterval(() => {
+      const elapsed = Date.now() - start;
+      const pct = Math.max(0, 100 - (elapsed / TOAST_LIFETIME) * 100);
+      setProgress(pct);
+      if (pct <= 0) clearInterval(progressInterval);
+    }, 50);
+    return () => clearInterval(progressInterval);
+  }, []);
+
+  useEffect(() => {
+    const timeInterval = setInterval(() => {
+      setTimeLabel(formatTimestamp(notif.timestamp));
+    }, 1000);
+    return () => clearInterval(timeInterval);
+  }, [notif.timestamp]);
+
+  const IconComponent = notif.type === 'success' ? CheckCircle
+    : notif.type === 'error' ? AlertCircle
+    : notif.type === 'warning' ? AlertTriangle
+    : Info;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 80, scale: 0.92 }}
+      animate={{ opacity: 1, x: 0, scale: 1, transition: { type: 'spring', stiffness: 350, damping: 22 } }}
+      exit={{ opacity: 0, x: 80, scale: 0.92, transition: { duration: 0.18, ease: 'easeIn' } }}
+      className={`pointer-events-auto relative flex items-start gap-3 p-3 rounded-lg border shadow-xl overflow-hidden min-w-[300px] max-w-[420px] border-l-[3px] ${style.bg} ${style.border} ${style.borderLeft}`}
+    >
+      <div className="flex-shrink-0 mt-0.5">
+        <div className={`w-6 h-6 rounded-full ${style.iconBg} flex items-center justify-center`}>
+          <IconComponent className={`h-3.5 w-3.5 ${style.iconText}`} />
+        </div>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold">{notif.title}</span>
+          <span className="text-[10px] text-muted-foreground tabular-nums">{timeLabel}</span>
+        </div>
+        <div className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{notif.message}</div>
+      </div>
+      <button
+        onClick={() => removeNotification(notif.id)}
+        className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+      {/* Progress bar */}
+      <div className={`absolute bottom-0 left-0 right-0 h-[2px] ${style.progressTrack}`}>
+        <div
+          className={`h-full ${style.progressFill} transition-none`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </motion.div>
+  );
+}
+
 function NotificationToast({ notifications, removeNotification }: {
   notifications: Array<{ id: string; type: 'success' | 'error' | 'warning' | 'info'; title: string; message: string; timestamp: number }>;
   removeNotification: (id: string) => void;
 }) {
+  const showDismissAll = notifications.length >= 3;
+  const dismissAll = useCallback(() => {
+    [...notifications].forEach(n => removeNotification(n.id));
+  }, [notifications, removeNotification]);
+
   return (
-    <div className="fixed top-4 right-4 z-[100] space-y-2 pointer-events-none border-transition">
-      <AnimatePresence>
+    <div className="fixed top-4 right-4 z-[100] space-y-2 pointer-events-none">
+      {showDismissAll && (
+        <motion.button
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          onClick={dismissAll}
+          className="pointer-events-auto ml-auto flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground bg-card/80 border border-border/60 rounded-md px-2.5 py-1.5 backdrop-blur-sm transition-colors"
+        >
+          <Trash2 className="h-3 w-3" />
+          Dismiss All ({notifications.length})
+        </motion.button>
+      )}
+      <AnimatePresence mode="popLayout">
         {notifications.map((notif) => (
-          <motion.div
-            key={notif.id}
-            initial={{ opacity: 0, x: 100, scale: 0.95 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 100, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className={`pointer-events-auto flex items-start gap-3 p-3 rounded-lg border shadow-lg min-w-[280px] max-w-[380px] toast-enter
-              ${notif.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30' :
-                notif.type === 'error' ? 'bg-red-500/10 border-red-500/30' :
-                notif.type === 'warning' ? 'bg-amber-500/10 border-amber-500/30' :
-                'bg-card border-border'
-              }`}
-          >
-            <div className="flex-shrink-0 mt-0.5">
-              {notif.type === 'success' && <CheckCircle className="h-4 w-4 text-emerald-500" />}
-              {notif.type === 'error' && <AlertCircle className="h-4 w-4 text-red-500" />}
-              {notif.type === 'warning' && <AlertTriangle className="h-4 w-4 text-amber-500" />}
-              {notif.type === 'info' && <Info className="h-4 w-4 text-slate-500" />}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold">{notif.title}</div>
-              <div className="text-[11px] text-muted-foreground mt-0.5">{notif.message}</div>
-            </div>
-            <button
-              onClick={() => removeNotification(notif.id)}
-              className="flex-shrink-0 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </motion.div>
+          <SingleToast key={notif.id} notif={notif} removeNotification={removeNotification} />
         ))}
       </AnimatePresence>
     </div>
@@ -72,7 +175,7 @@ function ErrorLogsView() {
   const { errorLogs, resolveErrorLog, clearResolvedLogs } = useTradingStore();
   const unresolvedCount = errorLogs.filter(e => !e.resolved).length;
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 pt-5 space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -206,8 +309,10 @@ export default function TradingDashboard() {
       <div className="flex-1 flex flex-col overflow-hidden"
         style={isMobile ? {} : { marginLeft: sidebarWidth }}
       >
-        <main className="flex-1 overflow-y-auto">
-          <div className="min-h-full pb-10 md:pb-0">
+        <main className="flex-1 overflow-y-auto relative">
+          {/* Top gradient border line */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent z-10" />
+          <div className="min-h-full pb-10 md:pb-0 mesh-gradient-bg">
             {renderView()}
           </div>
         </main>

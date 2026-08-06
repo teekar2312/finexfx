@@ -19,6 +19,7 @@ import PriceChart from './PriceChart';
 import OrderBookDepth from './OrderBookDepth';
 import MarketSentiment from './MarketSentiment';
 import TradeExportButton from './TradeExportButton';
+import AdvancedOrderTypes from './AdvancedOrderTypes';
 
 export default function TradingView() {
   const {
@@ -235,6 +236,9 @@ export default function TradingView() {
                       </TabsTrigger>
                       <TabsTrigger value="history" className="text-xs h-6 data-[state=active]:bg-emerald-600/20 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.15)]">
                         History ({closedTrades.length})
+                      </TabsTrigger>
+                      <TabsTrigger value="advanced" className="text-xs h-6 data-[state=active]:bg-amber-600/20 data-[state=active]:text-amber-400 data-[state=active]:shadow-[0_0_10px_rgba(245,158,11,0.15)]">
+                        Advanced
                       </TabsTrigger>
                     </TabsList>
                     <TradeExportButton />
@@ -518,6 +522,11 @@ export default function TradingView() {
                         </div>
                       </>
                     )}
+                  </CardContent>
+                </TabsContent>
+                <TabsContent value="advanced" className="mt-0">
+                  <CardContent className="px-4 pb-3">
+                    <AdvancedOrderTypes />
                   </CardContent>
                 </TabsContent>
               </Tabs>

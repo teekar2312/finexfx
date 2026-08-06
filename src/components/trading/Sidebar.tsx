@@ -1,7 +1,8 @@
 'use client';
 
+import { useState, useEffect, useMemo } from 'react';
 import { useTradingStore, type TabId } from '@/store/trading-store';
-import { BROKER_CONFIG } from '@/lib/types';
+import { BROKER_CONFIG, TRADING_SESSIONS } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart3,
@@ -15,7 +16,6 @@ import {
   Play,
   PieChart as PieChartIcon,
   ChevronLeft,
-  ChevronRight,
   Shield,
   TriangleAlert,
   Zap,
@@ -48,6 +48,28 @@ const navItems: NavItem[] = [
   { id: 'errors', label: 'Error Logs', icon: <TriangleAlert className="h-4 w-4" /> },
 ];
 
+const SESSION_DEFS = [
+  { label: 'SYD', start: 22, end: 7, color: 'bg-cyan-400', inactiveColor: 'bg-slate-700' },
+  { label: 'TKY', start: 0, end: 9, color: 'bg-violet-400', inactiveColor: 'bg-slate-700' },
+  { label: 'LDN', start: TRADING_SESSIONS.LONDON.start, end: TRADING_SESSIONS.LONDON.end, color: 'bg-emerald-400', inactiveColor: 'bg-slate-700' },
+  { label: 'NYC', start: TRADING_SESSIONS.NEW_YORK.start, end: TRADING_SESSIONS.NEW_YORK.end, color: 'bg-amber-400', inactiveColor: 'bg-slate-700' },
+] as const;
+
+function isSessionActive(start: number, end: number, utcHour: number): boolean {
+  if (start > end) {
+    return utcHour >= start || utcHour < end;
+  }
+  return utcHour >= start && utcHour < end;
+}
+
+function generateSparkline(seed: number): number[] {
+  const points: number[] = [50];
+  for (let i = 1; i < 20; i++) {
+    points.push(Math.max(10, Math.min(90, points[i - 1] + (Math.sin(seed + i * 0.8) * 6 + Math.cos(seed * 1.3 + i * 0.5) * 4))));
+  }
+  return points;
+}
+
 export default function Sidebar() {
   const {
     activeTab,
@@ -61,11 +83,39 @@ export default function Sidebar() {
     setAutoTrading,
     errorLogs,
     signals,
+    balance,
   } = useTradingStore();
 
   const isMobile = useIsMobile();
   const unresolvedErrors = errorLogs.filter(e => !e.resolved).length;
   const effectiveOpen = isMobile ? true : sidebarOpen;
+
+  // Session mini-bars - update every minute
+  const [activeSessions, setActiveSessions] = useState<boolean[]>([false, false, false, false]);
+  useEffect(() => {
+    const update = () => {
+      const utcHour = new Date().getUTCHours();
+      setActiveSessions(SESSION_DEFS.map(s => isSessionActive(s.start, s.end, utcHour)));
+    };
+    update();
+    const interval = setInterval(update, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Equity sparkline
+  const sparklinePoints = useMemo(() => generateSparkline(42), []);
+  const sparklinePath = useMemo(() => {
+    const w = 80, h = 24, pad = 2;
+    const step = (w - pad * 2) / (sparklinePoints.length - 1);
+    const min = Math.min(...sparklinePoints);
+    const max = Math.max(...sparklinePoints);
+    const range = max - min || 1;
+    return sparklinePoints.map((p, i) => {
+      const x = pad + i * step;
+      const y = pad + (1 - (p - min) / range) * (h - pad * 2);
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+  }, [sparklinePoints]);
 
   const handleNav = (id: TabId) => {
     setActiveTab(id);
@@ -115,8 +165,10 @@ export default function Sidebar() {
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-4 min-h-[56px]">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary flex-shrink-0">
-              <Zap className="h-4 w-4 text-primary-foreground" />
+            <div className="logo-gradient-ring flex-shrink-0">
+              <div className="flex items-center justify-center w-8 h-8 rounded-[7px] bg-primary">
+                <Zap className="h-4 w-4 text-primary-foreground" />
+              </div>
             </div>
             {effectiveOpen && (
               <div className="overflow-hidden whitespace-nowrap">
@@ -124,7 +176,7 @@ export default function Sidebar() {
                   <div className="text-sm font-bold text-foreground">Navigation</div>
                 ) : (
                   <div>
-                    <div className="text-sm font-bold text-foreground">ForexPro</div>
+                    <div className="text-sm font-bold text-foreground">ForexPro <span className="text-[9px] font-normal text-muted-foreground">by FINEX</span></div>
                     <div className="text-[10px] text-muted-foreground">{BROKER_CONFIG.name}</div>
                   </div>
                 )}
@@ -160,6 +212,16 @@ export default function Sidebar() {
               </Badge>
             )}
           </div>
+          {/* Session mini-bars */}
+          <div className="flex gap-1 mt-1 px-2">
+            {SESSION_DEFS.map((s, i) => (
+              <div
+                key={s.label}
+                className={`h-[2px] flex-1 rounded-full transition-colors duration-500 ${activeSessions[i] ? s.color : s.inactiveColor}`}
+                title={`${s.label} ${activeSessions[i] ? 'Active' : 'Inactive'}`}
+              />
+            ))}
+          </div>
         </div>
 
         <Separator className="opacity-50" />
@@ -175,13 +237,13 @@ export default function Sidebar() {
               <button
                 key={item.id}
                 onClick={() => handleNav(item.id)}
-                className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-md text-sm transition-all duration-150 relative group min-h-[44px] focus-ring
+                className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-md text-sm transition-all duration-200 relative group min-h-[44px] focus-ring
                   ${isActive
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent glass-card-interactive'
+                    ? 'sidebar-nav-active text-primary font-medium gradient-text-emerald'
+                    : 'sidebar-nav-item text-muted-foreground hover:text-foreground glass-card-interactive'
                   }`}
               >
-                <span className={`flex-shrink-0 ${isActive ? 'text-primary' : ''}`}>{item.icon}</span>
+                <span className={`sidebar-nav-icon flex-shrink-0 ${isActive ? 'text-primary' : ''}`}>{item.icon}</span>
                 {effectiveOpen && (
                   <span className="overflow-hidden whitespace-nowrap">{item.label}</span>
                 )}
@@ -219,17 +281,17 @@ export default function Sidebar() {
         {/* Account Type Toggle */}
         <div className="px-3 py-2">
           {effectiveOpen ? (
-            <div className="flex items-center justify-between px-2 min-h-[44px]">
+            <div className={`flex items-center justify-between px-2 min-h-[44px] rounded-lg transition-all duration-300 ${accountType === 'live' ? 'toggle-pill toggle-pill-active-live' : 'toggle-pill toggle-pill-active-demo'}`}>
               <div className="flex flex-col">
                 <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Account</span>
-                <span className={`text-xs font-semibold ${accountType === 'live' ? 'text-emerald-500' : 'text-amber-500'}`}>
+                <span className={`text-xs font-semibold transition-colors duration-300 ${accountType === 'live' ? 'text-emerald-500' : 'text-amber-500'}`}>
                   {accountType === 'live' ? '● LIVE' : '● DEMO'}
                 </span>
               </div>
               <Switch
                 checked={accountType === 'live'}
                 onCheckedChange={(checked) => setAccountType(checked ? 'live' : 'demo')}
-                className="data-[state=checked]:bg-emerald-600"
+                className="data-[state=checked]:bg-emerald-600 transition-all duration-300"
               />
             </div>
           ) : (
@@ -242,29 +304,46 @@ export default function Sidebar() {
           {effectiveOpen ? (
             <div className="flex items-center justify-between px-2 min-h-[44px]">
               <div className="flex items-center gap-2">
-                <Play className={`h-3 w-3 ${isAutoTrading ? 'text-emerald-500' : 'text-muted-foreground'}`} />
+                <Play className={`h-3 w-3 transition-colors duration-300 ${isAutoTrading ? 'text-emerald-500' : 'text-muted-foreground'}`} />
                 <span className="text-xs text-muted-foreground">Auto Trade</span>
               </div>
-              <Switch
-                checked={isAutoTrading}
-                onCheckedChange={setAutoTrading}
-                disabled={!isConnected}
-                className="data-[state=checked]:bg-emerald-600"
-              />
+              <div className={isAutoTrading ? 'auto-trade-glow-ring rounded-full' : ''}>
+                <Switch
+                  checked={isAutoTrading}
+                  onCheckedChange={setAutoTrading}
+                  disabled={!isConnected}
+                  className="data-[state=checked]:bg-emerald-600 transition-all duration-300"
+                />
+              </div>
             </div>
           ) : (
             collapsedAutoToggle
           )}
         </div>
 
+        {/* Equity Curve Footer */}
+        {effectiveOpen && (
+          <div className="px-3 py-2 metric-compact">
+            <div className="px-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Equity</span>
+                <span className="text-[10px] font-medium text-foreground tabular-nums">${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <svg viewBox="0 0 80 24" className="w-full h-6" preserveAspectRatio="none">
+                <path d={sparklinePath} fill="none" stroke="rgb(16 185 129)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
+              </svg>
+            </div>
+          </div>
+        )}
+
         {/* Collapse Button - desktop only */}
         {!isMobile && (
           <div className="px-2 py-2 border-t border-border">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="w-full flex items-center justify-center py-1.5 rounded-md hover:bg-accent transition-colors text-muted-foreground hover:text-foreground min-h-[44px]"
+              className="w-full flex items-center justify-center py-1.5 rounded-md hover:bg-accent transition-all duration-200 text-muted-foreground hover:text-foreground min-h-[44px]"
             >
-              {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              <ChevronLeft className={`h-4 w-4 sidebar-chevron ${!sidebarOpen ? 'sidebar-chevron-collapsed' : ''}`} />
             </button>
           </div>
         )}

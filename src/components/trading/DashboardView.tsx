@@ -13,6 +13,7 @@ import { TrendingUp, TrendingDown, DollarSign, Activity, Zap, Play, ArrowUpRight
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import WatchlistPanel from './WatchlistPanel';
 import ActivityFeed from './ActivityFeed';
+import SessionOverlapScanner from './SessionOverlapScanner';
 
 function getConditionIcon(condition: MarketCondition) {
   switch (condition) {
@@ -849,6 +850,9 @@ export default function DashboardView() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Session Overlap Scanner */}
+      <SessionOverlapScanner />
 
       {/* Activity Feed */}
       <ActivityFeed />
