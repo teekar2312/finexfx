@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Newspaper, AlertTriangle, Clock, Globe, Filter, X, Radio, ArrowUpRight, ArrowDownRight, Minus, Flame, TrendingUp } from 'lucide-react';
+import { Newspaper, AlertTriangle, Clock, Globe, Filter, X, Radio, ArrowUpRight, ArrowDownRight, Minus, Flame, TrendingUp, Building2, BarChart3, Landmark, Percent } from 'lucide-react';
 
 const MOCK_NEWS: Array<{
   id: string;
@@ -60,7 +60,7 @@ const MOCK_EVENTS: Array<{
 
 function ImpactDots({ impact }: { impact: 'high' | 'medium' | 'low' }) {
   const count = impact === 'high' ? 3 : impact === 'medium' ? 2 : 1;
-  const color = impact === 'high' ? 'bg-red-500' : impact === 'medium' ? 'bg-amber-500' : 'bg-slate-500';
+  const color = impact === 'high' ? 'bg-red-500' : impact === 'medium' ? 'bg-amber-500' : 'bg-green-500';
   return (
     <div className="flex items-center gap-0.5">
       {Array.from({ length: 3 }).map((_, i) => (
@@ -101,6 +101,32 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+function getCategoryIcon(category: string) {
+  switch (category) {
+    case 'Central Bank': return <Landmark className="h-3 w-3 text-violet-400" />;
+    case 'Employment': return <Building2 className="h-3 w-3 text-cyan-400" />;
+    case 'Technical': return <BarChart3 className="h-3 w-3 text-amber-400" />;
+    case 'Commodities': return <Flame className="h-3 w-3 text-orange-400" />;
+    case 'Inflation': return <Percent className="h-3 w-3 text-red-400" />;
+    case 'GDP': return <TrendingUp className="h-3 w-3 text-emerald-400" />;
+    case 'Economic': return <Globe className="h-3 w-3 text-blue-400" />;
+    default: return <Newspaper className="h-3 w-3 text-slate-400" />;
+  }
+}
+
+function getCategoryColor(category: string): string {
+  switch (category) {
+    case 'Central Bank': return 'border-violet-500/30 text-violet-400 bg-violet-500/10';
+    case 'Employment': return 'border-cyan-500/30 text-cyan-400 bg-cyan-500/10';
+    case 'Technical': return 'border-amber-500/30 text-amber-400 bg-amber-500/10';
+    case 'Commodities': return 'border-orange-500/30 text-orange-400 bg-orange-500/10';
+    case 'Inflation': return 'border-red-500/30 text-red-400 bg-red-500/10';
+    case 'GDP': return 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10';
+    case 'Economic': return 'border-blue-500/30 text-blue-400 bg-blue-500/10';
+    default: return 'border-slate-500/30 text-slate-400 bg-slate-500/10';
+  }
+}
+
 function getReadingTime(text: string): string {
   const words = text.split(/\s+/).length;
   const minutes = Math.max(1, Math.ceil(words / 200));
@@ -118,7 +144,7 @@ function SourceCircle({ source }: { source: string }) {
   };
   const bgColor = colors[source] || 'bg-slate-500';
   return (
-    <div className={`w-5 h-5 rounded-full ${bgColor} flex items-center justify-center flex-shrink-0`}>
+    <div className={`w-6 h-6 rounded-full ${bgColor} flex items-center justify-center flex-shrink-0 ring-2 ring-white/10`}>
       <span className="text-[9px] font-bold text-white">{source.charAt(0)}</span>
     </div>
   );
@@ -175,7 +201,7 @@ export default function NewsView() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="relative overflow-hidden rounded-lg bg-red-500/10 border border-red-500/30"
+            className="relative overflow-hidden rounded-lg bg-red-500/10 border border-red-500/30 shimmer-border-red"
           >
             {/* CSS animations for marquee and pulse */}
             <style dangerouslySetInnerHTML={{ __html: `
@@ -193,7 +219,7 @@ export default function NewsView() {
                 <div className="relative">
                   <div className="w-2.5 h-2.5 rounded-full bg-red-500 pulse-dot-anim" />
                 </div>
-                <Badge className="bg-red-500 text-white text-[10px] px-2.5 py-0 font-bold flex items-center gap-1">
+                <Badge className="bg-red-500 text-white text-[10px] px-2.5 py-0 font-bold flex items-center gap-1 time-fade">
                   <Radio className="h-2.5 w-2.5" />
                   BREAKING
                 </Badge>
@@ -272,28 +298,29 @@ export default function NewsView() {
         <span className="text-[10px] text-muted-foreground">{filteredNews.length} articles • {filteredEvents.length} events</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
         {/* News Feed - Enhanced */}
-        <Card className="glass-card">
+        <Card className="glass-card card-hover">
           <CardHeader className="pb-2 pt-3 px-4">
             <div className="flex items-center gap-2">
               <Newspaper className="h-4 w-4 text-primary" />
-              <CardTitle className="text-sm font-semibold">News Feed</CardTitle>
+              <CardTitle className="text-sm font-semibold"><span className="section-title-accent">News Feed</span></CardTitle>
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-3">
             <ScrollArea className="h-[600px]">
-              <div className="space-y-3">
+              <div className="space-y-3 stagger-children">
                 {filteredNews.map((news, i) => {
                   const isNew = news.publishedAt ? (Date.now() - new Date(news.publishedAt).getTime()) < 1800000 : false;
                   const summary = (news as any).summary || '';
+                  const isFirst = i === 0;
                   return (
                     <motion.div
                       key={news.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.03 }}
-                      className={`p-3 rounded-lg border transition-all border-l-4 hover:bg-accent/30 group ${
+                      className={`p-3 rounded-lg border transition-all border-l-4 hover:bg-accent/30 group card-hover ${isFirst ? 'shimmer-border ' : ''}
                         news.impact === 'high' ? 'border-l-red-500 border-red-500/20 hover:border-l-red-400 hover:shadow-[0_0_12px_rgba(239,68,68,0.1)]' :
                         news.impact === 'medium' ? 'border-l-amber-500 border-amber-500/20 hover:border-l-amber-400 hover:shadow-[0_0_12px_rgba(245,158,11,0.1)]' :
                         'border-l-slate-500 border-border hover:border-l-slate-400'
@@ -323,7 +350,10 @@ export default function NewsView() {
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-[9px] px-1.5 py-0">{news.currency}</Badge>
                           {(news as any).category && (
-                            <Badge variant="secondary" className="text-[9px] px-1.5 py-0">{(news as any).category}</Badge>
+                            <Badge variant="outline" className={`text-[9px] px-1.5 py-0 flex items-center gap-1 ${getCategoryColor((news as any).category)}`}>
+                              {getCategoryIcon((news as any).category)}
+                              {(news as any).category}
+                            </Badge>
                           )}
                           {/* Reading time */}
                           {summary && (
@@ -353,15 +383,15 @@ export default function NewsView() {
         </Card>
 
         {/* Economic Calendar - Enhanced with timeline, color-coded actual vs forecast */}
-        <Card className="glass-card">
+        <Card className="glass-card card-hover">
           <CardHeader className="pb-2 pt-3 px-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Globe className="h-4 w-4 text-primary" />
-                <CardTitle className="text-sm font-semibold">Economic Calendar</CardTitle>
+                <CardTitle className="text-sm font-semibold"><span className="section-title-accent">Economic Calendar</span></CardTitle>
               </div>
               {/* Currency Strength summary */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 elevated-card px-2 py-1 rounded-lg">
                 <Flame className="h-3 w-3 text-red-500" />
                 <div className="flex items-center gap-1.5">
                   {currencyStrength.slice(0, 4).map(([currency, count]) => (
@@ -403,7 +433,7 @@ export default function NewsView() {
                           <div className={`w-2.5 h-2.5 rounded-full border-2 z-10 ${
                             event.impact === 'high' ? 'bg-red-500 border-red-400' :
                             event.impact === 'medium' ? 'bg-amber-500 border-amber-400' :
-                            'bg-slate-500 border-slate-400'
+                            'bg-green-500 border-green-400'
                           }`} />
                           {idx < filteredEvents.length - 1 && <div className="flex-1 w-px bg-border" />}
                         </div>

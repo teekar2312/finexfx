@@ -1,0 +1,1052 @@
+     1→@import "tailwindcss";
+     2→@import "tw-animate-css";
+     3→
+     4→@custom-variant dark (&:is(.dark *));
+     5→
+     6→@theme inline {
+     7→  --color-background: var(--background);
+     8→  --color-foreground: var(--foreground);
+     9→  --font-sans: var(--font-geist-sans);
+    10→  --font-mono: var(--font-geist-mono);
+    11→  --color-sidebar-ring: var(--sidebar-ring);
+    12→  --color-sidebar-border: var(--sidebar-border);
+    13→  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    14→  --color-sidebar-accent: var(--sidebar-accent);
+    15→  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    16→  --color-sidebar-primary: var(--sidebar-primary);
+    17→  --color-sidebar-foreground: var(--sidebar-foreground);
+    18→  --color-sidebar: var(--sidebar);
+    19→  --color-chart-5: var(--chart-5);
+    20→  --color-chart-4: var(--chart-4);
+    21→  --color-chart-3: var(--chart-3);
+    22→  --color-chart-2: var(--chart-2);
+    23→  --color-chart-1: var(--chart-1);
+    24→  --color-ring: var(--ring);
+    25→  --color-input: var(--input);
+    26→  --color-border: var(--border);
+    27→  --color-destructive: var(--destructive);
+    28→  --color-accent-foreground: var(--accent-foreground);
+    29→  --color-accent: var(--accent);
+    30→  --color-muted-foreground: var(--muted-foreground);
+    31→  --color-muted: var(--muted);
+    32→  --color-secondary-foreground: var(--secondary-foreground);
+    33→  --color-secondary: var(--secondary);
+    34→  --color-primary-foreground: var(--primary-foreground);
+    35→  --color-primary: var(--primary);
+    36→  --color-popover-foreground: var(--popover-foreground);
+    37→  --color-popover: var(--popover);
+    38→  --color-card-foreground: var(--card-foreground);
+    39→  --color-card: var(--card);
+    40→  --color-profit: var(--profit);
+    41→  --color-loss: var(--loss);
+    42→  --color-warning: var(--warning);
+    43→  --radius-sm: calc(var(--radius) - 4px);
+    44→  --radius-md: calc(var(--radius) - 2px);
+    45→  --radius-lg: var(--radius);
+    46→  --radius-xl: calc(var(--radius) + 4px);
+    47→}
+    48→
+    49→:root {
+    50→  --radius: 0.625rem;
+    51→  --background: #f8fafc;
+    52→  --foreground: #0f172a;
+    53→  --card: #ffffff;
+    54→  --card-foreground: #0f172a;
+    55→  --popover: #ffffff;
+    56→  --popover-foreground: #0f172a;
+    57→  --primary: #0f172a;
+    58→  --primary-foreground: #f8fafc;
+    59→  --secondary: #f1f5f9;
+    60→  --secondary-foreground: #0f172a;
+    61→  --muted: #f1f5f9;
+    62→  --muted-foreground: #64748b;
+    63→  --accent: #f1f5f9;
+    64→  --accent-foreground: #0f172a;
+    65→  --destructive: #ef4444;
+    66→  --border: #e2e8f0;
+    67→  --input: #e2e8f0;
+    68→  --ring: #10b981;
+    69→  --chart-1: #10b981;
+    70→  --chart-2: #ef4444;
+    71→  --chart-3: #f59e0b;
+    72→  --chart-4: #8b5cf6;
+    73→  --chart-5: #06b6d4;
+    74→  --sidebar: #ffffff;
+    75→  --sidebar-foreground: #0f172a;
+    76→  --sidebar-primary: #10b981;
+    77→  --sidebar-primary-foreground: #ffffff;
+    78→  --sidebar-accent: #f1f5f9;
+    79→  --sidebar-accent-foreground: #0f172a;
+    80→  --sidebar-border: #e2e8f0;
+    81→  --sidebar-ring: #10b981;
+    82→  --profit: #10b981;
+    83→  --loss: #ef4444;
+    84→  --warning: #f59e0b;
+    85→}
+    86→
+    87→.dark {
+    88→  --background: #0a0f1c;
+    89→  --foreground: #e2e8f0;
+    90→  --card: #111827;
+    91→  --card-foreground: #e2e8f0;
+    92→  --popover: #111827;
+    93→  --popover-foreground: #e2e8f0;
+    94→  --primary: #10b981;
+    95→  --primary-foreground: #0a0f1c;
+    96→  --secondary: #1e293b;
+    97→  --secondary-foreground: #e2e8f0;
+    98→  --muted: #1e293b;
+    99→  --muted-foreground: #94a3b8;
+   100→  --accent: #1e293b;
+   101→  --accent-foreground: #e2e8f0;
+   102→  --destructive: #ef4444;
+   103→  --border: rgba(255, 255, 255, 0.08);
+   104→  --input: rgba(255, 255, 255, 0.1);
+   105→  --ring: #10b981;
+   106→  --chart-1: #10b981;
+   107→  --chart-2: #ef4444;
+   108→  --chart-3: #f59e0b;
+   109→  --chart-4: #8b5cf6;
+   110→  --chart-5: #06b6d4;
+   111→  --sidebar: #0d1321;
+   112→  --sidebar-foreground: #e2e8f0;
+   113→  --sidebar-primary: #10b981;
+   114→  --sidebar-primary-foreground: #0a0f1c;
+   115→  --sidebar-accent: #1e293b;
+   116→  --sidebar-accent-foreground: #e2e8f0;
+   117→  --sidebar-border: rgba(255, 255, 255, 0.08);
+   118→  --sidebar-ring: #10b981;
+   119→  --profit: #10b981;
+   120→  --loss: #ef4444;
+   121→  --warning: #f59e0b;
+   122→}
+   123→
+   124→@layer base {
+   125→  * {
+   126→    @apply border-border outline-ring/50;
+   127→  }
+   128→  body {
+   129→    @apply bg-background text-foreground;
+   130→  }
+   131→}
+   132→
+   133→/* Custom scrollbar for dark theme */
+   134→.dark ::-webkit-scrollbar {
+   135→  width: 6px;
+   136→  height: 6px;
+   137→}
+   138→
+   139→.dark ::-webkit-scrollbar-track {
+   140→  background: #0a0f1c;
+   141→}
+   142→
+   143→.dark ::-webkit-scrollbar-thumb {
+   144→  background: #1e293b;
+   145→  border-radius: 3px;
+   146→}
+   147→
+   148→.dark ::-webkit-scrollbar-thumb:hover {
+   149→  background: #334155;
+   150→}
+   151→
+   152→::-webkit-scrollbar {
+   153→  width: 6px;
+   154→  height: 6px;
+   155→}
+   156→
+   157→::-webkit-scrollbar-track {
+   158→  background: transparent;
+   159→}
+   160→
+   161→::-webkit-scrollbar-thumb {
+   162→  background: #cbd5e1;
+   163→  border-radius: 3px;
+   164→}
+   165→
+   166→::-webkit-scrollbar-thumb:hover {
+   167→  background: #94a3b8;
+   168→}
+   169→
+   170→/* Glass morphism card effect */
+   171→.glass-card {
+   172→  background: rgba(17, 24, 39, 0.6);
+   173→  backdrop-filter: blur(12px);
+   174→  -webkit-backdrop-filter: blur(12px);
+   175→  border: 1px solid rgba(255, 255, 255, 0.06);
+   176→}
+   177→
+   178→.dark .glass-card {
+   179→  background: rgba(17, 24, 39, 0.6);
+   180→  backdrop-filter: blur(12px);
+   181→  -webkit-backdrop-filter: blur(12px);
+   182→  border: 1px solid rgba(255, 255, 255, 0.06);
+   183→}
+   184→
+   185→:not(.dark) .glass-card {
+   186→  background: rgba(255, 255, 255, 0.7);
+   187→  backdrop-filter: blur(12px);
+   188→  border: 1px solid rgba(0, 0, 0, 0.06);
+   189→}
+   190→
+   191→/* Price flash animation */
+   192→@keyframes flash-green {
+   193→  0% { background-color: rgba(16, 185, 129, 0.3); }
+   194→  100% { background-color: transparent; }
+   195→}
+   196→
+   197→@keyframes flash-red {
+   198→  0% { background-color: rgba(239, 68, 68, 0.3); }
+   199→  100% { background-color: transparent; }
+   200→}
+   201→
+   202→.flash-green {
+   203→  animation: flash-green 0.5s ease-out;
+   204→}
+   205→
+   206→.flash-red {
+   207→  animation: flash-red 0.5s ease-out;
+   208→}
+   209→
+   210→/* Pulse dot for live status */
+   211→@keyframes pulse-dot {
+   212→  0%, 100% { opacity: 1; transform: scale(1); }
+   213→  50% { opacity: 0.5; transform: scale(1.5); }
+   214→}
+   215→
+   216→.pulse-dot {
+   217→  animation: pulse-dot 2s ease-in-out infinite;
+   218→}
+   219→
+   220→/* Slide in from right */
+   221→@keyframes slide-in-right {
+   222→  0% { transform: translateX(100%); opacity: 0; }
+   223→  100% { transform: translateX(0); opacity: 1; }
+   224→}
+   225→
+   226→.slide-in-right {
+   227→  animation: slide-in-right 0.3s ease-out;
+   228→}
+   229→
+   230→/* Fade in up */
+   231→@keyframes fade-in-up {
+   232→  0% { transform: translateY(10px); opacity: 0; }
+   233→  100% { transform: translateY(0); opacity: 1; }
+   234→}
+   235→
+   236→.fade-in-up {
+   237→  animation: fade-in-up 0.3s ease-out;
+   238→}
+   239→
+   240→/* Number ticker */
+   241→@keyframes ticker-up {
+   242→  0% { color: #10b981; }
+   243→  100% { color: inherit; }
+   244→}
+   245→
+   246→@keyframes ticker-down {
+   247→  0% { color: #ef4444; }
+   248→  100% { color: inherit; }
+   249→}
+   250→
+   251→.ticker-up {
+   252→  animation: ticker-up 0.6s ease-out;
+   253→}
+   254→
+   255→.ticker-down {
+   256→  animation: ticker-down 0.6s ease-out;
+   257→}
+   258→
+   259→/* Shimmer loading effect */
+   260→@keyframes shimmer {
+   261→  0% { background-position: -200% 0; }
+   262→  100% { background-position: 200% 0; }
+   263→}
+   264→
+   265→.shimmer {
+   266→  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
+   267→  background-size: 200% 100%;
+   268→  animation: shimmer 1.5s infinite;
+   269→}
+   270→
+   271→/* Notification toast animation */
+   272→@keyframes toast-in {
+   273→  0% { transform: translateX(100%); opacity: 0; }
+   274→  100% { transform: translateX(0); opacity: 1; }
+   275→}
+   276→
+   277→.toast-enter {
+   278→  animation: toast-in 0.3s ease-out forwards;
+   279→}
+   280→
+   281→/* Custom number display */
+   282→.tabular-nums {
+   283→  font-variant-numeric: tabular-nums;
+   284→}
+   285→
+   286→/* Ticker animation for footer */
+   287→@keyframes ticker-scroll {
+   288→  0% { transform: translateX(0); }
+   289→  100% { transform: translateX(-50%); }
+   290→}
+   291→.animate-ticker {
+   292→  animation: ticker-scroll 30s linear infinite;
+   293→}
+   294→.animate-ticker:hover {
+   295→  animation-play-state: paused;
+   296→}
+   297→
+   298→/* Glow effect for active elements */
+   299→@keyframes glow-pulse {
+   300→  0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.2); }
+   301→  50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(16, 185, 129, 0.1); }
+   302→}
+   303→
+   304→.glow-emerald {
+   305→  animation: glow-pulse 3s ease-in-out infinite;
+   306→}
+   307→
+   308→.glow-red {
+   309→  animation: glow-pulse-red 3s ease-in-out infinite;
+   310→}
+   311→
+   312→@keyframes glow-pulse-red {
+   313→  0%, 100% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.2); }
+   314→  50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(239, 68, 68, 0.1); }
+   315→}
+   316→
+   317→/* Gradient text */
+   318→.gradient-text-emerald {
+   319→  background: linear-gradient(135deg, #10b981, #06b6d4);
+   320→  -webkit-background-clip: text;
+   321→  -webkit-text-fill-color: transparent;
+   322→  background-clip: text;
+   323→}
+   324→
+   325→.gradient-text-profit {
+   326→  background: linear-gradient(135deg, #10b981, #34d399);
+   327→  -webkit-background-clip: text;
+   328→  -webkit-text-fill-color: transparent;
+   329→  background-clip: text;
+   330→}
+   331→
+   332→.gradient-text-loss {
+   333→  background: linear-gradient(135deg, #ef4444, #f87171);
+   334→  -webkit-background-clip: text;
+   335→  -webkit-text-fill-color: transparent;
+   336→  background-clip: text;
+   337→}
+   338→
+   339→/* Card hover lift */
+   340→.card-hover {
+   341→  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+   342→}
+   343→
+   344→.card-hover:hover {
+   345→  transform: translateY(-2px);
+   346→  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+   347→  border-color: rgba(255, 255, 255, 0.12);
+   348→}
+   349→
+   350→/* Shimmer border effect */
+   351→@keyframes shimmer-border {
+   352→  0% { background-position: 0% 50%; }
+   353→  50% { background-position: 100% 50%; }
+   354→  100% { background-position: 0% 50%; }
+   355→}
+   356→
+   357→.shimmer-border {
+   358→  position: relative;
+   359→}
+   360→
+   361→.shimmer-border::before {
+   362→  content: '';
+   363→  position: absolute;
+   364→  inset: -1px;
+   365→  border-radius: inherit;
+   366→  padding: 1px;
+   367→  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.3), transparent, rgba(16, 185, 129, 0.3), transparent);
+   368→  background-size: 200% 100%;
+   369→  animation: shimmer-border 3s linear infinite;
+   370→  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+   371→  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+   372→  -webkit-mask-composite: xor;
+   373→  mask-composite: exclude;
+   374→  pointer-events: none;
+   375→}
+   376→
+   377→/* Number count-up animation */
+   378→@keyframes count-up {
+   379→  from { opacity: 0; transform: translateY(8px); }
+   380→  to { opacity: 1; transform: translateY(0); }
+   381→}
+   382→
+   383→.count-up {
+   384→  animation: count-up 0.4s ease-out;
+   385→}
+   386→
+   387→/* Progress bar fill animation */
+   388→@keyframes progress-fill {
+   389→  from { width: 0%; }
+   390→}
+   391→
+   392→.animate-progress {
+   393→  animation: progress-fill 0.8s ease-out;
+   394→}
+   395→
+   396→/* Subtle floating animation */
+   397→@keyframes float {
+   398→  0%, 100% { transform: translateY(0); }
+   399→  50% { transform: translateY(-4px); }
+   400→}
+   401→
+   402→.animate-float {
+   403→  animation: float 4s ease-in-out infinite;
+   404→}
+   405→
+   406→/* Scale on click */
+   407→.scale-click {
+   408→  transition: transform 0.1s ease;
+   409→}
+   410→
+   411→.scale-click:active {
+   412→  transform: scale(0.97);
+   413→}
+   414→
+   415→/* Status indicator pulse ring */
+   416→@keyframes pulse-ring {
+   417→  0% { transform: scale(1); opacity: 0.8; }
+   418→  100% { transform: scale(2.5); opacity: 0; }
+   419→}
+   420→
+   421→.pulse-ring::after {
+   422→  content: '';
+   423→  position: absolute;
+   424→  inset: 0;
+   425→  border-radius: 50%;
+   426→  border: 2px solid currentColor;
+   427→  animation: pulse-ring 2s ease-out infinite;
+   428→}
+   429→
+   430→/* Breathing background animation for active cards */
+   431→@keyframes breathe {
+   432→  0%, 100% { background-color: rgba(16, 185, 129, 0.03); }
+   433→  50% { background-color: rgba(16, 185, 129, 0.08); }
+   434→}
+   435→
+   436→.breathe-emerald {
+   437→  animation: breathe 4s ease-in-out infinite;
+   438→}
+   439→
+   440→/* Rotating border gradient */
+   441→@keyframes rotate-border {
+   442→  0% { --angle: 0deg; }
+   443→  100% { --angle: 360deg; }
+   444→}
+   445→
+   446→/* Glass card enhanced hover */
+   447→.glass-card-interactive {
+   448→  transition: all 0.2s ease;
+   449→  cursor: pointer;
+   450→}
+   451→
+   452→.glass-card-interactive:hover {
+   453→  background: rgba(17, 24, 39, 0.8);
+   454→  border-color: rgba(255, 255, 255, 0.12);
+   455→  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+   456→}
+   457→
+   458→/* Badge pulse for important items */
+   459→@keyframes badge-pulse {
+   460→  0%, 100% { opacity: 1; }
+   461→  50% { opacity: 0.6; }
+   462→}
+   463→
+   464→.badge-pulse {
+   465→  animation: badge-pulse 2s ease-in-out infinite;
+   466→}
+   467→
+   468→/* Tooltip fade-in */
+   469→.tooltip-fade {
+   470→  animation: fade-in-up 0.15s ease-out;
+   471→}
+   472→
+   473→/* Smooth border color transition for tabs/buttons */
+   474→.border-transition {
+   475→  transition: border-color 0.2s ease, background-color 0.2s ease;
+   476→}
+   477→
+   478→/* Focus ring for accessibility */
+   479→.focus-ring:focus-visible {
+   480→  outline: 2px solid rgba(16, 185, 129, 0.5);
+   481→  outline-offset: 2px;
+   482→  border-radius: 4px;
+   483→}
+   484→
+   485→/* === Dashboard Styling Overhaul === */
+   486→
+   487→/* Faint dot grid pattern for stat cards */
+   488→.stat-card-pattern {
+   489→  position: relative;
+   490→  overflow: hidden;
+   491→}
+   492→
+   493→.stat-card-pattern::before {
+   494→  content: '';
+   495→  position: absolute;
+   496→  inset: 0;
+   497→  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+   498→  background-size: 12px 12px;
+   499→  pointer-events: none;
+   500→  z-index: 0;
+   501→}
+   502→
+   503→.stat-card-pattern > * {
+   504→  position: relative;
+   505→  z-index: 1;
+   506→}
+   507→
+   508→/* Stat card gradient accent top line */
+   509→.stat-accent-emerald {
+   510→  border-top: 2px solid transparent;
+   511→  border-image: linear-gradient(90deg, #10b981, #06b6d4) 1;
+   512→}
+   513→
+   514→.stat-accent-red {
+   515→  border-top: 2px solid transparent;
+   516→  border-image: linear-gradient(90deg, #ef4444, #f97316) 1;
+   517→}
+   518→
+   519→.stat-accent-neutral {
+   520→  border-top: 2px solid transparent;
+   521→  border-image: linear-gradient(90deg, rgba(148, 163, 184, 0.5), rgba(100, 116, 139, 0.3)) 1;
+   522→}
+   523→
+   524→/* Inner glow on hover for stat cards */
+   525→.stat-card-glow:hover {
+   526→  box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.06), 0 8px 25px rgba(0, 0, 0, 0.3);
+   527→  border-color: rgba(255, 255, 255, 0.12);
+   528→}
+   529→
+   530→/* Performance section glass wrapper with top gradient border */
+   531→.perf-section-glass {
+   532→  position: relative;
+   533→  overflow: hidden;
+   534→}
+   535→
+   536→.perf-section-glass::before {
+   537→  content: '';
+   538→  position: absolute;
+   539→  top: 0;
+   540→  left: 0;
+   541→  right: 0;
+   542→  height: 1px;
+   543→  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.4), rgba(6, 182, 212, 0.4), transparent);
+   544→  pointer-events: none;
+   545→}
+   546→
+   547→/* Section title with decorative accent */
+   548→.section-title-accent {
+   549→  display: flex;
+   550→  align-items: center;
+   551→  gap: 8px;
+   552→}
+   553→
+   554→.section-title-accent::before {
+   555→  content: '';
+   556→  width: 3px;
+   557→  height: 14px;
+   558→  border-radius: 2px;
+   559→  background: linear-gradient(180deg, #10b981, #06b6d4);
+   560→  flex-shrink: 0;
+   561→}
+   562→
+   563→/* Quick actions gradient background animation */
+   564→@keyframes quick-actions-bg {
+   565→  0%, 100% { background-position: 0% 50%; }
+   566→  50% { background-position: 100% 50%; }
+   567→}
+   568→
+   569→.quick-actions-gradient {
+   570→  background: linear-gradient(135deg, rgba(16, 185, 129, 0.03), rgba(6, 182, 212, 0.05), rgba(16, 185, 129, 0.03));
+   571→  background-size: 200% 200%;
+   572→  animation: quick-actions-bg 8s ease-in-out infinite;
+   573→}
+   574→
+   575→/* Action button glass-card hover */
+   576→.action-btn-glass {
+   577→  transition: all 0.2s ease;
+   578→  position: relative;
+   579→  overflow: hidden;
+   580→}
+   581→
+   582→.action-btn-glass::before {
+   583→  content: '';
+   584→  position: absolute;
+   585→  inset: 0;
+   586→  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+   587→  opacity: 0;
+   588→  transition: opacity 0.2s ease;
+   589→  pointer-events: none;
+   590→}
+   591→
+   592→.action-btn-glass:hover::before {
+   593→  opacity: 1;
+   594→}
+   595→
+   596→/* Clock tick animation for active sessions */
+   597→@keyframes clock-tick {
+   598→  0%, 100% { transform: rotate(0deg); }
+   599→  25% { transform: rotate(5deg); }
+   600→  75% { transform: rotate(-5deg); }
+   601→}
+   602→
+   603→.clock-tick {
+   604→  animation: clock-tick 2s ease-in-out infinite;
+   605→  display: inline-block;
+   606→}
+   607→
+   608→/* Time-ago subtle fade */
+   609→@keyframes time-fade {
+   610→  0% { opacity: 0.6; }
+   611→  50% { opacity: 1; }
+   612→  100% { opacity: 0.6; }
+   613→}
+   614→
+   615→.time-fade {
+   616→  animation: time-fade 4s ease-in-out infinite;
+   617→}
+   618→
+   619→/* Gradient progress bar for sessions */
+   620→.progress-gradient-emerald {
+   621→  background: linear-gradient(90deg, #10b981, #06b6d4);
+   622→  transition: width 1s ease;
+   623→}
+   624→
+   625→.progress-gradient-slate {
+   626→  background: linear-gradient(90deg, #475569, #64748b);
+   627→}
+   628→
+   629→/* Confidence bar gradient */
+   630→.confidence-bar-emerald {
+   631→  background: linear-gradient(90deg, #059669, #10b981);
+   632→}
+   633→
+   634→.confidence-bar-amber {
+   635→  background: linear-gradient(90deg, #d97706, #f59e0b);
+   636→}
+   637→
+   638→.confidence-bar-red {
+   639→  background: linear-gradient(90deg, #dc2626, #ef4444);
+   640→}
+   641→
+   642→/* Overlap badge */
+   643→.overlap-badge {
+   644→  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.15));
+   645→  border: 1px solid rgba(16, 185, 129, 0.3);
+   646→  color: #10b981;
+   647→  font-size: 9px;
+   648→  padding: 1px 6px;
+   649→  border-radius: 9999px;
+   650→  font-weight: 500;
+   651→}
+   652→
+   653→/* === Trading View Enhancements === */
+   654→
+   655→/* Pill selector active glow */
+   656→.pill-active-glow {
+   657→  position: relative;
+   658→}
+   659→.pill-active-glow::after {
+   660→  content: '';
+   661→  position: absolute;
+   662→  bottom: -2px;
+   663→  left: 15%;
+   664→  right: 15%;
+   665→  height: 2px;
+   666→  background: linear-gradient(90deg, transparent, #10b981, transparent);
+   667→  box-shadow: 0 0 10px rgba(16, 185, 129, 0.6), 0 0 20px rgba(16, 185, 129, 0.2);
+   668→  border-radius: 1px;
+   669→}
+   670→
+   671→/* Trade row left borders */
+   672→.trade-row-buy {
+   673→  border-left: 3px solid #10b981;
+   674→}
+   675→.trade-row-sell {
+   676→  border-left: 3px solid #ef4444;
+   677→}
+   678→
+   679→/* Pulsing border for one-click mode */
+   680→@keyframes pulse-border-amber {
+   681→  0%, 100% { border-color: rgba(245, 158, 11, 0.3); box-shadow: none; }
+   682→  50% { border-color: rgba(245, 158, 11, 0.8); box-shadow: 0 0 15px rgba(245, 158, 11, 0.25); }
+   683→}
+   684→.pulsing-border-amber {
+   685→  animation: pulse-border-amber 2s ease-in-out infinite;
+   686→}
+   687→
+   688→/* Gradient BUY button */
+   689→.gradient-buy-btn {
+   690→  background: linear-gradient(135deg, #059669, #10b981, #34d399) !important;
+   691→  transition: all 0.2s ease;
+   692→}
+   693→.gradient-buy-btn:hover {
+   694→  background: linear-gradient(135deg, #047857, #059669, #10b981) !important;
+   695→  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+   696→}
+   697→.gradient-buy-btn:disabled {
+   698→  opacity: 0.5;
+   699→  cursor: not-allowed;
+   700→}
+   701→
+   702→/* Gradient SELL button */
+   703→.gradient-sell-btn {
+   704→  background: linear-gradient(135deg, #dc2626, #ef4444, #f87171) !important;
+   705→  transition: all 0.2s ease;
+   706→}
+   707→.gradient-sell-btn:hover {
+   708→  background: linear-gradient(135deg, #b91c1c, #dc2626, #ef4444) !important;
+   709→  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
+   710→}
+   711→.gradient-sell-btn:disabled {
+   712→  opacity: 0.5;
+   713→  cursor: not-allowed;
+   714→}
+   715→
+   716→/* Lot size chip buttons */
+   717→.lot-chip {
+   718→  transition: all 0.15s ease;
+   719→  cursor: pointer;
+   720→  user-select: none;
+   721→}
+   722→.lot-chip:hover {
+   723→  background: rgba(16, 185, 129, 0.15);
+   724→  border-color: rgba(16, 185, 129, 0.4);
+   725→  color: #10b981;
+   726→}
+   727→.lot-chip.active {
+   728→  background: rgba(16, 185, 129, 0.2);
+   729→  border-color: rgba(16, 185, 129, 0.5);
+   730→  color: #10b981;
+   731→  font-weight: 600;
+   732→}
+   733→
+   734→/* Chart glow */
+   735→.chart-glow {
+   736→  position: relative;
+   737→}
+   738→.chart-glow::before {
+   739→  content: '';
+   740→  position: absolute;
+   741→  inset: -6px;
+   742→  border-radius: 12px;
+   743→  background: radial-gradient(ellipse at center, rgba(16, 185, 129, 0.06), transparent 70%);
+   744→  pointer-events: none;
+   745→  z-index: 0;
+   746→}
+   747→.chart-glow > * {
+   748→  position: relative;
+   749→  z-index: 1;
+   750→}
+   751→
+   752→/* Section header accent line */
+   753→.section-header-accent {
+   754→  display: flex;
+   755→  align-items: center;
+   756→  gap: 10px;
+   757→  margin-bottom: 12px;
+   758→}
+   759→.section-header-accent::after {
+   760→  content: '';
+   761→  flex: 1;
+   762→  height: 1px;
+   763→  background: linear-gradient(90deg, rgba(16, 185, 129, 0.3), transparent);
+   764→}
+   765→
+   766→/* Trailing stop animation */
+   767→@keyframes trail-bounce {
+   768→  0%, 100% { transform: translateY(0); opacity: 0.8; }
+   769→  50% { transform: translateY(-3px); opacity: 1; }
+   770→}
+   771→.trail-animate {
+   772→  animation: trail-bounce 1.5s ease-in-out infinite;
+   773→  color: #10b981;
+   774→}
+   775→
+   776→/* Mini P&L bar container */
+   777→.pnl-bar-track {
+   778→  width: 60px;
+   779→  height: 3px;
+   780→  background: rgba(255, 255, 255, 0.06);
+   781→  border-radius: 2px;
+   782→  overflow: hidden;
+   783→}
+   784→.pnl-bar-fill {
+   785→  height: 100%;
+   786→  border-radius: 2px;
+   787→  transition: width 0.5s ease;
+   788→}
+   789→
+   790→/* Win/loss ratio bar */
+   791→.winloss-bar {
+   792→  height: 8px;
+   793→  border-radius: 4px;
+   794→  overflow: hidden;
+   795→  display: flex;
+   796→  background: rgba(255, 255, 255, 0.06);
+   797→}
+   798→
+   799→/* Comparison bar */
+   800→.comparison-bar {
+   801→  height: 8px;
+   802→  border-radius: 4px;
+   803→  transition: width 0.6s ease;
+   804→  min-width: 4px;
+   805→}
+   806→
+   807→/* Compact table row */
+   808→.compact-row td {
+   809→  padding: 6px 8px;
+   810→  vertical-align: middle;
+   811→}
+   812→
+   813→/* === Round 5: Additional Global CSS Improvements === */
+   814→
+   815→/* Noise texture overlay for premium glass feel */
+   816→.noise-overlay {
+   817→  position: relative;
+   818→}
+   819→.noise-overlay::after {
+   820→  content: '';
+   821→  position: absolute;
+   822→  inset: 0;
+   823→  opacity: 0.015;
+   824→  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+   825→  pointer-events: none;
+   826→  border-radius: inherit;
+   827→}
+   828→
+   829→/* Animated gradient mesh background for hero sections */
+   830→@keyframes mesh-gradient {
+   831→  0% { background-position: 0% 50%; }
+   832→  25% { background-position: 100% 0%; }
+   833→  50% { background-position: 100% 100%; }
+   834→  75% { background-position: 0% 100%; }
+   835→  100% { background-position: 0% 50%; }
+   836→}
+   837→
+   838→.mesh-gradient-bg {
+   839→  background: linear-gradient(135deg, rgba(16,185,129,0.04), rgba(6,182,212,0.06), rgba(139,92,246,0.03), rgba(16,185,129,0.04));
+   840→  background-size: 400% 400%;
+   841→  animation: mesh-gradient 20s ease-in-out infinite;
+   842→}
+   843→
+   844→/* Smooth number transition for live values */
+   845→.live-value {
+   846→  transition: color 0.3s ease;
+   847→  font-variant-numeric: tabular-nums;
+   848→}
+   849→
+   850→/* Enhanced tooltip with arrow */
+   851→.tooltip-enhanced {
+   852→  position: relative;
+   853→}
+   854→.tooltip-enhanced::after {
+   855→  content: '';
+   856→  position: absolute;
+   857→  bottom: -4px;
+   858→  left: 50%;
+   859→  transform: translateX(-50%) rotate(45deg);
+   860→  width: 8px;
+   861→  height: 8px;
+   862→  background: inherit;
+   863→  border-right: 1px solid rgba(255,255,255,0.08);
+   864→  border-bottom: 1px solid rgba(255,255,255,0.08);
+   865→}
+   866→
+   867→/* Stagger children animation */
+   868→.stagger-children > * {
+   869→  animation: fade-in-up 0.4s ease-out backwards;
+   870→}
+   871→.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+   872→.stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+   873→.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+   874→.stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+   875→.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+   876→.stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
+   877→.stagger-children > *:nth-child(7) { animation-delay: 0.35s; }
+   878→.stagger-children > *:nth-child(8) { animation-delay: 0.4s; }
+   879→
+   880→/* Glass card with noise for premium sections */
+   881→.glass-card-premium {
+   882→  background: rgba(17, 24, 39, 0.7);
+   883→  backdrop-filter: blur(16px);
+   884→  -webkit-backdrop-filter: blur(16px);
+   885→  border: 1px solid rgba(255, 255, 255, 0.08);
+   886→  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+   887→}
+   888→
+   889→/* Subtle parallax depth effect on hover */
+   890→.parallax-hover {
+   891→  transition: transform 0.3s ease, box-shadow 0.3s ease;
+   892→}
+   893→.parallax-hover:hover {
+   894→  transform: perspective(800px) rotateX(1deg) rotateY(-1deg) translateY(-2px);
+   895→  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+   896→}
+   897→
+   898→/* Neon border glow */
+   899→@keyframes neon-glow {
+   900→  0%, 100% { border-color: rgba(16, 185, 129, 0.3); box-shadow: 0 0 5px rgba(16, 185, 129, 0.1); }
+   901→  50% { border-color: rgba(16, 185, 129, 0.6); box-shadow: 0 0 20px rgba(16, 185, 129, 0.2), 0 0 40px rgba(16, 185, 129, 0.05); }
+   902→}
+   903→.neon-glow {
+   904→  animation: neon-glow 3s ease-in-out infinite;
+   905→}
+   906→
+   907→/* Smooth scrollbar for horizontal scroll containers */
+   908→.scroll-horizontal {
+   909→  overflow-x: auto;
+   910→  scrollbar-width: thin;
+   911→  scroll-behavior: smooth;
+   912→}
+   913→.scroll-horizontal::-webkit-scrollbar {
+   914→  height: 4px;
+   915→}
+   916→.scroll-horizontal::-webkit-scrollbar-thumb {
+   917→  background: rgba(255, 255, 255, 0.1);
+   918→  border-radius: 2px;
+   919→}
+   920→.scroll-horizontal::-webkit-scrollbar-thumb:hover {
+   921→  background: rgba(255, 255, 255, 0.2);
+   922→}
+   923→
+   924→/* Data grid cell hover highlight */
+   925→.data-cell-highlight:hover {
+   926→  background: rgba(16, 185, 129, 0.06);
+   927→  transition: background 0.15s ease;
+   928→}
+   929→
+   930→/* Animated underline for links and interactive text */
+   931→.animated-underline {
+   932→  position: relative;
+   933→  display: inline-block;
+   934→}
+   935→.animated-underline::after {
+   936→  content: '';
+   937→  position: absolute;
+   938→  bottom: -2px;
+   939→  left: 0;
+   940→  width: 0;
+   941→  height: 1px;
+   942→  background: linear-gradient(90deg, #10b981, #06b6d4);
+   943→  transition: width 0.3s ease;
+   944→}
+   945→.animated-underline:hover::after {
+   946→  width: 100%;
+   947→}
+   948→
+   949→/* Pulse dot with ring for active indicators */
+   950→@keyframes dot-ping {
+   951→  0% { transform: scale(1); opacity: 1; }
+   952→  75%, 100% { transform: scale(2.5); opacity: 0; }
+   953→}
+   954→.dot-ping::before {
+   955→  content: '';
+   956→  position: absolute;
+   957→  inset: 0;
+   958→  border-radius: 50%;
+   959→  background: currentColor;
+   960→  animation: dot-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+   961→}
+   962→
+   963→/* Skeleton loading shimmer variant */
+   964→@keyframes skeleton-shimmer {
+   965→  0% { background-position: -200% 0; }
+   966→  100% { background-position: 200% 0; }
+   967→}
+   968→.skeleton-shimmer {
+   969→  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+   970→  background-size: 200% 100%;
+   971→  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+   972→  border-radius: 4px;
+   973→}
+   974→
+   975→/* Focus visible ring for all interactive elements */
+   976→*:focus-visible {
+   977→  outline: 2px solid rgba(16, 185, 129, 0.4);
+   978→  outline-offset: 2px;
+   979→}
+   980→
+   981→/* Scroll margin for sticky elements */
+   982→.scroll-mt-header {
+   983→  scroll-margin-top: 64px;
+   984→}
+   985→
+   986→/* Text gradient utility */
+   987→.text-gradient-cool {
+   988→  background: linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #8b5cf6 100%);
+   989→  -webkit-background-clip: text;
+   990→  -webkit-text-fill-color: transparent;
+   991→  background-clip: text;
+   992→}
+   993→
+   994→/* Grid lines background pattern */
+   995→.grid-pattern {
+   996→  background-image:
+   997→    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+   998→    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+   999→  background-size: 24px 24px;
+  1000→}
+  1001→
+  1002→/* Animated border gradient */
+  1003→@keyframes border-spin {
+  1004→  to { --border-angle: 360deg; }
+  1005→}
+  1006→@property --border-angle {
+  1007→  syntax: "<angle>";
+  1008→  initial-value: 0deg;
+  1009→  inherits: false;
+  1010→}
+  1011→.animated-border-gradient {
+  1012→  --border-angle: 0deg;
+  1013→  border: 2px solid transparent;
+  1014→  background-image: linear-gradient(var(--card), var(--card)),
+  1015→    conic-gradient(from var(--border-angle), #10b981, #06b6d4, #8b5cf6, #10b981);
+  1016→  background-origin: border-box;
+  1017→  background-clip: padding-box, border-box;
+  1018→  animation: border-spin 4s linear infinite;
+  1019→}
+  1020→
+  1021→/* Elevated card with layered shadow */
+  1022→.elevated-card {
+  1023→  box-shadow:
+  1024→    0 1px 2px rgba(0, 0, 0, 0.3),
+  1025→    0 4px 8px rgba(0, 0, 0, 0.2),
+  1026→    0 8px 16px rgba(0, 0, 0, 0.15);
+  1027→  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  1028→}
+  1029→.elevated-card:hover {
+  1030→  box-shadow:
+  1031→    0 2px 4px rgba(0, 0, 0, 0.3),
+  1032→    0 8px 16px rgba(0, 0, 0, 0.25),
+  1033→    0 16px 32px rgba(0, 0, 0, 0.2);
+  1034→}
+  1035→
+  1036→/* Compact metric display */
+  1037→.metric-compact {
+  1038→  display: flex;
+  1039→  flex-direction: column;
+  1040→  align-items: center;
+  1041→  gap: 2px;
+  1042→  padding: 8px 12px;
+  1043→  border-radius: 8px;
+  1044→  background: rgba(255, 255, 255, 0.02);
+  1045→  border: 1px solid rgba(255, 255, 255, 0.04);
+  1046→}
+  1047→.metric-compact:hover {
+  1048→  background: rgba(255, 255, 255, 0.04);
+  1049→  border-color: rgba(255, 255, 255, 0.08);
+  1050→}
+  1051→
+  1052→

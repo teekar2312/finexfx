@@ -97,12 +97,12 @@ export default function RiskView() {
   return (
     <div className="p-4 space-y-4">
       {/* Daily Risk Dashboard */}
-      <Card className={`glass-card ${isDailyLimitReached ? 'border-red-500/50' : isDailyLimitWarning ? 'border-amber-500/50' : ''}`}>
+      <Card className={`glass-card card-hover parallax-hover animated-border-gradient ${isDailyLimitReached ? 'neon-glow-red border-red-500/50' : isDailyLimitWarning ? 'neon-glow-amber border-amber-500/50' : ''}`}>
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Shield className={`h-4 w-4 ${isDailyLimitReached ? 'text-red-500' : isDailyLimitWarning ? 'text-amber-500' : 'text-emerald-500'}`} />
-              <span className="text-sm font-semibold">Daily Risk Dashboard</span>
+              <span className="text-sm font-semibold"><span className="section-title-accent">Daily Risk Dashboard</span></span>
             </div>
             <span className={`text-xs tabular-nums font-bold ${isDailyLimitReached ? 'text-red-500' : isDailyLimitWarning ? 'text-amber-500' : 'text-emerald-500'}`}>
               {dailyRiskPercent.toFixed(2)}% / {dailyRiskLimitPercent}%
@@ -152,7 +152,7 @@ export default function RiskView() {
             </div>
 
             {/* Remaining Trades */}
-            <div className="text-center min-w-[60px]">
+            <div className="text-center min-w-[60px] metric-compact">
               <div className={`text-2xl font-bold tabular-nums ${remainingTrades > 3 ? 'text-emerald-500' : remainingTrades > 0 ? 'text-amber-500' : 'text-red-500'}`}>
                 {remainingTrades}
               </div>
@@ -160,7 +160,7 @@ export default function RiskView() {
             </div>
 
             {/* Remaining Risk */}
-            <div className="text-center min-w-[80px]">
+            <div className="text-center min-w-[80px] metric-compact">
               <div className={`text-2xl font-bold tabular-nums ${remainingRiskAmount > 100 ? 'text-emerald-500' : remainingRiskAmount > 0 ? 'text-amber-500' : 'text-red-500'}`}>
                 ${remainingRiskAmount.toFixed(0)}
               </div>
@@ -170,13 +170,13 @@ export default function RiskView() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
         {/* Risk Settings Form */}
-        <Card className="glass-card">
+        <Card className="glass-card card-hover parallax-hover">
           <CardHeader className="pb-2 pt-3 px-4">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />
-              <CardTitle className="text-sm font-semibold">Risk Settings</CardTitle>
+              <CardTitle className="text-sm font-semibold"><span className="section-title-accent">Risk Settings</span></CardTitle>
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-4 space-y-4">
@@ -270,11 +270,11 @@ export default function RiskView() {
 
         {/* Position Size Calculator - Enhanced */}
         <div className="space-y-4">
-          <Card className="glass-card border-emerald-500/30">
+          <Card className="glass-card card-hover parallax-hover border-emerald-500/30">
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center gap-2">
                 <Calculator className="h-4 w-4 text-emerald-500" />
-                <CardTitle className="text-sm font-semibold">Position Size Calculator</CardTitle>
+                <CardTitle className="text-sm font-semibold"><span className="section-title-accent">Position Size Calculator</span></CardTitle>
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-4 space-y-3">
@@ -375,31 +375,31 @@ export default function RiskView() {
       </div>
 
       {/* Money Management Summary */}
-      <Card className="glass-card">
+      <Card className="glass-card card-hover parallax-hover">
         <CardHeader className="pb-2 pt-3 px-4">
           <div className="flex items-center gap-2">
             <DollarSign className="h-4 w-4 text-primary" />
-            <CardTitle className="text-sm font-semibold">Money Management Summary</CardTitle>
+            <CardTitle className="text-sm font-semibold"><span className="section-title-accent">Money Management Summary</span></CardTitle>
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 stagger-children">
+            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 metric-compact">
               <div className="text-[10px] text-emerald-500 mb-0.5">Max Risk / Trade</div>
               <div className="text-lg font-bold text-emerald-500 tabular-nums">${maxRiskPerTrade.toFixed(2)}</div>
               <div className="text-[10px] text-muted-foreground">{riskSettings.riskPerTrade}% × ${balance.toLocaleString()}</div>
             </div>
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 metric-compact">
               <div className="text-[10px] text-red-500 mb-0.5">Max Daily Risk</div>
               <div className="text-lg font-bold text-red-500 tabular-nums">${maxDailyRisk.toFixed(2)}</div>
               <div className="text-[10px] text-muted-foreground">{riskSettings.dailyRiskLimit}% daily limit</div>
             </div>
-            <div className="p-3 rounded-lg bg-accent/50 border border-border">
+            <div className="p-3 rounded-lg bg-accent/50 border border-border metric-compact">
               <div className="text-[10px] text-amber-500 mb-0.5">Potential Profit</div>
               <div className="text-lg font-bold text-emerald-500 tabular-nums">+${potentialGain.toFixed(2)}</div>
               <div className="text-[10px] text-muted-foreground">per trade ({riskSettings.riskRewardRatio}:1 R:R)</div>
             </div>
-            <div className="p-3 rounded-lg bg-accent/50 border border-border">
+            <div className="p-3 rounded-lg bg-accent/50 border border-border metric-compact">
               <div className="text-[10px] text-muted-foreground mb-0.5">Potential Loss</div>
               <div className="text-lg font-bold text-red-500 tabular-nums">-${potentialLoss.toFixed(2)}</div>
               <div className="text-[10px] text-muted-foreground">per trade ({riskSettings.stopLossPips} pips)</div>
@@ -440,18 +440,18 @@ export default function RiskView() {
       </Card>
 
       {/* Risk Rules Display */}
-      <Card className="glass-card">
+      <Card className="glass-card card-hover parallax-hover">
         <CardHeader className="pb-2 pt-3 px-4">
           <div className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4 text-primary" />
-            <CardTitle className="text-sm font-semibold">Risk Rules Reference</CardTitle>
+            <CardTitle className="text-sm font-semibold"><span className="section-title-accent">Risk Rules Reference</span></CardTitle>
             <Badge variant="outline" className="text-[10px] ml-auto">
               {riskRules.filter(r => r.ok).length}/{riskRules.length} compliant
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 stagger-children">
             {riskRules.map((rule) => (
               <div key={rule.name} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-accent/30 border border-border">
                 <CheckCircle className={`h-4 w-4 flex-shrink-0 ${rule.ok ? 'text-emerald-500' : 'text-red-500/50'}`} />

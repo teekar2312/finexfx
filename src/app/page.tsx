@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, CheckCircle, AlertTriangle, Info, AlertCircle, Menu } from 'lucide-react';
 import { useTradingStore } from '@/store/trading-store';
@@ -15,8 +16,10 @@ import TradeJournalView from '@/components/trading/TradeJournalView';
 import PerformanceAnalyticsView from '@/components/trading/PerformanceAnalyticsView';
 import SettingsView from '@/components/trading/SettingsView';
 import QuickTradePanel from '@/components/trading/QuickTradePanel';
+import KeyboardShortcutsHelp from '@/components/trading/KeyboardShortcutsHelp';
 import Footer from '@/components/trading/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { usePriceSimulator } from '@/hooks/use-price-simulator';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -152,9 +155,13 @@ function ErrorLogsView() {
 export default function TradingDashboard() {
   const isMobile = useIsMobile();
   const { activeTab, sidebarOpen, notifications, removeNotification } = useTradingStore();
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
   // Initialize price simulator (replaces WebSocket)
   usePriceSimulator();
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({ showShortcutsHelp, setShowShortcutsHelp });
 
   const renderView = () => {
     switch (activeTab) {
@@ -212,6 +219,9 @@ export default function TradingDashboard() {
 
       {/* Floating Quick Trade Panel - accessible from any tab */}
       <QuickTradePanel />
+
+      {/* Keyboard Shortcuts Help Overlay */}
+      <KeyboardShortcutsHelp isOpen={showShortcutsHelp} onClose={() => setShowShortcutsHelp(false)} />
     </div>
   );
 }

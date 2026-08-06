@@ -336,9 +336,9 @@ export default function PerformanceAnalyticsView() {
       </motion.div>
 
       {/* KPI Summary Row */}
-      <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-5 gap-3 stagger-children">
         {/* Total Return */}
-        <div className={`glass-card rounded-lg p-4 ${analytics.totalReturn >= 0 ? 'border-l-2 border-l-emerald-500' : 'border-l-2 border-l-red-500'}`}>
+        <div className={`glass-card elevated-card card-hover rounded-lg p-4 ${analytics.totalReturn >= 0 ? 'border-l-2 border-l-emerald-500' : 'border-l-2 border-l-red-500'}`}>
           <div className="flex items-center gap-1.5 mb-2">
             <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Total Return</span>
@@ -352,7 +352,7 @@ export default function PerformanceAnalyticsView() {
         </div>
 
         {/* Win Rate with SVG Ring */}
-        <div className="glass-card rounded-lg p-4">
+        <div className="glass-card elevated-card card-hover rounded-lg p-4">
           <div className="flex items-center gap-1.5 mb-2">
             <Target className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Win Rate</span>
@@ -385,7 +385,7 @@ export default function PerformanceAnalyticsView() {
         </div>
 
         {/* Profit Factor */}
-        <div className="glass-card rounded-lg p-4">
+        <div className="glass-card elevated-card card-hover rounded-lg p-4">
           <div className="flex items-center gap-1.5 mb-2">
             <Award className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Profit Factor</span>
@@ -399,7 +399,7 @@ export default function PerformanceAnalyticsView() {
         </div>
 
         {/* Avg Trade Duration */}
-        <div className="glass-card rounded-lg p-4">
+        <div className="glass-card elevated-card card-hover rounded-lg p-4">
           <div className="flex items-center gap-1.5 mb-2">
             <Clock className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Avg Duration</span>
@@ -409,7 +409,7 @@ export default function PerformanceAnalyticsView() {
         </div>
 
         {/* Best/Worst Day */}
-        <div className="glass-card rounded-lg p-4">
+        <div className="glass-card elevated-card card-hover rounded-lg p-4">
           <div className="flex items-center gap-1.5 mb-2">
             <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Best / Worst Day</span>
@@ -426,7 +426,7 @@ export default function PerformanceAnalyticsView() {
       </motion.div>
 
       {/* Equity Curve Chart */}
-      <motion.div variants={item} className="glass-card rounded-lg p-4">
+      <motion.div variants={item} className="glass-card parallax-hover card-hover rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="text-sm font-semibold">Equity Curve</h3>
@@ -467,7 +467,7 @@ export default function PerformanceAnalyticsView() {
       </motion.div>
 
       {/* Daily P&L Bar Chart */}
-      <motion.div variants={item} className="glass-card rounded-lg p-4">
+      <motion.div variants={item} className="glass-card parallax-hover card-hover rounded-lg p-4">
         <div className="flex items-center justify-between mb-1">
           <div>
             <h3 className="text-sm font-semibold">Daily P&L</h3>
@@ -510,9 +510,9 @@ export default function PerformanceAnalyticsView() {
       </motion.div>
 
       {/* Performance by Symbol + Performance by Session */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
         {/* Performance by Symbol */}
-        <motion.div variants={item} className="glass-card rounded-lg p-4">
+        <motion.div variants={item} className="glass-card card-hover rounded-lg p-4">
           <div className="mb-3">
             <h3 className="text-sm font-semibold">Performance by Symbol</h3>
             <p className="text-[10px] text-muted-foreground">Per-symbol breakdown of trading performance</p>
@@ -550,12 +550,12 @@ export default function PerformanceAnalyticsView() {
         </motion.div>
 
         {/* Performance by Session */}
-        <motion.div variants={item} className="glass-card rounded-lg p-4">
+        <motion.div variants={item} className="glass-card card-hover rounded-lg p-4">
           <div className="mb-3">
             <h3 className="text-sm font-semibold">Performance by Session</h3>
             <p className="text-[10px] text-muted-foreground">Trading session performance comparison</p>
           </div>
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5 stagger-children">
             {sessionData.map(session => (
               <div key={session.session} className="rounded-lg p-3 bg-background/40 border border-border/50">
                 <div className="flex items-center gap-2 mb-2">
@@ -587,7 +587,7 @@ export default function PerformanceAnalyticsView() {
       </div>
 
       {/* Weekly Heatmap */}
-      <motion.div variants={item} className="glass-card rounded-lg p-4">
+      <motion.div variants={item} className="glass-card glass-card-premium card-hover rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="text-sm font-semibold">Weekly Heatmap</h3>
@@ -663,9 +663,9 @@ export default function PerformanceAnalyticsView() {
       </motion.div>
 
       {/* Trade Distribution: Pie + Direction Bar + Duration */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 stagger-children">
         {/* Win/Loss Pie */}
-        <motion.div variants={item} className="glass-card rounded-lg p-4">
+        <motion.div variants={item} className="glass-card card-hover rounded-lg p-4">
           <h3 className="text-sm font-semibold mb-1">Win / Loss</h3>
           <p className="text-[10px] text-muted-foreground mb-3">Trade outcome distribution</p>
           <ResponsiveContainer width="100%" height={160}>
@@ -690,17 +690,17 @@ export default function PerformanceAnalyticsView() {
           <div className="flex justify-center gap-4 text-[10px]">
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="text-muted-foreground">Wins: <span className="text-foreground font-medium">{analytics.wins}</span></span>
+              <span className="text-muted-foreground">Wins: <span className="text-foreground font-medium tabular-nums">{analytics.wins}</span></span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-red-500" />
-              <span className="text-muted-foreground">Losses: <span className="text-foreground font-medium">{analytics.losses}</span></span>
+              <span className="text-muted-foreground">Losses: <span className="text-foreground font-medium tabular-nums">{analytics.losses}</span></span>
             </div>
           </div>
         </motion.div>
 
         {/* Long vs Short Stacked Bar */}
-        <motion.div variants={item} className="glass-card rounded-lg p-4">
+        <motion.div variants={item} className="glass-card card-hover rounded-lg p-4">
           <h3 className="text-sm font-semibold mb-1">Long vs Short</h3>
           <p className="text-[10px] text-muted-foreground mb-3">Direction performance breakdown</p>
           <div className="flex items-end justify-center gap-6 h-[160px]">
@@ -738,7 +738,7 @@ export default function PerformanceAnalyticsView() {
         </motion.div>
 
         {/* Duration Distribution */}
-        <motion.div variants={item} className="glass-card rounded-lg p-4">
+        <motion.div variants={item} className="glass-card card-hover rounded-lg p-4">
           <h3 className="text-sm font-semibold mb-1">Holding Duration</h3>
           <p className="text-[10px] text-muted-foreground mb-3">Trade length distribution</p>
           <ResponsiveContainer width="100%" height={160}>
@@ -764,7 +764,7 @@ export default function PerformanceAnalyticsView() {
             {durationData.map(d => (
               <div key={d.name} className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
-                <span className="text-muted-foreground">{d.name}: <span className="text-foreground font-medium">{d.value}</span></span>
+                <span className="text-muted-foreground">{d.name}: <span className="text-foreground font-medium tabular-nums">{d.value}</span></span>
               </div>
             ))}
           </div>
@@ -772,7 +772,7 @@ export default function PerformanceAnalyticsView() {
       </div>
 
       {/* Key Metrics Table */}
-      <motion.div variants={item} className="glass-card rounded-lg p-4">
+      <motion.div variants={item} className="glass-card card-hover rounded-lg p-4">
         <div className="mb-3">
           <h3 className="text-sm font-semibold">Key Metrics</h3>
           <p className="text-[10px] text-muted-foreground">Detailed performance statistics</p>

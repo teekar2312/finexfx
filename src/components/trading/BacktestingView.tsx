@@ -245,14 +245,14 @@ export default function BacktestingView() {
       {latestResult ? (
         <>
           {/* Enhanced Equity Curve */}
-          <Card className="glass-card">
+          <Card className="glass-card elevated-card card-hover">
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <LineChartIcon className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-sm font-semibold">
+                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">
                     Equity Curve — {latestResult.name} ({SYMBOL_INFO[latestResult.symbol].name})
-                  </CardTitle>
+                  </CardTitle></span>
                 </div>
                 <div className="flex items-center gap-3">
                   {maxPoint && (
@@ -301,9 +301,9 @@ export default function BacktestingView() {
           </Card>
 
           {/* Stats Grid 2x4 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children glass-card-premium p-3 rounded-xl">
             {/* Total P&L */}
-            <Card className={`glass-card ${isProfitable ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
+            <Card className={`glass-card card-hover ${isProfitable ? 'neon-glow border-emerald-500/20 bg-emerald-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
               <CardContent className="p-3 pb-4">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Total P&L</span>
@@ -319,7 +319,7 @@ export default function BacktestingView() {
             </Card>
 
             {/* Win Rate with Ring */}
-            <Card className="glass-card">
+            <Card className="glass-card card-hover">
               <CardContent className="p-3 pb-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -327,7 +327,7 @@ export default function BacktestingView() {
                     <div className={`text-xl font-bold tabular-nums ${latestResult.winRate >= 55 ? 'text-emerald-500' : latestResult.winRate >= 45 ? 'text-amber-500' : 'text-red-500'}`}>
                       {latestResult.winRate}%
                     </div>
-                    <div className="text-[10px] text-muted-foreground mt-0.5">
+                    <div className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">
                       {Math.round(latestResult.totalTrades * latestResult.winRate / 100)}W / {latestResult.totalTrades - Math.round(latestResult.totalTrades * latestResult.winRate / 100)}L
                     </div>
                   </div>
@@ -337,7 +337,7 @@ export default function BacktestingView() {
             </Card>
 
             {/* Profit Factor */}
-            <Card className="glass-card">
+            <Card className="glass-card card-hover">
               <CardContent className="p-3 pb-4">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Profit Factor</span>
@@ -353,7 +353,7 @@ export default function BacktestingView() {
             </Card>
 
             {/* Max Drawdown */}
-            <Card className="glass-card border-red-500/10">
+            <Card className="glass-card card-hover border-red-500/10">
               <CardContent className="p-3 pb-4">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Max Drawdown</span>
@@ -369,7 +369,7 @@ export default function BacktestingView() {
             </Card>
 
             {/* Sharpe Ratio */}
-            <Card className="glass-card">
+            <Card className="glass-card card-hover">
               <CardContent className="p-3 pb-4">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Sharpe Ratio</span>
@@ -385,7 +385,7 @@ export default function BacktestingView() {
             </Card>
 
             {/* Total Trades */}
-            <Card className="glass-card">
+            <Card className="glass-card card-hover">
               <CardContent className="p-3 pb-4">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Total Trades</span>
@@ -394,14 +394,14 @@ export default function BacktestingView() {
                 <div className="text-xl font-bold tabular-nums text-foreground">
                   {latestResult.totalTrades}
                 </div>
-                <div className="text-[10px] text-muted-foreground mt-0.5">
+                <div className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">
                   {Math.round(latestResult.totalTrades * latestResult.winRate / 100)} winners
                 </div>
               </CardContent>
             </Card>
 
             {/* Avg Win */}
-            <Card className="glass-card border-b-2 border-b-emerald-500/40">
+            <Card className="glass-card card-hover border-b-2 border-b-emerald-500/40">
               <CardContent className="p-3 pb-4">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Avg Win</span>
@@ -414,7 +414,7 @@ export default function BacktestingView() {
             </Card>
 
             {/* Avg Loss */}
-            <Card className="glass-card border-b-2 border-b-red-500/40">
+            <Card className="glass-card card-hover border-b-2 border-b-red-500/40">
               <CardContent className="p-3 pb-4">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Avg Loss</span>
@@ -428,15 +428,15 @@ export default function BacktestingView() {
           </div>
 
           {/* Trade Distribution */}
-          <Card className="glass-card">
+          <Card className="glass-card card-hover">
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-primary" />
-                <CardTitle className="text-sm font-semibold">Trade Distribution</CardTitle>
+                <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Trade Distribution</CardTitle></span>
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-4 stagger-children">
                 {/* Win/Loss Distribution */}
                 <div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Win / Loss</div>
@@ -480,10 +480,10 @@ export default function BacktestingView() {
           </Card>
 
           {/* Detailed Stats + Trade List */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <Card className="glass-card">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 stagger-children">
+            <Card className="glass-card card-hover">
               <CardHeader className="pb-2 pt-3 px-4">
-                <CardTitle className="text-sm font-semibold">Detailed Stats</CardTitle>
+                <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Detailed Stats</CardTitle></span>
               </CardHeader>
               <CardContent className="px-4 pb-3 space-y-2">
                 {[
@@ -504,9 +504,9 @@ export default function BacktestingView() {
               </CardContent>
             </Card>
 
-            <Card className="glass-card lg:col-span-2">
+            <Card className="glass-card card-hover lg:col-span-2">
               <CardHeader className="pb-2 pt-3 px-4">
-                <CardTitle className="text-sm font-semibold">Trade List (Sample)</CardTitle>
+                <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Trade List (Sample)</CardTitle></span>
               </CardHeader>
               <CardContent className="px-4 pb-3">
                 <ScrollArea className="h-[300px]">
@@ -546,11 +546,11 @@ export default function BacktestingView() {
 
           {/* Backtest History */}
           {backtestResults.length > 1 && (
-            <Card className="glass-card">
+            <Card className="glass-card card-hover">
               <CardHeader className="pb-2 pt-3 px-4">
                 <div className="flex items-center gap-2">
                   <History className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-sm font-semibold">Backtest History</CardTitle>
+                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Backtest History</CardTitle></span>
                   <Badge variant="outline" className="text-[10px] ml-auto">{backtestResults.length} results</Badge>
                 </div>
               </CardHeader>
@@ -602,7 +602,7 @@ export default function BacktestingView() {
           )}
         </>
       ) : (
-        <Card className="glass-card">
+        <Card className="glass-card card-hover">
           <CardContent className="p-12 text-center">
             <LineChartIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
             <h3 className="text-sm font-medium text-muted-foreground mb-1">No Backtest Results</h3>

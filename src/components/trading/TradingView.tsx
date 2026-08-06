@@ -18,6 +18,7 @@ import { ArrowUpRight, ArrowDownRight, X, Square, AlertTriangle, History, Target
 import PriceChart from './PriceChart';
 import OrderBookDepth from './OrderBookDepth';
 import MarketSentiment from './MarketSentiment';
+import TradeExportButton from './TradeExportButton';
 
 export default function TradingView() {
   const {
@@ -227,14 +228,17 @@ export default function TradingView() {
             <Card className="glass-card card-hover">
               <Tabs defaultValue="open" className="w-full">
                 <CardHeader className="pb-0 pt-3 px-4">
-                  <TabsList className="h-8 bg-slate-800/50">
-                    <TabsTrigger value="open" className="text-xs h-6 data-[state=active]:bg-emerald-600/20 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.15)]">
-                      Open ({openTrades.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="history" className="text-xs h-6 data-[state=active]:bg-emerald-600/20 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.15)]">
-                      History ({closedTrades.length})
-                    </TabsTrigger>
-                  </TabsList>
+                  <div className="flex items-center justify-between gap-2">
+                    <TabsList className="h-8 bg-slate-800/50">
+                      <TabsTrigger value="open" className="text-xs h-6 data-[state=active]:bg-emerald-600/20 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.15)]">
+                        Open ({openTrades.length})
+                      </TabsTrigger>
+                      <TabsTrigger value="history" className="text-xs h-6 data-[state=active]:bg-emerald-600/20 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.15)]">
+                        History ({closedTrades.length})
+                      </TabsTrigger>
+                    </TabsList>
+                    <TradeExportButton />
+                  </div>
                 </CardHeader>
 
                 <TabsContent value="open" className="mt-0">

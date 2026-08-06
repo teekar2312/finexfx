@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion } from 'framer-motion';
-import { Gauge, TrendingUp, TrendingDown, Minus, BarChart3, Activity, Volume2, Eye, EyeOff, Settings } from 'lucide-react';
+import { Gauge, TrendingUp, TrendingDown, Minus, BarChart3, Activity, Volume2, Eye, EyeOff, Settings, Search } from 'lucide-react';
 import { SYMBOLS } from '@/lib/types';
 
 interface IndicatorDisplay {
@@ -64,11 +64,11 @@ function getTrendArrow(signal: string) {
   return <Minus className="h-3.5 w-3.5 text-slate-500" />;
 }
 
-const categoryConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  trend: { label: 'Trend', color: 'text-emerald-500', icon: <TrendingUp className="h-4 w-4" /> },
-  momentum: { label: 'Momentum', color: 'text-amber-500', icon: <Activity className="h-4 w-4" /> },
-  volatility: { label: 'Volatility', color: 'text-red-500', icon: <BarChart3 className="h-4 w-4" /> },
-  volume: { label: 'Volume', color: 'text-cyan-500', icon: <Volume2 className="h-4 w-4" /> },
+const categoryConfig: Record<string, { label: string; color: string; icon: React.ReactNode; accent: string }> = {
+  trend: { label: 'Trend', color: 'text-emerald-500', icon: <TrendingUp className="h-4 w-4" />, accent: 'stat-accent-emerald' },
+  momentum: { label: 'Momentum', color: 'text-amber-500', icon: <Activity className="h-4 w-4" />, accent: 'stat-accent-amber' },
+  volatility: { label: 'Volatility', color: 'text-red-500', icon: <BarChart3 className="h-4 w-4" />, accent: 'stat-accent-red' },
+  volume: { label: 'Volume', color: 'text-cyan-500', icon: <Volume2 className="h-4 w-4" />, accent: 'stat-accent-cyan' },
 };
 
 // Indicator gauge configuration
@@ -167,6 +167,7 @@ function MiniSparkline({ values, color, width = 280, height = 80 }: { values: nu
 export default function IndicatorsView() {
   const { selectedSymbol, setSelectedSymbol, indicatorValues, indicatorConfigs, setIndicatorConfigs } = useTradingStore();
   const [selectedIndicator, setSelectedIndicator] = useState<IndicatorDisplay | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const enabledIndicators = indicatorConfigs
     .filter(c => c.enabled)
@@ -222,11 +223,17 @@ export default function IndicatorsView() {
     ? (selectedIndicator.signal === 'bullish' ? '#10b981' : selectedIndicator.signal === 'bearish' ? '#ef4444' : '#64748b')
     : '#64748b';
 
+  const filteredIndicators = useMemo(() => {
+    if (!searchQuery.trim()) return null;
+    const q = searchQuery.toLowerCase();
+    return INDICATOR_POOL.filter(ind => ind.name.toLowerCase().includes(q));
+  }, [searchQuery]);
+
   return (
     <TooltipProvider delayDuration={200}>
     <div className="p-4 space-y-4">
-      {/* Symbol Selector */}
-      <div className="flex items-center gap-3">
+      {/* Symbol Selector + Search + Active Badge */}
+      <div className="flex flex-wrap items-center gap-3">
         <span className="text-xs text-muted-foreground">Symbol:</span>
         <div className="flex gap-2">
           {SYMBOLS.map((sym) => (
@@ -243,15 +250,31 @@ export default function IndicatorsView() {
             </button>
           ))}
         </div>
+        <div className="flex-1" />
+        <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-emerald-500/30 text-emerald-400">
+          Active: {enabledIndicators.length}/{INDICATOR_POOL.length}
+        </Badge>
+      </div>
+
+      {/* Search/Filter Input */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Filter indicators by name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full h-8 pl-9 pr-3 rounded-md bg-accent/50 border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all"
+        />
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
         {categories.map((cat) => {
           const config = categoryConfig[cat];
           const summary = getCategorySignalSummary(cat);
           return (
-            <Card key={cat} className="glass-card">
+            <Card key={cat} className={`glass-card card-hover ${config.accent}`}>
               <CardContent className="p-3">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5">
@@ -303,9 +326,9 @@ export default function IndicatorsView() {
         return (
           <div key={cat}>
             {/* Enhanced category header with summary bar */}
-            <div className="flex items-center gap-3 mb-3">
+            <div className={`flex items-center gap-3 mb-3 p-2 rounded-lg glass-card ${config.accent}`}>
               <span className={config.color}>{config.icon}</span>
-              <h3 className={`text-sm font-semibold ${config.color}`}>{config.label} Indicators</h3>
+              <h3 className={`section-title-accent text-sm font-semibold ${config.color}`}>{config.label} Indicators</h3>
               {/* Summary counts */}
               <div className="flex items-center gap-1.5 text-[10px]">
                 <span className="text-emerald-500 font-medium">{summary.bullish} Bull</span>
@@ -317,10 +340,11 @@ export default function IndicatorsView() {
               <div className="flex-1 h-px bg-border" />
               <span className="text-[10px] text-muted-foreground">{indicators.length}</span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 stagger-children">
               {indicators.map((ind, idx) => {
                 const display = getIndicatorValue(ind.name);
                 const isEnabled = enabledIndicators.includes(ind.name);
+                if (filteredIndicators && !filteredIndicators.find(f => f.name === ind.name)) return null;
                 return (
                   <motion.div
                     key={ind.name}
@@ -329,7 +353,7 @@ export default function IndicatorsView() {
                     transition={{ delay: idx * 0.02 }}
                   >
                     <Card
-                      className={`glass-card border-b-2 cursor-pointer transition-all hover:border-border ${
+                      className={`glass-card card-hover border-b-2 cursor-pointer transition-all hover:border-border ${
                         isEnabled ? 'border-primary/20' : ''
                       } ${getSignalBorder(display.signal)}`}
                       onClick={() => setSelectedIndicator(display)}
@@ -340,12 +364,16 @@ export default function IndicatorsView() {
                             {getSignalIcon(display.signal)}
                             <span className="text-xs font-medium">{ind.name}</span>
                           </div>
-                          <Switch
-                            checked={isEnabled}
-                            onCheckedChange={(checked) => toggleIndicator(ind.name, checked)}
-                            className="scale-75 data-[state=checked]:bg-emerald-600"
-                            onClick={(e) => e.stopPropagation()}
-                          />
+                          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <Switch
+                              checked={isEnabled}
+                              onCheckedChange={(checked) => toggleIndicator(ind.name, checked)}
+                              className="scale-100 data-[state=checked]:bg-emerald-600"
+                            />
+                            <span className={`text-[9px] font-bold ${isEnabled ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                              {isEnabled ? 'ON' : 'OFF'}
+                            </span>
+                          </div>
                         </div>
                         {/* Large value with trend arrow */}
                         <div className="flex items-center gap-1.5 mb-2">
@@ -389,7 +417,7 @@ export default function IndicatorsView() {
       {/* Indicator Details Dialog */}
       <Dialog open={!!selectedIndicator} onOpenChange={(open) => { if (!open) setSelectedIndicator(null); }}>
         {selectedIndicator && dialogIndicatorPool && (
-          <DialogContent className="sm:max-w-md bg-[#0f1629] border-border text-foreground">
+          <DialogContent className="sm:max-w-md glass-card-premium mesh-gradient-bg border-border text-foreground">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-sm">
                 {getSignalIcon(selectedIndicator.signal)}

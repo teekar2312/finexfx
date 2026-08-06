@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, DollarSign, Activity, Zap, Play, ArrowUpRight, ArrowDownRight, Clock, BarChart3, Shield, Volume2, RefreshCw, Award, Flame, Calendar, Target } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import WatchlistPanel from './WatchlistPanel';
+import ActivityFeed from './ActivityFeed';
 
 function getConditionIcon(condition: MarketCondition) {
   switch (condition) {
@@ -848,6 +849,9 @@ export default function DashboardView() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Activity Feed */}
+      <ActivityFeed />
 
       {/* Watchlist */}
       <WatchlistPanel />

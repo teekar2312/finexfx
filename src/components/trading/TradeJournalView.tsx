@@ -345,7 +345,7 @@ function JournalEntryCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.2 }}
-      className="glass-card rounded-lg overflow-hidden"
+      className="glass-card rounded-lg overflow-hidden parallax-hover"
     >
       {/* Card Header */}
       <div className="p-4">
@@ -604,10 +604,10 @@ function JournalAnalytics({ entries }: { entries: JournalEntry[] }) {
   }));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 elevated-card rounded-xl p-4">
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="glass-card border-0 p-0">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
+        <Card className="glass-card border-0 p-0 card-hover">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -620,7 +620,7 @@ function JournalAnalytics({ entries }: { entries: JournalEntry[] }) {
           </CardContent>
         </Card>
 
-        <Card className="glass-card border-0 p-0">
+        <Card className="glass-card border-0 p-0 card-hover">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1">
               <div className={`w-7 h-7 rounded-lg ${totalPnl >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10'} flex items-center justify-center`}>
@@ -636,7 +636,7 @@ function JournalAnalytics({ entries }: { entries: JournalEntry[] }) {
           </CardContent>
         </Card>
 
-        <Card className="glass-card border-0 p-0">
+        <Card className="glass-card border-0 p-0 card-hover">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center">
@@ -649,7 +649,7 @@ function JournalAnalytics({ entries }: { entries: JournalEntry[] }) {
           </CardContent>
         </Card>
 
-        <Card className="glass-card border-0 p-0">
+        <Card className="glass-card border-0 p-0 card-hover">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -668,13 +668,13 @@ function JournalAnalytics({ entries }: { entries: JournalEntry[] }) {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 stagger-children">
         {/* P&L by Strategy */}
-        <Card className="glass-card border-0 p-0 md:col-span-2">
+        <Card className="glass-card border-0 p-0 card-hover md:col-span-2">
           <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <span className="section-title-accent"><CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
               <BarChart3 className="h-3.5 w-3.5" /> P&L by Strategy
-            </CardTitle>
+            </CardTitle></span>
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <div className="h-48">
@@ -718,11 +718,11 @@ function JournalAnalytics({ entries }: { entries: JournalEntry[] }) {
         </Card>
 
         {/* Mood Distribution */}
-        <Card className="glass-card border-0 p-0">
+        <Card className="glass-card border-0 p-0 card-hover">
           <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <span className="section-title-accent"><CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
               <Smile className="h-3.5 w-3.5" /> Mood Distribution
-            </CardTitle>
+            </CardTitle></span>
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <div className="h-48 flex items-center justify-center">
@@ -767,11 +767,11 @@ function JournalAnalytics({ entries }: { entries: JournalEntry[] }) {
       </div>
 
       {/* P&L by Symbol */}
-      <Card className="glass-card border-0 p-0">
+      <Card className="glass-card border-0 p-0 card-hover">
         <CardHeader className="pb-2 pt-4 px-4">
-          <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <span className="section-title-accent"><CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
             <DollarSign className="h-3.5 w-3.5" /> P&L by Symbol
-          </CardTitle>
+          </CardTitle></span>
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <div className="flex flex-wrap gap-3">
@@ -957,7 +957,7 @@ export default function TradeJournalView() {
       </AnimatePresence>
 
       {/* Filters Bar */}
-      <Card className="glass-card border-0 p-0">
+      <Card className="glass-card border-0 p-0 card-hover">
         <CardContent className="p-3">
           <div className="flex flex-col md:flex-row gap-3">
             {/* Search */}
@@ -1060,7 +1060,7 @@ export default function TradeJournalView() {
       </Card>
 
       {/* Journal Entries List */}
-      <div className="space-y-3">
+      <div className="space-y-3 stagger-children">
         {filteredEntries.length === 0 ? (
           <div className="glass-card rounded-lg p-12 text-center">
             <BookOpen className="h-10 w-10 text-muted-foreground mx-auto mb-3" />

@@ -137,7 +137,7 @@ export default function SettingsView() {
         {/* ==================== BROKER TAB ==================== */}
         <TabsContent value="broker" className="space-y-4">
           {/* Broker Hero Card */}
-          <Card className="glass-card">
+          <Card className="glass-card elevated-card card-hover">
             <CardContent className="p-4">
               <div className="flex items-center gap-4">
                 {/* Logo Placeholder */}
@@ -206,15 +206,15 @@ export default function SettingsView() {
           </Card>
 
           {/* Broker Specs - 2-column grid with green dots */}
-          <Card className="glass-card">
+          <Card className="glass-card card-hover">
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center gap-2">
                 <Server className="h-4 w-4 text-primary" />
-                <CardTitle className="text-sm font-semibold">Broker Specifications</CardTitle>
+                <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Broker Specifications</CardTitle></span>
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 stagger-children">
                 {[
                   { label: 'Leverage', value: `1:${BROKER_CONFIG.leverage}` },
                   { label: 'Min Spread', value: `${BROKER_CONFIG.minSpread} pips` },
@@ -229,7 +229,7 @@ export default function SettingsView() {
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <span className="text-[10px] uppercase tracking-wider text-muted-foreground block">{item.label}</span>
-                      <span className="text-sm font-medium tabular-nums">{item.value}</span>
+                      <span className={`text-sm font-medium tabular-nums ${['Leverage', 'Min Spread', 'Commission'].includes(item.label) ? 'metric-compact' : ''}`}>{item.value}</span>
                     </div>
                   </div>
                 ))}
@@ -238,12 +238,12 @@ export default function SettingsView() {
           </Card>
 
           {/* Server Status */}
-          <Card className="glass-card">
+          <Card className="glass-card card-hover">
             <CardHeader className="pb-2 pt-3 px-4">
-              <CardTitle className="text-sm font-semibold">Server Status</CardTitle>
+              <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Server Status</CardTitle></span>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
                 <div className="flex items-center gap-2">
                   <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 pulse-dot' : 'bg-red-500'}`} />
                   <div>
@@ -280,12 +280,12 @@ export default function SettingsView() {
         {/* ==================== ACCOUNT TAB ==================== */}
         <TabsContent value="account" className="space-y-4">
           {/* Account Summary Card */}
-          <Card className="glass-card">
+          <Card className="glass-card card-hover">
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-sm font-semibold">Account Overview</CardTitle>
+                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Account Overview</CardTitle></span>
                 </div>
                 <Badge className={`text-[10px] ${accountType === 'live' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'bg-amber-500/10 text-amber-500 border-amber-500/30'}`}>
                   {accountType === 'live' ? '● LIVE' : '● DEMO'}
@@ -293,7 +293,7 @@ export default function SettingsView() {
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
                 <div className="p-3 rounded-lg bg-accent/50 border border-border">
                   <div className="text-[10px] text-muted-foreground mb-0.5">Balance</div>
                   <div className="text-lg font-bold tabular-nums">${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
@@ -319,16 +319,16 @@ export default function SettingsView() {
           </Card>
 
           {/* Trading Statistics + Account Health */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="glass-card">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-children">
+            <Card className="glass-card card-hover">
               <CardHeader className="pb-2 pt-3 px-4">
                 <div className="flex items-center gap-2">
                   <Activity className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-sm font-semibold">Trading Statistics</CardTitle>
+                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Trading Statistics</CardTitle></span>
                 </div>
               </CardHeader>
               <CardContent className="px-4 pb-4 space-y-3">
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-3 stagger-children">
                   <div className="text-center p-2 rounded-lg bg-accent/30">
                     <div className="text-[10px] text-muted-foreground">Total Trades</div>
                     <div className="text-base font-bold tabular-nums mt-0.5">{accountStats.total}</div>
@@ -345,7 +345,7 @@ export default function SettingsView() {
                   </div>
                 </div>
                 <Separator className="opacity-50" />
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 stagger-children">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] text-muted-foreground">Wins</span>
                     <span className="text-[11px] font-bold tabular-nums text-emerald-500">{accountStats.wins}</span>
@@ -369,11 +369,11 @@ export default function SettingsView() {
             </Card>
 
             {/* Account Health */}
-            <Card className="glass-card">
+            <Card className="glass-card card-hover">
               <CardHeader className="pb-2 pt-3 px-4">
                 <div className="flex items-center gap-2">
                   <Target className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-sm font-semibold">Account Health</CardTitle>
+                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Account Health</CardTitle></span>
                 </div>
               </CardHeader>
               <CardContent className="px-4 pb-4">
@@ -414,7 +414,7 @@ export default function SettingsView() {
 
                 <Separator className="opacity-50 mb-3" />
 
-                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                <div className="grid grid-cols-2 gap-2 text-[10px] stagger-children">
                   <div className="flex items-center justify-between py-1 px-2 rounded bg-accent/30">
                     <span className="text-muted-foreground">Equity Growth</span>
                     <span className={`font-bold tabular-nums ${equity >= 10000 ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -444,9 +444,9 @@ export default function SettingsView() {
           </div>
 
           {/* Auto Trading + Notifications */}
-          <Card className="glass-card">
+          <Card className="glass-card card-hover">
             <CardHeader className="pb-2 pt-3 px-4">
-              <CardTitle className="text-sm font-semibold">Settings</CardTitle>
+              <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Settings</CardTitle></span>
             </CardHeader>
             <CardContent className="px-4 pb-4 space-y-3">
               <div className="flex items-center justify-between p-3 rounded-lg bg-accent/50 border border-border">
@@ -497,12 +497,12 @@ export default function SettingsView() {
 
         {/* ==================== ALERTS TAB ==================== */}
         <TabsContent value="notifications" className="space-y-4">
-          <Card className="glass-card">
+          <Card className="glass-card card-hover">
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Bell className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-sm font-semibold">Price Alerts</CardTitle>
+                  <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Price Alerts</CardTitle></span>
                   <Badge variant="outline" className="text-[10px]">{priceAlerts.length}</Badge>
                 </div>
                 <Button
@@ -626,11 +626,11 @@ export default function SettingsView() {
 
         {/* ==================== ERROR LOGS TAB ==================== */}
         <TabsContent value="logs" className="space-y-4">
-          <Card className="glass-card">
+          <Card className="glass-card card-hover">
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center gap-2">
                 <TriangleAlert className="h-4 w-4 text-primary" />
-                <CardTitle className="text-sm font-semibold">Error Logs</CardTitle>
+                <span className="section-title-accent"><CardTitle className="text-sm font-semibold">Error Logs</CardTitle></span>
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-3">
