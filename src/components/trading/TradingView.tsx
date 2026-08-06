@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
 import { SYMBOLS, SYMBOL_INFO, BROKER_CONFIG, type TradeDirection } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,7 @@ import OrderBookDepth from './OrderBookDepth';
 import MarketSentiment from './MarketSentiment';
 import TradeExportButton from './TradeExportButton';
 import AdvancedOrderTypes from './AdvancedOrderTypes';
+import TradeHistoryTable from './TradeHistoryTable';
 
 export default function TradingView() {
   const {
@@ -169,14 +170,15 @@ export default function TradingView() {
               <button
                 key={sym}
                 onClick={() => setSelectedSymbol(sym)}
-                className={`flex-shrink-0 py-2.5 px-3 rounded-full text-sm font-medium transition-all min-w-[120px] card-hover scale-click flex items-center gap-2 border ${
+                className={`flex-shrink-0 py-2.5 px-3 rounded-full text-sm font-medium transition-all min-w-[120px] card-hover scale-click flex items-center gap-2.5 border ${
                   isActive
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 pill-active-glow shadow-[0_0_20px_rgba(16,185,129,0.1)]'
+                    ? 'text-emerald-400 border-emerald-500/30 pill-active-glow symbol-pill-active'
                     : 'bg-card/80 border-border/60 text-muted-foreground hover:text-foreground hover:border-border'
                 }`}
               >
                 <div className="flex flex-col items-start gap-0.5">
                   <div className="flex items-center gap-1.5">
+                    {p && <div className={`direction-dot ${p.change >= 0 ? 'direction-dot-up' : 'direction-dot-down'}`} />}
                     <span className="text-xs font-bold tracking-tight">{SYMBOL_INFO[sym].name}</span>
                     {p && (
                       <span className="text-[9px] text-muted-foreground font-normal tabular-nums">
@@ -212,7 +214,7 @@ export default function TradingView() {
           {/* Chart */}
           <div className="lg:col-span-3 space-y-4">
             <div className="chart-glow rounded-xl">
-              <Card className="glass-card border-border/40">
+              <Card className="glass-card border-border/40 chart-inner-glow">
                 <CardContent className="p-0">
                   <PriceChart
                     data={chartData}
@@ -226,18 +228,18 @@ export default function TradingView() {
             </div>
 
             {/* (a) Tabbed Positions / History */}
-            <Card className="glass-card card-hover">
+            <Card className="glass-card-premium card-hover">
               <Tabs defaultValue="open" className="w-full">
                 <CardHeader className="pb-0 pt-3 px-4">
                   <div className="flex items-center justify-between gap-2">
-                    <TabsList className="h-8 bg-slate-800/50">
-                      <TabsTrigger value="open" className="text-xs h-6 data-[state=active]:bg-emerald-600/20 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.15)]">
+                    <TabsList className="h-8 glass-card-premium border-0 shadow-none gap-0.5 p-1">
+                      <TabsTrigger value="open" className="text-xs h-6 rounded-lg data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_12px_rgba(16,185,129,0.2),inset_0_1px_0_rgba(16,185,129,0.1)]">
                         Open ({openTrades.length})
                       </TabsTrigger>
-                      <TabsTrigger value="history" className="text-xs h-6 data-[state=active]:bg-emerald-600/20 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.15)]">
+                      <TabsTrigger value="history" className="text-xs h-6 rounded-lg data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_12px_rgba(16,185,129,0.2),inset_0_1px_0_rgba(16,185,129,0.1)]">
                         History ({closedTrades.length})
                       </TabsTrigger>
-                      <TabsTrigger value="advanced" className="text-xs h-6 data-[state=active]:bg-amber-600/20 data-[state=active]:text-amber-400 data-[state=active]:shadow-[0_0_10px_rgba(245,158,11,0.15)]">
+                      <TabsTrigger value="advanced" className="text-xs h-6 rounded-lg data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-400 data-[state=active]:shadow-[0_0_12px_rgba(245,158,11,0.2),inset_0_1px_0_rgba(245,158,11,0.1)]">
                         Advanced
                       </TabsTrigger>
                     </TabsList>
@@ -298,7 +300,7 @@ export default function TradingView() {
                                   </div>
                                   <div className="pnl-bar-track mt-0.5">
                                     <div
-                                      className={`pnl-bar-fill ${trade.profit >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}
+                                      className={`pnl-bar-fill-premium ${trade.profit >= 0 ? 'profit' : 'loss'}`}
                                       style={{ width: `${Math.min((Math.abs(trade.profit) / maxProfit) * 100, 100)}%` }}
                                     />
                                   </div>
@@ -395,29 +397,29 @@ export default function TradingView() {
                           return (
                             <>
                             <div className="grid grid-cols-5 gap-2 mb-3">
-                              <div className="text-center p-2 rounded-lg bg-slate-800/30 stat-card-pattern">
+                              <div className="text-center p-2 rounded-lg stat-card-premium">
                                 <div className="text-[10px] text-muted-foreground uppercase">Trades</div>
                                 <div className="text-sm font-bold tabular-nums count-up">{historyStats.totalTrades}</div>
                               </div>
-                              <div className="text-center p-2 rounded-lg bg-slate-800/30 stat-card-pattern">
+                              <div className="text-center p-2 rounded-lg stat-card-premium">
                                 <div className="text-[10px] text-muted-foreground uppercase">Win Rate</div>
                                 <div className={`text-sm font-bold tabular-nums ${historyStats.winRate >= 50 ? 'text-emerald-500' : 'text-red-500'}`}>
                                   {historyStats.winRate.toFixed(0)}%
                                 </div>
                               </div>
-                              <div className="text-center p-2 rounded-lg bg-slate-800/30 stat-card-pattern">
+                              <div className="text-center p-2 rounded-lg stat-card-premium">
                                 <div className="text-[10px] text-muted-foreground uppercase">Total P&L</div>
                                 <div className={`text-sm font-bold tabular-nums ${historyStats.totalPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                                   {historyStats.totalPnl >= 0 ? '+' : ''}${historyStats.totalPnl.toFixed(2)}
                                 </div>
                               </div>
-                              <div className="text-center p-2 rounded-lg bg-slate-800/30 stat-card-pattern">
+                              <div className="text-center p-2 rounded-lg stat-card-premium">
                                 <div className="text-[10px] text-muted-foreground uppercase">Best</div>
                                 <div className="text-sm font-bold tabular-nums text-emerald-500">
                                   +${historyStats.bestTrade.profit.toFixed(2)}
                                 </div>
                               </div>
-                              <div className="text-center p-2 rounded-lg bg-slate-800/30 stat-card-pattern">
+                              <div className="text-center p-2 rounded-lg stat-card-premium">
                                 <div className="text-[10px] text-muted-foreground uppercase">Worst</div>
                                 <div className="text-sm font-bold tabular-nums text-red-500">
                                   ${historyStats.worstTrade.profit.toFixed(2)}
@@ -431,13 +433,13 @@ export default function TradingView() {
                                 <span className="text-muted-foreground">{historyStats.winRate.toFixed(0)}%</span>
                                 <span className="text-red-500 font-medium">{losses.length} Losses</span>
                               </div>
-                              <div className="winloss-bar">
+                              <div className="winloss-bar-premium">
                                 <div
-                                  className="bg-gradient-to-r from-emerald-600 to-emerald-400 animate-progress rounded-l-[4px]"
+                                  className="bg-gradient-to-r from-emerald-600 to-emerald-400 animate-progress"
                                   style={{ width: `${historyStats.winRate}%` }}
                                 />
                                 <div
-                                  className="bg-gradient-to-r from-red-400 to-red-600 animate-progress rounded-r-[4px]"
+                                  className="bg-gradient-to-r from-red-400 to-red-600 animate-progress"
                                   style={{ width: `${100 - historyStats.winRate}%` }}
                                 />
                               </div>
@@ -446,9 +448,9 @@ export default function TradingView() {
                             <div className="mb-3 space-y-1.5">
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] text-emerald-500 w-12 shrink-0">Avg Win</span>
-                                <div className="flex-1 h-2 rounded-full bg-slate-800/50 overflow-hidden">
+                                <div className="flex-1 avg-bar-premium overflow-hidden">
                                   <div
-                                    className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full animate-progress"
+                                    className="bg-gradient-to-r from-emerald-600 to-emerald-400 animate-progress"
                                     style={{ width: `${(avgWin / maxAvg) * 100}%` }}
                                   />
                                 </div>
@@ -458,9 +460,9 @@ export default function TradingView() {
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] text-red-500 w-12 shrink-0">Avg Loss</span>
-                                <div className="flex-1 h-2 rounded-full bg-slate-800/50 overflow-hidden">
+                                <div className="flex-1 avg-bar-premium overflow-hidden">
                                   <div
-                                    className="h-full bg-gradient-to-r from-red-400 to-red-600 rounded-full animate-progress"
+                                    className="bg-gradient-to-r from-red-400 to-red-600 animate-progress"
                                     style={{ width: `${(avgLoss / maxAvg) * 100}%` }}
                                   />
                                 </div>
@@ -602,21 +604,21 @@ export default function TradingView() {
             </Card>
 
             {/* (c) Better Order Panel */}
-            <Card className={`glass-card card-hover ${oneClickMode ? 'pulsing-border-amber' : ''}`}>
-              <CardHeader className="pb-2 pt-3 px-4">
+            <div className={`order-panel-premium rounded-xl card-hover ${oneClickMode ? 'pulsing-border-amber' : ''}`}>
+              <div className="p-5 pb-0 pt-4 px-5">
                 <div className="section-header-accent">
-                  <CardTitle className="text-sm font-semibold">New Order</CardTitle>
+                  <h3 className="text-sm font-semibold">New Order</h3>
                 </div>
-              </CardHeader>
-              <CardContent className="px-4 pb-4 space-y-3">
+              </div>
+              <div className="px-5 pb-5 pt-3 space-y-3">
                 <div>
                   <Label className="text-[11px] text-muted-foreground font-medium">Lot Size</Label>
-                  <div className="flex flex-wrap gap-1.5 mt-1.5 mb-1.5">
+                  <div className="flex flex-wrap gap-2 mt-1.5 mb-1.5">
                     {quickLots.map((lot) => (
                       <button
                         key={lot}
                         onClick={() => setLotSize(lot.toString())}
-                        className={`lot-chip text-[10px] px-2.5 py-1 rounded-full border ${
+                        className={`lot-chip-premium text-[10px] px-3 py-1.5 border ${
                           parseFloat(lotSize) === lot
                             ? 'active'
                             : 'border-border/60 text-muted-foreground'
@@ -723,7 +725,7 @@ export default function TradingView() {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <Button
-                        className="gradient-buy-btn text-white h-12 font-bold text-base scale-click rounded-xl"
+                        className="gradient-buy-btn trade-btn-premium text-white h-12 font-bold text-base rounded-xl"
                         onClick={() => handleOpenTrade('BUY')}
                         disabled={!isConnected}
                       >
@@ -731,7 +733,7 @@ export default function TradingView() {
                         BUY
                       </Button>
                       <Button
-                        className="gradient-sell-btn text-white h-12 font-bold text-base scale-click rounded-xl"
+                        className="gradient-sell-btn trade-btn-premium text-white h-12 font-bold text-base rounded-xl"
                         onClick={() => handleOpenTrade('SELL')}
                         disabled={!isConnected}
                       >
@@ -743,7 +745,7 @@ export default function TradingView() {
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     <Button
-                      className="gradient-buy-btn text-white h-12 font-bold text-base scale-click rounded-xl"
+                      className="gradient-buy-btn trade-btn-premium text-white h-12 font-bold text-base rounded-xl"
                       onClick={() => handleOpenTrade('BUY')}
                       disabled={!isConnected}
                     >
@@ -751,7 +753,7 @@ export default function TradingView() {
                       BUY
                     </Button>
                     <Button
-                      className="gradient-sell-btn text-white h-12 font-bold text-base scale-click rounded-xl"
+                      className="gradient-sell-btn trade-btn-premium text-white h-12 font-bold text-base rounded-xl"
                       onClick={() => handleOpenTrade('SELL')}
                       disabled={!isConnected}
                     >
@@ -776,8 +778,8 @@ export default function TradingView() {
                     className="data-[state=checked]:bg-amber-600"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Market Info */}
             <Card className="glass-card">
@@ -812,6 +814,9 @@ export default function TradingView() {
           />
           <MarketSentiment />
         </div>
+
+        {/* Advanced Trade History Table */}
+        <TradeHistoryTable />
       </div>
     </TooltipProvider>
   );

@@ -364,7 +364,7 @@ export default function DashboardView() {
       {/* (e) Header Enhancement */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
         <div>
-          <h1 className="text-xl font-bold">Trading Dashboard</h1>
+          <h1 className="text-xl font-bold shimmer-text">Trading Dashboard</h1>
           <p className="text-xs text-muted-foreground">FINEX Indonesia • Demo Account • {currentDateTime}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -385,7 +385,7 @@ export default function DashboardView() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
           >
-            <Card className={`glass-card card-hover stat-card-glow stat-card-pattern ${stat.accentClass}`}>
+            <Card className={`glass-card card-hover card-hover-lift stat-card-glow stat-card-pattern ${stat.accentClass}`}>
               <CardContent className="p-3">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{stat.label}</span>
@@ -461,7 +461,7 @@ export default function DashboardView() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 + i * 0.04 }}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 stat-card-micro rounded-lg p-2 -m-2">
                 <div className="relative flex-shrink-0">
                   <svg width="38" height="38" viewBox="0 0 38 38" className="-rotate-90">
                     <circle cx="19" cy="19" r="14" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
@@ -500,7 +500,7 @@ export default function DashboardView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Open Positions */}
-        <Card className="glass-card lg:col-span-2 col-span-1">
+        <Card className="glass-card card-hover-lift lg:col-span-2 col-span-1">
           <CardHeader className="pb-2 pt-3 px-4">
             <div className="flex items-center justify-between">
               <div className="section-title-accent">
@@ -566,7 +566,7 @@ export default function DashboardView() {
 
         {/* Quick Actions + Sessions */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-          <Card className={`glass-card quick-actions-gradient ${isAutoTrading ? 'border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.15)] breathe-emerald' : ''}`}>
+          <Card className={`glass-card card-hover-lift quick-actions-gradient ${isAutoTrading ? 'border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.15)] breathe-emerald' : ''}`}>
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center justify-between">
                 <div className="section-title-accent">
@@ -627,7 +627,7 @@ export default function DashboardView() {
           </Card>
 
           {/* (b) Better Session Indicators */}
-          <Card className="glass-card">
+          <Card className="glass-card card-hover-lift">
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center justify-between">
                 <div className="section-title-accent">
@@ -699,7 +699,7 @@ export default function DashboardView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* (c) Better Signal Cards */}
-        <Card className="glass-card">
+        <Card className="glass-card card-hover-lift">
           <CardHeader className="pb-2 pt-3 px-4">
             <div className="flex items-center justify-between">
               <div className="section-title-accent">
@@ -797,7 +797,7 @@ export default function DashboardView() {
         </Card>
 
         {/* (d) Market Conditions Enhancement */}
-        <Card className="glass-card">
+        <Card className="glass-card card-hover-lift">
           <CardHeader className="pb-2 pt-3 px-4">
             <div className="section-title-accent">
               <CardTitle className="text-sm font-semibold">Market Conditions</CardTitle>
@@ -861,7 +861,7 @@ export default function DashboardView() {
       <WatchlistPanel />
 
       {/* P&L Heatmap Calendar */}
-      <Card className="glass-card">
+      <Card className="glass-card card-hover-lift">
         <CardHeader className="pb-2 pt-3 px-4">
           <div className="flex items-center justify-between">
             <div className="section-title-accent">

@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Newspaper, AlertTriangle, Clock, Globe, Filter, X, Radio, ArrowUpRight, ArrowDownRight, Minus, Flame, TrendingUp, Building2, BarChart3, Landmark, Percent } from 'lucide-react';
+import EconomicCalendar from './EconomicCalendar';
 
 const MOCK_NEWS: Array<{
   id: string;
@@ -470,6 +471,9 @@ export default function NewsView() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Economic Calendar */}
+      <EconomicCalendar />
     </div>
   );
 }

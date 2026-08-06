@@ -184,7 +184,7 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
     const changeSign = changeFromPrev >= 0 ? '+' : '';
 
     return (
-      <div className="glass-card-premium rounded-lg p-3 text-[11px] shadow-lg min-w-[165px]">
+      <div className="glass-card-premium tooltip-animated-border rounded-lg p-3 text-[11px] shadow-lg min-w-[165px]">
         <div className="text-[10px] text-slate-400 mb-2 font-medium">{timeStr}</div>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1">
           <div className="flex items-center justify-between gap-2">
@@ -249,30 +249,25 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
 
   return (
     <div className="relative w-full tooltip-fade" style={{ height }}>
-      {/* Chart Mode Toggle */}
-      <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
-        <button
-          onClick={() => setChartMode('area')}
-          className={`p-1.5 rounded-md border-transition ${
-            chartMode === 'area'
-              ? 'bg-primary/20 text-primary border border-primary/30'
-              : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-          }`}
-          title="Area Chart"
-        >
-          <BarChart3 className="h-3.5 w-3.5" />
-        </button>
-        <button
-          onClick={() => setChartMode('candlestick')}
-          className={`p-1.5 rounded-md border-transition ${
-            chartMode === 'candlestick'
-              ? 'bg-primary/20 text-primary border border-primary/30'
-              : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-          }`}
-          title="Candlestick Chart"
-        >
-          <CandlestickChart className="h-3.5 w-3.5" />
-        </button>
+      {/* Chart Mode Toggle - Sleek Pill with Sliding Indicator */}
+      <div className="absolute top-2 right-2 z-10">
+        <div className="chart-toggle-container">
+          <div className={`chart-toggle-slider ${chartMode === 'candlestick' ? 'right' : ''}`} />
+          <button
+            onClick={() => setChartMode('area')}
+            className={`chart-toggle-btn ${chartMode === 'area' ? 'chart-toggle-btn-active' : ''}`}
+            title="Area Chart"
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={() => setChartMode('candlestick')}
+            className={`chart-toggle-btn ${chartMode === 'candlestick' ? 'chart-toggle-btn-active' : ''}`}
+            title="Candlestick Chart"
+          >
+            <CandlestickChart className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       <ResponsiveContainer width="100%" height="100%">

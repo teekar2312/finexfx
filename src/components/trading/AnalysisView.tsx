@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import MultiTimeframePanel from './MultiTimeframePanel';
 import SignalDetailModal from './SignalDetailModal';
+import CorrelationMatrix from './CorrelationMatrix';
 import type { TradingSignal } from '@/lib/types';
 
 function getConditionIcon(condition: MarketCondition, size: number = 20) {
@@ -220,7 +221,7 @@ function CorrelationGrid({ priceHistory }: { priceHistory: Record<Symbol, any[]>
 }
 
 export default function AnalysisView() {
-  const { signals, marketConditions, priceHistory } = useTradingStore();
+  const { signals, marketConditions } = useTradingStore();
   const [expandedAnalysis, setExpandedAnalysis] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedSignal, setSelectedSignal] = useState<TradingSignal | null>(null);
@@ -254,33 +255,9 @@ export default function AnalysisView() {
 
   return (
     <TooltipProvider delayDuration={200}>
-    <div className="p-4 space-y-4">
-      {/* Currency Correlation Matrix */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2 pt-3 px-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold">Currency Correlation Matrix</CardTitle>
-            <span className="text-[10px] text-muted-foreground">Last 50 candles</span>
-          </div>
-        </CardHeader>
-        <CardContent className="px-4 pb-3">
-          <CorrelationGrid priceHistory={priceHistory} />
-          <div className="flex items-center justify-center gap-4 mt-3">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm bg-emerald-500/20 border border-emerald-500/30" />
-              <span className="text-[10px] text-muted-foreground">Positive</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm bg-slate-500/10 border border-slate-500/30" />
-              <span className="text-[10px] text-muted-foreground">Weak</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm bg-red-500/20 border border-red-500/30" />
-              <span className="text-[10px] text-muted-foreground">Negative</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="p-4 space-y-4 scrollbar-thin">
+      {/* Currency Correlation Matrix - Enhanced */}
+      <CorrelationMatrix />
 
       {/* Market Conditions Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -296,7 +273,7 @@ export default function AnalysisView() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: SYMBOLS.indexOf(sym) * 0.05 }}
             >
-              <Card className={`glass-card card-hover${sig && highestConfidenceSignal && sig.id === highestConfidenceSignal.id ? ' shimmer-border' : ''}`}>
+              <Card className={`glass-card card-hover card-hover-lift${sig && highestConfidenceSignal && sig.id === highestConfidenceSignal.id ? ' shimmer-border' : ''}`}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -378,8 +355,8 @@ export default function AnalysisView() {
                     <>
                       <Separator className="my-3 opacity-50" />
                       <div className={`flex items-center justify-between p-2 rounded-lg border-l-4 ${
-                        sig.direction === 'BUY' ? 'bg-emerald-500/5 border-l-emerald-500 border border-emerald-500/20' :
-                        sig.direction === 'SELL' ? 'bg-red-500/5 border-l-red-500 border border-red-500/20' :
+                        sig.direction === 'BUY' ? 'bg-emerald-500/5 border-l-emerald-500 border border-emerald-500/20 glow-border-emerald' :
+                        sig.direction === 'SELL' ? 'bg-red-500/5 border-l-red-500 border border-red-500/20 glow-border-amber' :
                         'bg-slate-500/5 border-l-slate-500 border border-slate-500/20'
                       }`}>
                         <div className="flex items-center gap-2">
@@ -411,7 +388,7 @@ export default function AnalysisView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* AI Analysis */}
-        <Card className="glass-card lg:col-span-2">
+        <Card className="glass-card card-hover-lift lg:col-span-2">
           <CardHeader className="pb-2 pt-3 px-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -574,7 +551,7 @@ export default function AnalysisView() {
         </Card>
 
         {/* Signal History - Enhanced with confidence gauge, prices, R:R, copy, time ago */}
-        <Card className="glass-card">
+        <Card className="glass-card card-hover-lift">
           <CardHeader className="pb-2 pt-3 px-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold">Signal History</CardTitle>
@@ -725,7 +702,7 @@ export default function AnalysisView() {
       <MultiTimeframePanel />
 
       {/* Strategy Reference Grid */}
-      <Card className="glass-card">
+      <Card className="glass-card card-hover-lift">
         <CardHeader className="pb-2 pt-3 px-4">
           <div className="flex items-center gap-2">
             <Award className="h-4 w-4 text-primary" />
