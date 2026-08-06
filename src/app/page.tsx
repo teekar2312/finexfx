@@ -12,6 +12,7 @@ import NewsView from '@/components/trading/NewsView';
 import RiskView from '@/components/trading/RiskView';
 import BacktestingView from '@/components/trading/BacktestingView';
 import SettingsView from '@/components/trading/SettingsView';
+import Footer from '@/components/trading/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePriceSimulator } from '@/hooks/use-price-simulator';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
@@ -155,7 +156,7 @@ export default function TradingDashboard() {
               <Menu className="h-4 w-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-[240px] bg-sidebar border-border">
+          <SheetContent side="left" className="p-0 w-[280px] sm:w-[240px] bg-sidebar border-border">
             <SheetTitle className="sr-only">Navigation</SheetTitle>
             <Sidebar />
           </SheetContent>
@@ -163,16 +164,16 @@ export default function TradingDashboard() {
       )}
 
       {/* Main Content */}
-      <main
-        className={`flex-1 overflow-y-auto transition-all duration-200 ${
-          isMobile ? 'ml-0' : ''
-        }`}
+      <div className="flex-1 flex flex-col overflow-hidden"
         style={isMobile ? {} : { marginLeft: sidebarWidth }}
       >
-        <div className="min-h-full">
-          {renderView()}
-        </div>
-      </main>
+        <main className="flex-1 overflow-y-auto">
+          <div className="min-h-full pb-10 md:pb-0">
+            {renderView()}
+          </div>
+        </main>
+        <Footer />
+      </div>
 
       {/* Notification Toasts */}
       <NotificationToast notifications={notifications} removeNotification={removeNotification} />

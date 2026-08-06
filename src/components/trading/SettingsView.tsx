@@ -14,7 +14,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Shield, Bell, Server, TriangleAlert, Plus, RefreshCw, Trash2, Wifi, WifiOff, Globe, HardDrive, CheckCircle, AlertCircle, Info, Filter, Zap, DollarSign, Activity, Clock, Target } from 'lucide-react';
+import { Shield, Bell, Server, TriangleAlert, Plus, RefreshCw, Trash2, Wifi, WifiOff, Globe, HardDrive, CheckCircle, AlertCircle, Info, Filter, Zap, DollarSign, Activity, Clock, Target, Volume2 } from 'lucide-react';
+import { setSoundEnabled } from '@/lib/sounds';
 import { SYMBOLS, type Symbol } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -27,6 +28,7 @@ export default function SettingsView() {
 
   const [emailNotif, setEmailNotif] = useState(true);
   const [pushNotif, setPushNotif] = useState(true);
+  const [soundNotif, setSoundNotif] = useState(true);
   const [newAlertSymbol, setNewAlertSymbol] = useState<Symbol>('EURUSD');
   const [newAlertCondition, setNewAlertCondition] = useState('above');
   const [newAlertPrice, setNewAlertPrice] = useState('1.10000');
@@ -478,6 +480,16 @@ export default function SettingsView() {
                   <div className="text-[10px] text-muted-foreground">Browser push notifications for important events</div>
                 </div>
                 <Switch checked={pushNotif} onCheckedChange={setPushNotif} className="data-[state=checked]:bg-emerald-600" />
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/50 border border-border">
+                <div>
+                  <div className="text-xs font-medium flex items-center gap-1.5">
+                    <Volume2 className="h-3.5 w-3.5 text-primary" />
+                    Sound Notifications
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">Play audio alerts for trades, signals, and price alerts</div>
+                </div>
+                <Switch checked={soundNotif} onCheckedChange={(checked) => { setSoundNotif(checked); setSoundEnabled(checked); }} className="data-[state=checked]:bg-emerald-600" />
               </div>
             </CardContent>
           </Card>

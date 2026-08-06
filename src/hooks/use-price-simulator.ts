@@ -266,9 +266,76 @@ export function usePriceSimulator() {
       s.setMarketConditions(conditions);
     }, 10000);
 
-    // Signal generation - 30 seconds
+    // Signal generation + auto-trading - 30 seconds
     signalTimerRef.current = setInterval(() => {
       const s = useTradingStore.getState();
+
+      // Auto-trading logic
+      if (s.isAutoTrading && s.isConnected) {
+        const sym = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+        const price = s.prices[sym];
+        if (price) {
+          const openTrades = s.openTrades;
+          const riskSettings = s.riskSettings;
+
+          // Check daily risk limit
+          const dailyRiskUsed = s.dailyPnl < 0 ? Math.abs(s.dailyPnl) / s.balance * 100 : 0;
+          if (dailyRiskUsed < riskSettings.dailyRiskLimit
+            && openTrades.length < riskSettings.maxSimultaneousPositions
+            && s.todayTradeCount < riskSettings.maxDailyTrades
+            && !openTrades.some(t => t.symbol === sym)) {
+
+            // Generate signal first
+            const signal = generateSignal(sym, stateRef.current[sym]);
+
+            // Only execute high-confidence signals (>70%)
+            if (signal.confidence >= 70 && signal.marketCondition !== 'low_volatility') {
+              const pipSize = SYMBOL_INFO[sym as Symbol].pipSize;
+              const slPips = riskSettings.stopLossPips;
+              const tpPips = slPips * riskSettings.riskRewardRatio;
+              const direction = signal.direction as 'BUY' | 'SELL';
+              const entryPrice = direction === 'BUY' ? price.ask : price.bid;
+
+              const trade = {
+                id: `auto-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+                symbol: sym as Symbol,
+                direction,
+                lotSize: 0.01,
+                entryPrice,
+                currentPrice: entryPrice,
+                stopLoss: direction === 'BUY' ? entryPrice - slPips * pipSize : entryPrice + slPips * pipSize,
+                takeProfit: direction === 'BUY' ? entryPrice + tpPips * pipSize : entryPrice - tpPips * pipSize,
+                isTrailingStop: true,
+                trailingStop: slPips,
+                pips: 0,
+                profit: 0,
+                commission: 1,
+                spread: price.spread,
+                swap: 0,
+                status: 'open' as const,
+                strategy: signal.strategy,
+                aiConfidence: signal.confidence,
+                marketCondition: signal.marketCondition as MarketCondition,
+                openedAt: new Date().toISOString(),
+              };
+
+              s.addSignal(signal);
+              s.addTrade(trade);
+              s.addNotification({
+                type: 'success',
+                title: 'Auto Trade Executed',
+                message: `${direction} ${sym} @ ${entryPrice.toFixed(SYMBOL_INFO[sym as Symbol].digits)} (${signal.confidence.toFixed(1)}% confidence)`,
+              });
+              return; // Don't generate another signal this interval
+            }
+
+            s.addSignal(signal);
+            return;
+          }
+        }
+      }
+
+      // Default: generate a regular signal
       const sym = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
       s.addSignal(generateSignal(sym, stateRef.current[sym]));
     }, 30000);

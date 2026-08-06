@@ -363,3 +363,174 @@ Stage Summary:
 - Add heat map calendar for daily P&L
 - Add sound alerts for price triggers
 - Add trade journaling with notes/screenshots
+
+---
+Task ID: R3-3/R3-4
+Agent: fullstack-developer (subagent)
+Task: Add auto-trading engine + currency correlation matrix
+
+Work Log:
+
+**use-price-simulator.ts — Auto-trading engine:**
+- Replaced the simple 30s signal generation interval with auto-trading logic
+- When `isAutoTrading && isConnected`: picks a random symbol, generates a signal, checks all risk guards (daily risk limit, max positions, daily trade count, no duplicate symbol)
+- Only executes trades with confidence ≥ 70% and market condition ≠ low_volatility
+- Auto-trades get `auto-` prefixed IDs, lot size 0.01, trailing stop enabled, SL/TP from risk settings, $1 commission
+- Fires `addNotification` with trade details on execution
+- Falls through to normal signal-only generation when guards block execution or confidence is too low
+
+**DashboardView.tsx — Auto-trading status UI:**
+- Quick Actions card gets pulsing green border + glow shadow when `isAutoTrading` is true
+- Header shows pulsing green dot + "Auto Trading Active" label with pulse animation
+- Shows count of auto positions (trades with `auto-` prefix ID) in emerald-tinted info bar
+- Quick "Stop" button in the info bar to deactivate auto-trading instantly
+- All existing Quick Actions buttons preserved (New Trade, Start/Stop Auto Trading, Refresh Signals)
+
+**AnalysisView.tsx — Currency Correlation Matrix:**
+- Added `calculateCorrelation()` function (Pearson correlation on close price arrays, min 10 data points)
+- Added `getCorrelationColor()` helper with 5-tier color scale: strong positive (emerald-500/20), moderate positive (emerald-500/10), weak (slate-500/10), moderate negative (red-500/10), strong negative (red-500/20)
+- Added `CorrelationGrid` component using `useMemo` to compute 4×4 matrix from last 50 candles in `priceHistory`
+- Diagonal cells show 1.00 with dark `bg-slate-700/50` background
+- Compact grid: w-16 h-12 cells, text-[10px] tabular-nums, rounded-md cells
+- Row/column headers with symbol names
+- Color legend: Positive (green), Weak (grey), Negative (red)
+- Placed at top of AnalysisView, before Market Conditions Grid
+- Added `Symbol` type import and `priceHistory` from store
+
+Stage Summary:
+- Build compiles successfully (next build passes, 0 errors)
+- 3 files modified: use-price-simulator.ts, DashboardView.tsx, AnalysisView.tsx
+- All existing functionality preserved — no removed features or broken handlers
+- Dark navy theme + glass-morphism styling maintained
+- Auto-trading respects all risk management rules from store
+
+---
+Task ID: R3-5/R3-6/R3-9
+Agent: fullstack-developer (subagent)
+Task: Candlestick chart mode + footer bar + sound notification system
+
+Work Log:
+
+**PriceChart.tsx — Candlestick Chart Mode:**
+- Added `useState<ChartMode>('area')` to toggle between 'area' and 'candlestick' modes
+- Added toggle buttons in top-right corner using BarChart3 and CandlestickChart icons from lucide-react
+- Active mode gets highlighted background (primary/20 with border)
+- Created `CandlestickShape` custom SVG component: renders wick line (low→high) and body rect (open→close) with proper pixel scaling using the global Y axis domain
+- Green body (#10b981) when close >= open, red body (#ef4444) when close < open
+- In candlestick mode: uses ComposedChart with Bar (dataKey='high', custom shape) + hidden volume Bar on separate yAxis
+- Added custom tooltip component showing Time, Open, High, Low, Close, Volume in a dark glass card with color-coded values
+- Both modes: current bid price shown as dashed ReferenceLine with strokeDasharray="5 5" and price label
+- Volume bars visible at bottom in both modes
+- Area mode: preserved all existing gradient fill, bid/ask reference lines
+
+**Footer.tsx — New Footer Component:**
+- Created /src/components/trading/Footer.tsx with h-8 sticky footer
+- Scrolling market ticker showing all 4 symbols with bid price and change (color-coded emerald/red)
+- Status indicators: connection status (LIVE/OFF with pulse dot), auto trading badge, positions count + daily P&L
+- Right side: UTC time (live updating) + broker name (FINEX Indonesia)
+- All values use tabular-nums, text-[10px] sizing
+- Tooltips on status indicators for context
+
+**globals.css — Ticker Animation:**
+- Added `@keyframes ticker-scroll` (0% → translateX(0), 100% → translateX(-50%))
+- `.animate-ticker` class with 30s linear infinite animation
+- `.animate-ticker:hover` pauses animation on hover
+
+**page.tsx — Layout Integration:**
+- Imported Footer component
+- Changed main content area from single `<main>` to `<div className="flex-1 flex flex-col overflow-hidden">` wrapper
+- Main content uses `flex-1 overflow-y-auto` for scrollable content area
+- Footer placed after main, before NotificationToast
+- Footer stays fixed at bottom of viewport
+
+**sounds.ts — Web Audio API Sound System:**
+- Created /src/lib/sounds.ts with lazy AudioContext initialization
+- AudioContext.resume() called before each play to handle browser autoplay restrictions
+- Module-level `soundEnabled` flag (default true)
+- `playSound(type)` with 4 sound types:
+  - trade_open: 880Hz sine, 0.2s (bright ping)
+  - trade_close: 660Hz sine, 0.3s (lower confirmation)
+  - alert: 1200Hz square, 0.1s (sharp beep)
+  - signal: 440Hz sine, 0.15s (soft notification)
+- `setSoundEnabled()` / `isSoundEnabled()` exported for settings integration
+
+**trading-store.ts — Sound Integration:**
+- Imported `playSound` from '@/lib/sounds'
+- `addTrade()`: plays 'trade_open' sound before notification
+- `closeTrade()`: plays 'trade_close' sound before notification
+- `addSignal()`: plays 'signal' sound only when confidence > 75
+- `addPriceAlert()`: plays 'alert' sound when creating a new alert
+
+**SettingsView.tsx — Sound Toggle:**
+- Added Volume2 icon import and setSoundEnabled import from sounds.ts
+- Added `soundNotif` state (default true)
+- Added "Sound Notifications" toggle switch in Account tab Settings card (after Push Notifications)
+- Switch has Volume2 icon, description text, and calls setSoundEnabled() on change
+
+Stage Summary:
+- Build compiles successfully (next build passes, 0 errors)
+- 6 files modified/created: PriceChart.tsx, Footer.tsx (new), sounds.ts (new), trading-store.ts, SettingsView.tsx, globals.css, page.tsx
+- All existing functionality preserved — no removed features or broken handlers
+- Dark navy theme + glass-morphism styling maintained
+- Candlestick mode renders proper OHLC candles with green/red coloring
+- Footer provides persistent status bar with live ticker, connection status, and UTC clock
+- Sound system is toggleable from Settings and handles AudioContext browser restrictions
+
+---
+Task ID: R3-7/R3-8
+Agent: fullstack-dev
+Task: P&L Heatmap Calendar + Mobile Responsive Polish
+
+Work Log:
+**Feature 1: P&L Heatmap Calendar (DashboardView.tsx)**
+- Added `Calendar`, `Target`, `Separator` imports
+- Created `calendarPnlData` useMemo generating 28 days of mock P&L data (-1.5% to +1.5% of balance)
+- Created `monthlySummary` useMemo computing total P&L, best/worst day, winning days ratio
+- Created `calendarWeeks` useMemo organizing data into Mon-Sun week rows
+- Added `getCellBg()` helper for 4-tier color scale: bright emerald (>2%), dim emerald (>0%), dim red (<0%), bright red (<-2%)
+- Built monthly summary row: 4 mini-cards (This Month P&L, Best Day, Worst Day, Win Days/Total)
+- Built 7-column fixed grid calendar with day headers, colored cells showing day number + P&L amount
+- Current day highlighted with ring-1 ring-primary border
+- Legend showing Loss/Profit color squares
+- Calendar card placed after Market Conditions card
+
+**Feature 2: Mobile Responsive Polish**
+
+**DashboardView.tsx:**
+- Header: flex-col on mobile, flex-row on sm+ for badge alignment
+- Top stats: grid-cols-2 mobile, md:grid-cols-3, lg:grid-cols-5
+- Performance metrics: grid-cols-2 on all mobile, md:grid-cols-4
+- Open Positions: full-width on mobile (lg:col-span-2 only on desktop)
+- Quick Actions + Sessions: grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 (stacks on mobile)
+- Recent Signals + Market Conditions: grid-cols-1 lg:grid-cols-2 (stacks on mobile)
+- P&L Calendar: full-width with overflow-x-auto for 420px min-width grid
+- Added pb-10 md:pb-4 bottom padding for mobile footer clearance
+
+**Sidebar.tsx:**
+- Added `useIsMobile`, `Button`, `X` icon imports
+- Mobile sidebar always renders in expanded mode (effectiveOpen = isMobile ? true : sidebarOpen)
+- Mobile header shows "Navigation" title + X close button
+- Close button dispatches Escape keydown to close Sheet
+- Nav items: min-h-[44px] touch targets, auto-close sheet on tap
+- Account Type and Auto Trade toggles always visible on mobile
+- Collapse button hidden on mobile
+- Extracted collapsed state tooltips to variables (avoids Turbopack JSX parsing issue)
+
+**page.tsx:**
+- Sheet sidebar width: w-[280px] sm:w-[240px] for wider mobile touch area
+- Added pb-10 md:pb-0 to main content wrapper for mobile footer clearance
+
+**TradingView.tsx:**
+- Symbol tabs: overflow-x-auto with flex-shrink-0 min-w-[100px] buttons (horizontal scroll on mobile)
+- Chart height: 300px (reduced from 380 for mobile viewport)
+- Order panel inputs: h-10 md:h-8 for larger touch targets on mobile
+- BUY/SELL buttons: h-12 md:h-10 text-base for larger touch area on mobile
+- Added pb-10 md:pb-4 bottom padding
+
+Stage Summary:
+- Build compiles successfully (next build passes, 0 errors)
+- 4 files modified: DashboardView.tsx, Sidebar.tsx, page.tsx, TradingView.tsx
+- P&L calendar with 4-week heatmap, color gradient, monthly summary cards
+- Mobile-first responsive: 44px touch targets, scrollable symbol tabs, stacking grids
+- Footer visible on all screen sizes with proper bottom padding
+- All existing functionality preserved

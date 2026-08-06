@@ -7,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Separator } from '@/components/ui/separator';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, DollarSign, Activity, Zap, Play, ArrowUpRight, ArrowDownRight, Clock, BarChart3, Shield, Volume2, RefreshCw, Award, Flame } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, Zap, Play, ArrowUpRight, ArrowDownRight, Clock, BarChart3, Shield, Volume2, RefreshCw, Award, Flame, Calendar, Target } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 
 function getConditionIcon(condition: MarketCondition) {
@@ -153,6 +154,55 @@ export default function DashboardView() {
     return points;
   }, [dailyPnl]);
 
+  // P&L Calendar mock data
+  const calendarPnlData = useMemo(() => {
+    const data = [];
+    const today = new Date();
+    for (let i = 27; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const pnl = (Math.random() - 0.47) * balance * 0.03;
+      data.push({
+        date,
+        day: date.getDate(),
+        dayName: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()],
+        pnl,
+        pnlPercent: (pnl / balance) * 100,
+        isToday: i === 0,
+      });
+    }
+    return data;
+  }, [balance]);
+
+  // Monthly summary from calendar data
+  const monthlySummary = useMemo(() => {
+    const totalPnl = calendarPnlData.reduce((s, d) => s + d.pnl, 0);
+    const bestDay = calendarPnlData.reduce((best, d) => d.pnl > best.pnl ? d : best, calendarPnlData[0]);
+    const worstDay = calendarPnlData.reduce((worst, d) => d.pnl < worst.pnl ? d : worst, calendarPnlData[0]);
+    const winningDays = calendarPnlData.filter(d => d.pnl > 0).length;
+    return { totalPnl, bestDay, worstDay, winningDays, totalDays: calendarPnlData.length };
+  }, [calendarPnlData]);
+
+  // Organize calendar into weeks (Mon-Sun)
+  const calendarWeeks = useMemo(() => {
+    const weeks: typeof calendarPnlData[] = [];
+    const sorted = [...calendarPnlData];
+    // Find the first Monday going backwards from day 0
+    let startIdx = 0;
+    for (let i = 0; i < sorted.length; i++) {
+      if (sorted[i].date.getDay() === 1) { // Monday
+        startIdx = i;
+        break;
+      }
+    }
+    // Rearrange: from first Monday, chunk into 7s
+    const reordered = [...sorted.slice(startIdx), ...sorted.slice(0, startIdx)];
+    for (let i = 0; i < reordered.length; i += 7) {
+      weeks.push(reordered.slice(i, i + 7));
+    }
+    return weeks;
+  }, [calendarPnlData]);
+
   // Sparkline data for market conditions
   const sparklineData = useMemo(() => {
     const data: Record<string, number[]> = {};
@@ -248,15 +298,23 @@ export default function DashboardView() {
     },
   ];
 
+  function getCellBg(pnlPercent: number, pnl: number) {
+    if (pnl === 0) return 'bg-slate-800/40';
+    if (pnl > 0 && pnlPercent > 2) return 'bg-emerald-500/35';
+    if (pnl > 0) return 'bg-emerald-500/15';
+    if (pnl < 0 && pnlPercent < -2) return 'bg-red-500/35';
+    return 'bg-red-500/15';
+  }
+
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 p-4 pb-10 md:pb-4">
       {/* (e) Header Enhancement */}
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
         <div>
           <h1 className="text-xl font-bold">Trading Dashboard</h1>
           <p className="text-xs text-muted-foreground">FINEX Indonesia • Demo Account • {currentDateTime}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Badge variant="outline" className="text-[10px] border-emerald-500/50 text-emerald-500">● Connected</Badge>
           <Badge variant="outline" className="text-[10px]">UTC {utcNow}</Badge>
         </div>
@@ -314,7 +372,7 @@ export default function DashboardView() {
       </div>
 
       {/* (a) Performance Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3">
         {perfCards.map((metric, i) => (
           <motion.div
             key={metric.label}
@@ -342,7 +400,7 @@ export default function DashboardView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Open Positions */}
-        <Card className="glass-card lg:col-span-2">
+        <Card className="glass-card lg:col-span-2 col-span-1">
           <CardHeader className="pb-2 pt-3 px-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold">Open Positions ({openTrades.length})</CardTitle>
@@ -405,12 +463,35 @@ export default function DashboardView() {
         </Card>
 
         {/* Quick Actions + Sessions */}
-        <div className="space-y-4">
-          <Card className="glass-card">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+          <Card className={`glass-card ${isAutoTrading ? 'border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.15)]' : ''}`}>
             <CardHeader className="pb-2 pt-3 px-4">
-              <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
+                {isAutoTrading && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+                    <span className="text-[10px] font-medium text-emerald-400 animate-pulse">Auto Trading Active</span>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="px-4 pb-3 space-y-2">
+              {isAutoTrading && (
+                <div className="flex items-center justify-between px-2 py-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 mb-1">
+                  <span className="text-[10px] text-emerald-400">
+                    {openTrades.filter(t => t.id.startsWith('auto-')).length} auto positions
+                  </span>
+                  <Button
+                    onClick={() => setAutoTrading(false)}
+                    variant="destructive"
+                    size="sm"
+                    className="h-6 text-[10px] px-2"
+                  >
+                    Stop
+                  </Button>
+                </div>
+              )}
               <Button
                 onClick={() => setActiveTab('trading')}
                 className="w-full justify-start gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -633,6 +714,107 @@ export default function DashboardView() {
           </CardContent>
         </Card>
       </div>
+
+      {/* P&L Heatmap Calendar */}
+      <Card className="glass-card">
+        <CardHeader className="pb-2 pt-3 px-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-primary" />
+              Daily P&L Calendar
+            </CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-sm bg-red-500/35" />
+                <span className="text-[10px] text-muted-foreground">Loss</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500/35" />
+                <span className="text-[10px] text-muted-foreground">Profit</span>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-3">
+          {/* Monthly Summary Row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+            <div className="rounded-lg bg-slate-800/30 border border-border/50 p-2.5">
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">This Month P&L</div>
+              <div className={`text-sm font-bold tabular-nums mt-0.5 ${monthlySummary.totalPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                {monthlySummary.totalPnl >= 0 ? '+' : ''}${monthlySummary.totalPnl.toFixed(2)}
+              </div>
+              <div className={`text-[10px] tabular-nums ${monthlySummary.totalPnl >= 0 ? 'text-emerald-500/70' : 'text-red-500/70'}`}>
+                {((monthlySummary.totalPnl / balance) * 100).toFixed(2)}%
+              </div>
+            </div>
+            <div className="rounded-lg bg-slate-800/30 border border-border/50 p-2.5">
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <TrendingUp className="h-3 w-3 text-emerald-500" /> Best Day
+              </div>
+              <div className="text-sm font-bold tabular-nums mt-0.5 text-emerald-500">
+                +${monthlySummary.bestDay.pnl.toFixed(2)}
+              </div>
+              <div className="text-[10px] text-muted-foreground tabular-nums">
+                {monthlySummary.bestDay.dayName} {monthlySummary.bestDay.day}
+              </div>
+            </div>
+            <div className="rounded-lg bg-slate-800/30 border border-border/50 p-2.5">
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <TrendingDown className="h-3 w-3 text-red-500" /> Worst Day
+              </div>
+              <div className="text-sm font-bold tabular-nums mt-0.5 text-red-500">
+                ${monthlySummary.worstDay.pnl.toFixed(2)}
+              </div>
+              <div className="text-[10px] text-muted-foreground tabular-nums">
+                {monthlySummary.worstDay.dayName} {monthlySummary.worstDay.day}
+              </div>
+            </div>
+            <div className="rounded-lg bg-slate-800/30 border border-border/50 p-2.5">
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <Target className="h-3 w-3 text-primary" /> Win Days
+              </div>
+              <div className="text-sm font-bold tabular-nums mt-0.5">
+                {monthlySummary.winningDays} / {monthlySummary.totalDays}
+              </div>
+              <div className="text-[10px] text-muted-foreground tabular-nums">
+                {((monthlySummary.winningDays / monthlySummary.totalDays) * 100).toFixed(0)}% win rate
+              </div>
+            </div>
+          </div>
+
+          {/* Calendar Grid - 7 columns fixed */}
+          <div className="overflow-x-auto -mx-1 px-1">
+            <div className="min-w-[420px]">
+              {/* Day headers */}
+              <div className="grid grid-cols-7 gap-1 mb-1">
+                {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day) => (
+                  <div key={day} className="text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-1">
+                    {day}
+                  </div>
+                ))}
+              </div>
+              {/* Week rows */}
+              <div className="space-y-1">
+                {calendarWeeks.map((week, wi) => (
+                  <div key={wi} className="grid grid-cols-7 gap-1">
+                    {week.map((day) => (
+                      <div
+                        key={day.date.toISOString()}
+                        className={`rounded-md p-1.5 text-center transition-colors relative ${getCellBg(day.pnlPercent, day.pnl)} ${day.isToday ? 'ring-1 ring-primary ring-offset-1 ring-offset-background' : ''}`}
+                      >
+                        <div className="text-[10px] text-muted-foreground font-medium">{day.day}</div>
+                        <div className={`text-[10px] font-bold tabular-nums mt-0.5 ${day.pnl === 0 ? 'text-slate-500' : day.pnl > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {day.pnl === 0 ? '•' : `${day.pnl >= 0 ? '+' : ''}$${day.pnl.toFixed(0)}`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -8,7 +8,6 @@ import {
   Brain,
   CandlestickChart,
   Cog,
-  DollarSign,
   Gauge,
   LineChart as LineChartIcon,
   Newspaper,
@@ -16,20 +15,21 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
-  Signal,
   TriangleAlert,
   Zap,
+  X,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface NavItem {
   id: TabId;
   label: string;
   icon: React.ReactNode;
-  badge?: number;
 }
 
 const navItems: NavItem[] = [
@@ -59,34 +59,84 @@ export default function Sidebar() {
     signals,
   } = useTradingStore();
 
+  const isMobile = useIsMobile();
   const unresolvedErrors = errorLogs.filter(e => !e.resolved).length;
+  const effectiveOpen = isMobile ? true : sidebarOpen;
+
+  const handleNav = (id: TabId) => {
+    setActiveTab(id);
+    if (isMobile) {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    }
+  };
+
+  const handleClose = () => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  };
+
+  const collapsedAccountToggle = !effectiveOpen && !isMobile ? (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex justify-center">
+          <div className={`w-3 h-3 rounded-full ${accountType === 'live' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="text-xs">
+        {accountType === 'live' ? 'Live Account' : 'Demo Account'}
+      </TooltipContent>
+    </Tooltip>
+  ) : null;
+
+  const collapsedAutoToggle = !effectiveOpen && !isMobile ? (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex justify-center">
+          <Play className={`h-4 w-4 ${isAutoTrading ? 'text-emerald-500' : 'text-muted-foreground'}`} />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="text-xs">
+        Auto Trading {isAutoTrading ? 'ON' : 'OFF'}
+      </TooltipContent>
+    </Tooltip>
+  ) : null;
 
   return (
     <TooltipProvider delayDuration={0}>
       <motion.aside
         initial={false}
-        animate={{ width: sidebarOpen ? 240 : 64 }}
+        animate={{ width: isMobile ? 240 : (sidebarOpen ? 240 : 64) }}
         transition={{ duration: 0.2, ease: 'easeInOut' }}
         className="h-screen flex flex-col border-r border-border bg-sidebar fixed left-0 top-0 z-50"
       >
         {/* Header */}
-        <div className="flex items-center gap-3 px-3 py-4 min-h-[56px]">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary flex-shrink-0">
-            <Zap className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <AnimatePresence>
-            {sidebarOpen && (
-              <motion.div
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: 'auto' }}
-                exit={{ opacity: 0, width: 0 }}
-                className="overflow-hidden whitespace-nowrap"
-              >
-                <div className="text-sm font-bold text-foreground">ForexPro</div>
-                <div className="text-[10px] text-muted-foreground">{BROKER_CONFIG.name}</div>
-              </motion.div>
+        <div className="flex items-center justify-between px-3 py-4 min-h-[56px]">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary flex-shrink-0">
+              <Zap className="h-4 w-4 text-primary-foreground" />
+            </div>
+            {effectiveOpen && (
+              <div className="overflow-hidden whitespace-nowrap">
+                {isMobile ? (
+                  <div className="text-sm font-bold text-foreground">Navigation</div>
+                ) : (
+                  <div>
+                    <div className="text-sm font-bold text-foreground">ForexPro</div>
+                    <div className="text-[10px] text-muted-foreground">{BROKER_CONFIG.name}</div>
+                  </div>
+                )}
+              </div>
             )}
-          </AnimatePresence>
+          </div>
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+              onClick={handleClose}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
         <Separator className="opacity-50" />
@@ -95,12 +145,12 @@ export default function Sidebar() {
         <div className="px-3 py-2">
           <div className="flex items-center gap-2 px-2">
             <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isConnected ? 'bg-emerald-500 pulse-dot' : 'bg-red-500'}`} />
-            {sidebarOpen && (
+            {effectiveOpen && (
               <span className="text-xs text-muted-foreground">
                 {isConnected ? 'Connected' : 'Disconnected'}
               </span>
             )}
-            {isConnected && isAutoTrading && sidebarOpen && (
+            {isConnected && isAutoTrading && effectiveOpen && (
               <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 border-emerald-500/50 text-emerald-500">
                 AUTO
               </Badge>
@@ -120,26 +170,17 @@ export default function Sidebar() {
             const button = (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-md text-sm transition-all duration-150 relative group
+                onClick={() => handleNav(item.id)}
+                className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-md text-sm transition-all duration-150 relative group min-h-[44px]
                   ${isActive
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                   }`}
               >
                 <span className={`flex-shrink-0 ${isActive ? 'text-primary' : ''}`}>{item.icon}</span>
-                <AnimatePresence>
-                  {sidebarOpen && (
-                    <motion.span
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: 'auto' }}
-                      exit={{ opacity: 0, width: 0 }}
-                      className="overflow-hidden whitespace-nowrap"
-                    >
-                      {item.label}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
+                {effectiveOpen && (
+                  <span className="overflow-hidden whitespace-nowrap">{item.label}</span>
+                )}
                 {errorCount > 0 && (
                   <span className="absolute right-2 top-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-medium">
                     {errorCount > 9 ? '9+' : errorCount}
@@ -153,7 +194,7 @@ export default function Sidebar() {
               </button>
             );
 
-            if (!sidebarOpen) {
+            if (!effectiveOpen && !isMobile) {
               return (
                 <Tooltip key={item.id}>
                   <TooltipTrigger asChild>{button}</TooltipTrigger>
@@ -165,7 +206,7 @@ export default function Sidebar() {
               );
             }
 
-            return button;
+            return <div key={item.id}>{button}</div>;
           })}
         </nav>
 
@@ -173,8 +214,8 @@ export default function Sidebar() {
 
         {/* Account Type Toggle */}
         <div className="px-3 py-2">
-          {sidebarOpen ? (
-            <div className="flex items-center justify-between px-2">
+          {effectiveOpen ? (
+            <div className="flex items-center justify-between px-2 min-h-[44px]">
               <div className="flex flex-col">
                 <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Account</span>
                 <span className={`text-xs font-semibold ${accountType === 'live' ? 'text-emerald-500' : 'text-amber-500'}`}>
@@ -188,23 +229,14 @@ export default function Sidebar() {
               />
             </div>
           ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex justify-center">
-                  <div className={`w-3 h-3 rounded-full ${accountType === 'live' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="text-xs">
-                {accountType === 'live' ? 'Live Account' : 'Demo Account'}
-              </TooltipContent>
-            </Tooltip>
+            collapsedAccountToggle
           )}
         </div>
 
         {/* Auto Trading Toggle */}
         <div className="px-3 py-2">
-          {sidebarOpen ? (
-            <div className="flex items-center justify-between px-2">
+          {effectiveOpen ? (
+            <div className="flex items-center justify-between px-2 min-h-[44px]">
               <div className="flex items-center gap-2">
                 <Play className={`h-3 w-3 ${isAutoTrading ? 'text-emerald-500' : 'text-muted-foreground'}`} />
                 <span className="text-xs text-muted-foreground">Auto Trade</span>
@@ -217,28 +249,21 @@ export default function Sidebar() {
               />
             </div>
           ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex justify-center">
-                  <Play className={`h-4 w-4 ${isAutoTrading ? 'text-emerald-500' : 'text-muted-foreground'}`} />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="text-xs">
-                Auto Trading {isAutoTrading ? 'ON' : 'OFF'}
-              </TooltipContent>
-            </Tooltip>
+            collapsedAutoToggle
           )}
         </div>
 
-        {/* Collapse Button */}
-        <div className="px-2 py-2 border-t border-border">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="w-full flex items-center justify-center py-1.5 rounded-md hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-          >
-            {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </button>
-        </div>
+        {/* Collapse Button - desktop only */}
+        {!isMobile && (
+          <div className="px-2 py-2 border-t border-border">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="w-full flex items-center justify-center py-1.5 rounded-md hover:bg-accent transition-colors text-muted-foreground hover:text-foreground min-h-[44px]"
+            >
+              {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </button>
+          </div>
+        )}
       </motion.aside>
     </TooltipProvider>
   );

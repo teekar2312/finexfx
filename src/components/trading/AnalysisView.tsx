@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useTradingStore } from '@/store/trading-store';
-import { SYMBOLS, SYMBOL_INFO, MARKET_CONDITION_CONFIG, STRATEGIES, type MarketCondition, type StrategyName } from '@/lib/types';
+import { SYMBOLS, SYMBOL_INFO, MARKET_CONDITION_CONFIG, STRATEGIES, type Symbol, type MarketCondition, type StrategyName } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -121,8 +121,103 @@ const strategyCategories: Record<StrategyName, { category: string; color: string
   EMA_RSI_Filter: { category: 'Multi-Signal', color: 'border-blue-500/30 bg-blue-500/5' },
 };
 
+function calculateCorrelation(prices1: number[], prices2: number[]): number {
+  if (prices1.length !== prices2.length || prices1.length < 10) return 0;
+  const n = prices1.length;
+  const mean1 = prices1.reduce((a, b) => a + b, 0) / n;
+  const mean2 = prices2.reduce((a, b) => a + b, 0) / n;
+  let cov = 0, var1 = 0, var2 = 0;
+  for (let i = 0; i < n; i++) {
+    const d1 = prices1[i] - mean1;
+    const d2 = prices2[i] - mean2;
+    cov += d1 * d2;
+    var1 += d1 * d1;
+    var2 += d2 * d2;
+  }
+  if (var1 === 0 || var2 === 0) return 0;
+  return cov / Math.sqrt(var1 * var2);
+}
+
+function getCorrelationColor(r: number): string {
+  if (r > 0.5) return 'bg-emerald-500/20 text-emerald-400';
+  if (r > 0.2) return 'bg-emerald-500/10 text-emerald-500/70';
+  if (r < -0.5) return 'bg-red-500/20 text-red-400';
+  if (r < -0.2) return 'bg-red-500/10 text-red-500/70';
+  return 'bg-slate-500/10 text-slate-400';
+}
+
+function CorrelationGrid({ priceHistory }: { priceHistory: Record<Symbol, any[]> }) {
+  const matrix = useMemo(() => {
+    const closePrices: Record<string, number[]> = {};
+    SYMBOLS.forEach((sym) => {
+      const history = priceHistory[sym as Symbol];
+      if (history && history.length >= 10) {
+        closePrices[sym] = history.slice(-50).map((c: any) => c.close);
+      } else {
+        closePrices[sym] = [];
+      }
+    });
+
+    const grid: number[][] = [];
+    for (let i = 0; i < SYMBOLS.length; i++) {
+      const row: number[] = [];
+      for (let j = 0; j < SYMBOLS.length; j++) {
+        if (i === j) {
+          row.push(1);
+        } else {
+          const p1 = closePrices[SYMBOLS[i]];
+          const p2 = closePrices[SYMBOLS[j]];
+          if (p1.length >= 10 && p2.length >= 10) {
+            const len = Math.min(p1.length, p2.length);
+            row.push(calculateCorrelation(p1.slice(-len), p2.slice(-len)));
+          } else {
+            row.push(0);
+          }
+        }
+      }
+      grid.push(row);
+    }
+    return grid;
+  }, [priceHistory]);
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      {/* Column headers */}
+      <div className="flex items-center gap-1 pl-16">
+        {SYMBOLS.map((sym) => (
+          <div key={sym} className="w-16 h-6 flex items-center justify-center">
+            <span className="text-[10px] font-medium text-muted-foreground">{sym}</span>
+          </div>
+        ))}
+      </div>
+      {/* Rows */}
+      {SYMBOLS.map((sym, i) => (
+        <div key={sym} className="flex items-center gap-1">
+          <div className="w-16 h-12 flex items-center justify-end pr-2">
+            <span className="text-[10px] font-medium text-muted-foreground">{sym}</span>
+          </div>
+          {SYMBOLS.map((_, j) => {
+            const r = matrix[i]?.[j] ?? 0;
+            const isDiag = i === j;
+            return (
+              <div
+                key={`${i}-${j}`}
+                className={`w-16 h-12 rounded-md flex items-center justify-center ${
+                  isDiag ? 'bg-slate-700/50 text-foreground font-semibold' : getCorrelationColor(r)
+                }`}
+              >
+                <span className="text-[10px] tabular-nums">{r.toFixed(2)}</span>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function AnalysisView() {
-  const { signals, marketConditions } = useTradingStore();
+  const { signals, marketConditions, priceHistory } = useTradingStore();
   const [expandedAnalysis, setExpandedAnalysis] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -151,6 +246,33 @@ export default function AnalysisView() {
   return (
     <TooltipProvider delayDuration={200}>
     <div className="p-4 space-y-4">
+      {/* Currency Correlation Matrix */}
+      <Card className="glass-card">
+        <CardHeader className="pb-2 pt-3 px-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-semibold">Currency Correlation Matrix</CardTitle>
+            <span className="text-[10px] text-muted-foreground">Last 50 candles</span>
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-3">
+          <CorrelationGrid priceHistory={priceHistory} />
+          <div className="flex items-center justify-center gap-4 mt-3">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm bg-emerald-500/20 border border-emerald-500/30" />
+              <span className="text-[10px] text-muted-foreground">Positive</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm bg-slate-500/10 border border-slate-500/30" />
+              <span className="text-[10px] text-muted-foreground">Weak</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm bg-red-500/20 border border-red-500/30" />
+              <span className="text-[10px] text-muted-foreground">Negative</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Market Conditions Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         {SYMBOLS.map((sym) => {

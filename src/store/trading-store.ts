@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { PriceTick, Trade, TradingSignal, NewsItem, EconomicEvent, RiskSettings, BacktestResult, Symbol, MarketCondition, IndicatorConfig } from '@/lib/types';
 import { SYMBOLS, BROKER_CONFIG } from '@/lib/types';
+import { playSound } from '@/lib/sounds';
 
 type TabId = 'dashboard' | 'trading' | 'analysis' | 'indicators' | 'news' | 'risk' | 'backtesting' | 'settings' | 'errors';
 
@@ -162,6 +163,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       return;
     }
     set({ openTrades: [...openTrades, trade] });
+    playSound('trade_open');
     get().addNotification({ type: 'success', title: 'Trade Opened', message: `${trade.direction} ${trade.symbol} @ ${trade.entryPrice}` });
   },
   updateTrade: (id, updates) => {
@@ -176,6 +178,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
         openTrades: get().openTrades.filter(t => t.id !== id),
         closedTrades: [{ ...trade, status: 'closed' as const, closedAt: new Date().toISOString() }, ...get().closedTrades],
       });
+      playSound('trade_close');
       get().addNotification({ type: 'info', title: 'Trade Closed', message: `${trade.symbol} ${trade.direction} closed at ${trade.currentPrice} (P&L: $${trade.profit.toFixed(2)})` });
     }
   },
@@ -183,6 +186,9 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   // Signals
   signals: [],
   addSignal: (signal) => {
+    if (signal.confidence > 75) {
+      playSound('signal');
+    }
     const signals = [signal, ...get().signals].slice(0, 50);
     set({ signals });
   },
@@ -196,7 +202,10 @@ export const useTradingStore = create<TradingState>((set, get) => ({
 
   // Alerts
   priceAlerts: [],
-  addPriceAlert: (alert) => set({ priceAlerts: [...get().priceAlerts, { ...alert, id: `alert-${Date.now()}` }] }),
+  addPriceAlert: (alert) => {
+    playSound('alert');
+    set({ priceAlerts: [...get().priceAlerts, { ...alert, id: `alert-${Date.now()}` }] });
+  },
   removePriceAlert: (id) => set({ priceAlerts: get().priceAlerts.filter(a => a.id !== id) }),
   togglePriceAlert: (id) => set({
     priceAlerts: get().priceAlerts.map(a => a.id === id ? { ...a, isActive: !a.isActive } : a),

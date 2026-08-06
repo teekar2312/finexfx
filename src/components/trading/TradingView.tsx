@@ -136,9 +136,9 @@ export default function TradingView() {
 
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="p-4 space-y-4">
-        {/* Symbol Tabs */}
-        <div className="flex gap-2">
+      <div className="p-4 pb-10 md:pb-4 space-y-4">
+        {/* Symbol Tabs - scrollable on mobile */}
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           {SYMBOLS.map((sym) => {
             const isActive = sym === selectedSymbol;
             const p = prices[sym];
@@ -146,7 +146,7 @@ export default function TradingView() {
               <button
                 key={sym}
                 onClick={() => setSelectedSymbol(sym)}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                className={`flex-shrink-0 py-2 px-4 rounded-lg text-sm font-medium transition-all min-w-[100px] ${
                   isActive
                     ? 'bg-primary/10 text-primary border border-primary/30'
                     : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-accent'
@@ -174,7 +174,7 @@ export default function TradingView() {
                   symbol={selectedSymbol}
                   bid={price?.bid}
                   ask={price?.ask}
-                  height={380}
+                  height={300}
                 />
               </CardContent>
             </Card>
@@ -471,7 +471,7 @@ export default function TradingView() {
                     step="0.01"
                     min={BROKER_CONFIG.minLotSize}
                     max={BROKER_CONFIG.maxLotSize}
-                    className="h-8 text-sm tabular-nums mt-1"
+                    className="h-10 md:h-8 text-sm tabular-nums mt-1"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -483,7 +483,7 @@ export default function TradingView() {
                       onChange={(e) => setStopLoss(e.target.value)}
                       step="1"
                       min="0"
-                      className="h-8 text-sm tabular-nums mt-1"
+                      className="h-10 md:h-8 text-sm tabular-nums mt-1"
                     />
                   </div>
                   <div>
@@ -494,7 +494,7 @@ export default function TradingView() {
                       onChange={(e) => setTakeProfit(e.target.value)}
                       step="1"
                       min="0"
-                      className="h-8 text-sm tabular-nums mt-1"
+                      className="h-10 md:h-8 text-sm tabular-nums mt-1"
                     />
                   </div>
                 </div>
@@ -531,19 +531,19 @@ export default function TradingView() {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <Button
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white h-10 font-semibold"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white h-12 md:h-10 font-semibold text-base"
                         onClick={() => handleOpenTrade('BUY')}
                         disabled={!isConnected}
                       >
-                        <ArrowUpRight className="h-4 w-4 mr-1" />
+                        <ArrowUpRight className="h-5 w-5 mr-1" />
                         BUY
                       </Button>
                       <Button
-                        className="bg-red-600 hover:bg-red-700 text-white h-10 font-semibold"
+                        className="bg-red-600 hover:bg-red-700 text-white h-12 md:h-10 font-semibold text-base"
                         onClick={() => handleOpenTrade('SELL')}
                         disabled={!isConnected}
                       >
-                        <ArrowDownRight className="h-4 w-4 mr-1" />
+                        <ArrowDownRight className="h-5 w-5 mr-1" />
                         SELL
                       </Button>
                     </div>
@@ -551,19 +551,19 @@ export default function TradingView() {
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     <Button
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white h-10 font-semibold"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white h-12 md:h-10 font-semibold text-base"
                       onClick={() => handleOpenTrade('BUY')}
                       disabled={!isConnected}
                     >
-                      <ArrowUpRight className="h-4 w-4 mr-1" />
+                      <ArrowUpRight className="h-5 w-5 mr-1" />
                       BUY
                     </Button>
                     <Button
-                      className="bg-red-600 hover:bg-red-700 text-white h-10 font-semibold"
+                      className="bg-red-600 hover:bg-red-700 text-white h-12 md:h-10 font-semibold text-base"
                       onClick={() => handleOpenTrade('SELL')}
                       disabled={!isConnected}
                     >
-                      <ArrowDownRight className="h-4 w-4 mr-1" />
+                      <ArrowDownRight className="h-5 w-5 mr-1" />
                       SELL
                     </Button>
                   </div>
