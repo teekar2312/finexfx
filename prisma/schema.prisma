@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TradingAccount {
+  id            String   @id @default(cuid())
+  accountType   String   @default("demo") // live, demo
+  broker        String   @default("FINEX Indonesia")
+  balance       Float    @default(10000)
+  equity        Float    @default(10000)
+  margin        Float    @default(0)
+  freeMargin    Float    @default(10000)
+  marginLevel   Float    @default(0)
+  leverage      Int      @default(500)
+  currency      String   @default("USD")
+  dailyPnl      Float    @default(0)
+  totalPnl      Float    @default(0)
+  isAutoTrading Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  trades        Trade[]
+}
+
+model Trade {
+  id              String   @id @default(cuid())
+  accountId       String
+  account         TradingAccount @relation(fields: [accountId], references: [id])
+  symbol          String   // EURUSD, USDJPY, GBPUSD, XAUUSD
+  direction       String   // BUY, SELL
+  lotSize         Float
+  entryPrice      Float
+  currentPrice    Float?
+  stopLoss        Float?
+  takeProfit      Float?
+  trailingStop    Float?
+  isTrailingStop  Boolean  @default(false)
+  pips            Float    @default(0)
+  profit          Float    @default(0)
+  commission      Float    @default(0)
+  spread          Float    @default(0.5)
+  swap            Float    @default(0)
+  status          String   @default("open") // open, closed, pending
+  strategy        String?
+  aiConfidence    Float?
+  marketCondition String?
+  openedAt        DateTime @default(now())
+  closedAt        DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model TradingSignal {
+  id              String   @id @default(cuid())
+  symbol          String
+  direction       String   // BUY, SELL, HOLD
+  confidence      Float
+  strategy        String
+  marketCondition String
+  entryPrice      Float
+  stopLoss        Float?
+  takeProfit      Float?
+  riskReward      Float?
+  aiAnalysis      String?
+  indicators      String? // JSON
+  isExecuted      Boolean  @default(false)
+  executedTradeId String?
+  createdAt       DateTime @default(now())
+}
+
+model PriceAlert {
+  id        String   @id @default(cuid())
+  symbol    String
+  condition String   // above, below, crosses_above, crosses_below
+  price     Float
+  isActive  Boolean  @default(true)
+  message   String?
+  triggeredAt DateTime?
+  createdAt DateTime @default(now())
+}
+
+model NewsItem {
+  id          String   @id @default(cuid())
+  source      String
+  title       String
+  summary     String?
+  url         String?
+  category    String?
+  impact      String?  // high, medium, low
+  currency    String?
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model EconomicEvent {
+  id          String   @id @default(cuid())
+  event       String
+  currency    String
+  impact      String   // high, medium, low
+  actual      String?
+  forecast    String?
+  previous    String?
+  date        DateTime?
+  isAvoided   Boolean  @default(false) // high-impact events to avoid during scalping
+  createdAt   DateTime @default(now())
+}
+
+model BacktestResult {
+  id            String   @id @default(cuid())
+  name          String
+  symbol        String
+  strategy      String
+  startDate     DateTime?
+  endDate       DateTime?
+  initialBalance Float  @default(10000)
+  finalBalance  Float?
+  totalTrades   Int      @default(0)
+  winRate       Float?
+  profitFactor   Float?
+  maxDrawdown   Float?
+  sharpeRatio   Float?
+  totalProfit   Float?
+  totalLoss     Float?
+  avgWin        Float?
+  avgLoss       Float?
+  parameters    String? // JSON
+  trades        String? // JSON array
+  createdAt     DateTime @default(now())
+}
+
+model RiskSettings {
+  id                       String   @id @default(cuid())
+  riskPerTrade             Float    @default(0.5) // percentage
+  stopLossPips             Float    @default(10)
+  takeProfitPips           Float    @default(15)
+  riskRewardRatio          Float    @default(1.5)
+  maxSimultaneousPositions Int      @default(3)
+  dailyRiskLimit           Float    @default(3.0) // percentage
+  avoidMajorNews           Boolean  @default(true)
+  dailyTargetPercent       Float    @default(2.0)
+  maxDailyTrades           Int      @default(10)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
+
+model ErrorLog {
+  id        String   @id @default(cuid())
+  level     String   @default("error") // error, warning, info
+  source    String
+  message   String
+  stack     String?
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model NotificationLog {
+  id        String   @id @default(cuid())
+  type      String   // email, push, in_app
+  title     String
+  message   String
+  status    String   @default("sent") // sent, failed, pending
+  createdAt DateTime @default(now())
+}
+
+model IndicatorConfig {
+  id        String   @id @default(cuid())
+  name      String
+  category  String   // trend, momentum, volatility, volume
+  settings  String // JSON
+  isEnabled Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
