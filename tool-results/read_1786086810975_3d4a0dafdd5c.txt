@@ -1,0 +1,837 @@
+     1→'use client';
+     2→
+     3→import { useMemo, useState } from 'react';
+     4→import { motion } from 'framer-motion';
+     5→import { useTradingStore } from '@/store/trading-store';
+     6→import { useShallow } from 'zustand/react/shallow';
+     7→import { SYMBOLS, SYMBOL_INFO } from '@/lib/types';
+     8→import {
+     9→  AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+    10→  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart,
+    11→} from 'recharts';
+    12→import { TrendingUp, Calendar, Clock, DollarSign, Target, Award, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+    13→import PerformanceScorecard from './PerformanceScorecard';
+    14→
+    15→type Timeframe = 'today' | 'week' | 'month' | 'all';
+    16→
+    17→// Seed-based pseudo-random for consistent mock data
+    18→function seededRandom(seed: number) {
+    19→  let s = seed;
+    20→  return () => {
+    21→    s = (s * 16807 + 0) % 2147483647;
+    22→    return (s - 1) / 2147483646;
+    23→  };
+    24→}
+    25→
+    26→function generateMockEquityCurve(days: number) {
+    27→  const rng = seededRandom(42);
+    28→  const data: { date: string; equity: number; peak: number; drawdown: number }[] = [];
+    29→  let equity = 10000;
+    30→  let peak = 10000;
+    31→  const now = new Date();
+    32→  for (let i = days - 1; i >= 0; i--) {
+    33→    const d = new Date(now);
+    34→    d.setDate(d.getDate() - i);
+    35→    const dayReturn = (rng() - 0.42) * 80; // slight positive bias
+    36→    equity = Math.max(9200, equity + dayReturn);
+    37→    peak = Math.max(peak, equity);
+    38→    const dd = ((peak - equity) / peak) * 100;
+    39→    data.push({
+    40→      date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    41→      equity: Math.round(equity * 100) / 100,
+    42→      peak: Math.round(peak * 100) / 100,
+    43→      drawdown: Math.round(dd * 100) / 100,
+    44→    });
+    45→  }
+    46→  return data;
+    47→}
+    48→
+    49→function generateMockDailyPnl(days: number) {
+    50→  const rng = seededRandom(123);
+    51→  const data: { date: string; pnl: number }[] = [];
+    52→  const now = new Date();
+    53→  for (let i = days - 1; i >= 0; i--) {
+    54→    const d = new Date(now);
+    55→    d.setDate(d.getDate() - i);
+    56→    const pnl = (rng() - 0.42) * 120;
+    57→    data.push({
+    58→      date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    59→      pnl: Math.round(pnl * 100) / 100,
+    60→    });
+    61→  }
+    62→  return data;
+    63→}
+    64→
+    65→function generateMockHeatmap(): { day: string; week: number; pnl: number }[] {
+    66→  const rng = seededRandom(777);
+    67→  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    68→  const data: { day: string; week: number; pnl: number }[] = [];
+    69→  for (let w = 0; w < 5; w++) {
+    70→    for (const day of days) {
+    71→      if (day === 'Sat' || day === 'Sun') {
+    72→        data.push({ day, week: w, pnl: 0 });
+    73→      } else {
+    74→        const pnl = (rng() - 0.4) * 200;
+    75→        data.push({ day, week: w, pnl: Math.round(pnl) });
+    76→      }
+    77→    }
+    78→  }
+    79→  return data;
+    80→}
+    81→
+    82→function generateMockSessionData() {
+    83→  return [
+    84→    { session: 'London', trades: 24, winRate: 62.5, pnl: 342.5, avgPips: 18.3, color: '#10b981' },
+    85→    { session: 'New York', trades: 18, winRate: 55.6, pnl: 198.0, avgPips: 14.2, color: '#06b6d4' },
+    86→    { session: 'Asian', trades: 8, winRate: 37.5, pnl: -87.5, avgPips: -8.5, color: '#f59e0b' },
+    87→    { session: 'London/NY Overlap', trades: 14, winRate: 71.4, pnl: 456.3, avgPips: 26.7, color: '#8b5cf6' },
+    88→  ];
+    89→}
+    90→
+    91→function generateMockSymbolPerformance() {
+    92→  return [
+    93→    { symbol: 'EURUSD', trades: 15, winRate: 66.7, pnl: 287.5, avgPips: 22.1, name: 'EUR/USD' },
+    94→    { symbol: 'USDJPY', trades: 12, winRate: 50.0, pnl: 45.0, avgPips: 8.3, name: 'USD/JPY' },
+    95→    { symbol: 'GBPUSD', trades: 10, winRate: 60.0, pnl: 165.0, avgPips: 19.4, name: 'GBP/USD' },
+    96→    { symbol: 'XAUUSD', trades: 8, winRate: 62.5, pnl: 312.0, avgPips: 48.5, name: 'XAU/USD' },
+    97→  ];
+    98→}
+    99→
+   100→// Custom dark tooltip for Recharts
+   101→const DarkTooltip = ({ active, payload, label, valueLabel = 'Value' }: {
+   102→  active?: boolean;
+   103→  payload?: Array<{ name: string; value: number; color: string }>;
+   104→  label?: string;
+   105→  valueLabel?: string;
+   106→}) => {
+   107→  if (!active || !payload?.length) return null;
+   108→  return (
+   109→    <div className="glass-card rounded-lg p-2.5 border border-border/50 shadow-xl min-w-[120px]">
+   110→      <div className="text-[10px] text-muted-foreground mb-1">{label}</div>
+   111→      {payload.map((p, i) => (
+   112→        <div key={i} className="flex items-center gap-1.5 text-[11px]">
+   113→          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+   114→          <span className="text-muted-foreground">{p.name}:</span>
+   115→          <span className={`tabular-nums font-medium ${p.value >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   116→            {typeof p.value === 'number' ? p.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : p.value}
+   117→          </span>
+   118→        </div>
+   119→      ))}
+   120→    </div>
+   121→  );
+   122→};
+   123→
+   124→const container = {
+   125→  hidden: { opacity: 0 },
+   126→  show: { opacity: 1, transition: { staggerChildren: 0.04 } },
+   127→};
+   128→const item = {
+   129→  hidden: { opacity: 0, y: 12 },
+   130→  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+   131→};
+   132→
+   133→export default function PerformanceAnalyticsView() {
+   134→  const { journalEntries, closedTrades, balance, totalPnl } = useTradingStore(
+   135→    useShallow((s) => ({ journalEntries: s.journalEntries, closedTrades: s.closedTrades, balance: s.balance, totalPnl: s.totalPnl }))
+   136→  );
+   137→  const [timeframe, setTimeframe] = useState<Timeframe>('all');
+   138→
+   139→  // Generate mock historical data
+   140→  const equityCurve = useMemo(() => generateMockEquityCurve(30), []);
+   141→  const dailyPnlData = useMemo(() => generateMockDailyPnl(30), []);
+   142→  const heatmapData = useMemo(() => generateMockHeatmap(), []);
+   143→  const sessionData = useMemo(() => generateMockSessionData(), []);
+   144→  const symbolPerfData = useMemo(() => generateMockSymbolPerformance(), []);
+   145→
+   146→  // Compute analytics from journal entries + mock data
+   147→  const analytics = useMemo(() => {
+   148→    const entries = journalEntries;
+   149→    const wins = entries.filter(e => e.pnl > 0);
+   150→    const losses = entries.filter(e => e.pnl < 0);
+   151→    const totalPnlCalc = entries.reduce((s, e) => s + e.pnl, 0);
+   152→    const totalReturn = ((totalPnlCalc + 809.5) / 10000) * 100; // include mock historical
+   153→    const winRate = entries.length > 0 ? (wins.length / entries.length) * 100 : 0;
+   154→    const grossProfit = wins.reduce((s, e) => s + e.pnl, 0);
+   155→    const grossLoss = Math.abs(losses.reduce((s, e) => s + e.pnl, 0));
+   156→    const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 999 : 0;
+   157→
+   158→    // Average trade duration
+   159→    const durations = entries.map(e => {
+   160→      const open = new Date(e.openTime).getTime();
+   161→      const close = new Date(e.closeTime).getTime();
+   162→      return (close - open) / 60000; // minutes
+   163→    });
+   164→    const avgDuration = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+   165→    const hours = Math.floor(avgDuration / 60);
+   166→    const mins = Math.round(avgDuration % 60);
+   167→
+   168→    // Best/worst day
+   169→    const dailyMap: Record<string, number> = {};
+   170→    entries.forEach(e => {
+   171→      const day = e.closeTime.split('T')[0];
+   172→      dailyMap[day] = (dailyMap[day] || 0) + e.pnl;
+   173→    });
+   174→    const dailyValues = Object.values(dailyMap);
+   175→    const bestDay = dailyValues.length > 0 ? Math.max(...dailyValues) : 0;
+   176→    const worstDay = dailyValues.length > 0 ? Math.min(...dailyValues) : 0;
+   177→
+   178→    // Key metrics
+   179→    const largestWin = wins.length > 0 ? Math.max(...wins.map(w => w.pnl)) : 0;
+   180→    const largestLoss = losses.length > 0 ? Math.min(...losses.map(l => l.pnl)) : 0;
+   181→    const avgWin = wins.length > 0 ? grossProfit / wins.length : 0;
+   182→    const avgLoss = losses.length > 0 ? grossLoss / losses.length : 0;
+   183→
+   184→    // Consecutive wins/losses
+   185→    let maxConsWins = 0, maxConsLosses = 0, consWins = 0, consLosses = 0;
+   186→    entries.forEach(e => {
+   187→      if (e.pnl > 0) { consWins++; consLosses = 0; maxConsWins = Math.max(maxConsWins, consWins); }
+   188→      else if (e.pnl < 0) { consLosses++; consWins = 0; maxConsLosses = Math.max(maxConsLosses, consLosses); }
+   189→      else { consWins = 0; consLosses = 0; }
+   190→    });
+   191→
+   192→    // Max drawdown from equity curve
+   193→    let maxDD = 0;
+   194→    let peakEquity = 10000;
+   195→    equityCurve.forEach(d => {
+   196→      peakEquity = Math.max(peakEquity, d.equity);
+   197→      const dd = (peakEquity - d.equity) / peakEquity * 100;
+   198→      maxDD = Math.max(maxDD, dd);
+   199→    });
+   200→
+   201→    // Recovery factor
+   202→    const netProfit = Math.abs(totalPnlCalc + 809.5);
+   203→    const recoveryFactor = maxDD > 0 ? netProfit / maxDD : netProfit > 0 ? 999 : 0;
+   204→
+   205→    // Distribution data
+   206→    const longTrades = entries.filter(e => e.direction === 'BUY');
+   207→    const shortTrades = entries.filter(e => e.direction === 'SELL');
+   208→    const longWins = longTrades.filter(t => t.pnl > 0).length;
+   209→    const shortWins = shortTrades.filter(t => t.pnl > 0).length;
+   210→
+   211→    // Duration distribution
+   212→    const shortHolds = entries.filter(e => {
+   213→      const mins = (new Date(e.closeTime).getTime() - new Date(e.openTime).getTime()) / 60000;
+   214→      return mins < 60;
+   215→    }).length;
+   216→    const medHolds = entries.filter(e => {
+   217→      const mins = (new Date(e.closeTime).getTime() - new Date(e.openTime).getTime()) / 60000;
+   218→      return mins >= 60 && mins < 180;
+   219→    }).length;
+   220→    const longHolds = entries.filter(e => {
+   221→      const mins = (new Date(e.closeTime).getTime() - new Date(e.openTime).getTime()) / 60000;
+   222→      return mins >= 180;
+   223→    }).length;
+   224→
+   225→    return {
+   226→      totalReturn,
+   227→      winRate,
+   228→      profitFactor,
+   229→      avgDuration: `${hours}h ${mins}m`,
+   230→      bestDay,
+   231→      worstDay,
+   232→      totalTrades: entries.length,
+   233→      wins: wins.length,
+   234→      losses: losses.length,
+   235→      largestWin,
+   236→      largestLoss,
+   237→      avgWin,
+   238→      avgLoss,
+   239→      maxConsWins,
+   240→      maxConsLosses,
+   241→      maxDrawdown: maxDD,
+   242→      recoveryFactor,
+   243→      longTrades: longTrades.length,
+   244→      shortTrades: shortTrades.length,
+   245→      longWins,
+   246→      shortWins,
+   247→      shortHolds,
+   248→      medHolds,
+   249→      longHolds,
+   250→      totalPnl: totalPnlCalc + 809.5,
+   251→    };
+   252→  }, [journalEntries, equityCurve]);
+   253→
+   254→  // Heatmap color
+   255→  const heatmapColor = (pnl: number) => {
+   256→    if (pnl === 0) return 'bg-slate-800/30';
+   257→    const intensity = Math.min(Math.abs(pnl) / 150, 1);
+   258→    if (pnl > 0) return `bg-emerald-500/${Math.round(20 + intensity * 60).toString()}`;
+   259→    return `bg-red-500/${Math.round(20 + intensity * 60).toString()}`;
+   260→  };
+   261→
+   262→  // Current day of week
+   263→  const todayDayIndex = new Date().getDay(); // 0=Sun
+   264→  const dayMap = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+   265→  const todayDayName = dayMap[todayDayIndex];
+   266→
+   267→  // Win rate SVG circle
+   268→  const winRateRadius = 28;
+   269→  const winRateCircumference = 2 * Math.PI * winRateRadius;
+   270→  const winRateOffset = winRateCircumference - (analytics.winRate / 100) * winRateCircumference;
+   271→
+   272→  // Pie chart data
+   273→  const pieData = [
+   274→    { name: 'Wins', value: analytics.wins, color: '#10b981' },
+   275→    { name: 'Losses', value: analytics.losses, color: '#ef4444' },
+   276→  ];
+   277→
+   278→  // Duration pie data
+   279→  const durationData = [
+   280→    { name: '< 1h', value: analytics.shortHolds, color: '#06b6d4' },
+   281→    { name: '1-3h', value: analytics.medHolds, color: '#f59e0b' },
+   282→    { name: '> 3h', value: analytics.longHolds, color: '#8b5cf6' },
+   283→  ];
+   284→
+   285→  // Long/short bar data
+   286→  const directionData = [
+   287→    { name: 'Long', wins: analytics.longWins, losses: analytics.longTrades - analytics.longWins },
+   288→    { name: 'Short', wins: analytics.shortWins, losses: analytics.shortTrades - analytics.shortWins },
+   289→  ];
+   290→
+   291→  // Filtered daily PnL by timeframe
+   292→  const filteredDailyPnl = useMemo(() => {
+   293→    if (timeframe === 'all') return dailyPnlData;
+   294→    const count = timeframe === 'today' ? 1 : timeframe === 'week' ? 7 : 30;
+   295→    return dailyPnlData.slice(-count);
+   296→  }, [dailyPnlData, timeframe]);
+   297→
+   298→  const avgDailyPnl = filteredDailyPnl.length > 0
+   299→    ? filteredDailyPnl.reduce((s, d) => s + d.pnl, 0) / filteredDailyPnl.length
+   300→    : 0;
+   301→  const totalFilteredPnl = filteredDailyPnl.reduce((s, d) => s + d.pnl, 0);
+   302→  const positiveDays = filteredDailyPnl.filter(d => d.pnl > 0).length;
+   303→  const negativeDays = filteredDailyPnl.filter(d => d.pnl < 0).length;
+   304→
+   305→  const timeframes: { key: Timeframe; label: string }[] = [
+   306→    { key: 'today', label: 'Today' },
+   307→    { key: 'week', label: 'Week' },
+   308→    { key: 'month', label: 'Month' },
+   309→    { key: 'all', label: 'All' },
+   310→  ];
+   311→
+   312→  return (
+   313→    <motion.div variants={container} initial="hidden" animate="show" className="p-4 md:p-6 space-y-4">
+   314→      {/* Header */}
+   315→      <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+   316→        <div>
+   317→          <h1 className="text-lg font-semibold flex items-center gap-2">
+   318→            <TrendingUp className="h-5 w-5 text-primary" />
+   319→            Performance Analytics
+   320→          </h1>
+   321→          <p className="text-xs text-muted-foreground mt-0.5">
+   322→            Comprehensive trading performance metrics and analysis
+   323→          </p>
+   324→        </div>
+   325→        <div className="flex items-center gap-1.5">
+   326→          {timeframes.map(tf => (
+   327→            <button
+   328→              key={tf.key}
+   329→              onClick={() => setTimeframe(tf.key)}
+   330→              className={`px-3 py-1.5 text-[11px] font-medium rounded-md transition-all duration-150
+   331→                ${timeframe === tf.key
+   332→                  ? 'bg-primary/15 text-primary border border-primary/30'
+   333→                  : 'text-muted-foreground hover:text-foreground hover:bg-accent border border-transparent'
+   334→                }`}
+   335→            >
+   336→              {tf.label}
+   337→            </button>
+   338→          ))}
+   339→        </div>
+   340→      </motion.div>
+   341→
+   342→      {/* KPI Summary Row */}
+   343→      <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-5 gap-3 stagger-children">
+   344→        {/* Total Return */}
+   345→        <div className={`glass-card elevated-card card-hover rounded-lg p-4 ${analytics.totalReturn >= 0 ? 'border-l-2 border-l-emerald-500' : 'border-l-2 border-l-red-500'}`}>
+   346→          <div className="flex items-center gap-1.5 mb-2">
+   347→            <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+   348→            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Total Return</span>
+   349→          </div>
+   350→          <div className={`text-xl font-bold tabular-nums ${analytics.totalReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   351→            {analytics.totalReturn >= 0 ? '+' : ''}{analytics.totalReturn.toFixed(2)}%
+   352→          </div>
+   353→          <div className={`text-[10px] tabular-nums mt-1 ${analytics.totalPnl >= 0 ? 'text-emerald-500/70' : 'text-red-500/70'}`}>
+   354→            ${analytics.totalPnl >= 0 ? '+' : ''}{analytics.totalPnl.toFixed(2)}
+   355→          </div>
+   356→        </div>
+   357→
+   358→        {/* Win Rate with SVG Ring */}
+   359→        <div className="glass-card elevated-card card-hover rounded-lg p-4">
+   360→          <div className="flex items-center gap-1.5 mb-2">
+   361→            <Target className="h-3.5 w-3.5 text-muted-foreground" />
+   362→            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Win Rate</span>
+   363→          </div>
+   364→          <div className="flex items-center gap-3">
+   365→            <svg width="64" height="64" className="flex-shrink-0">
+   366→              <circle cx="32" cy="32" r={winRateRadius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5" />
+   367→              <circle
+   368→                cx="32" cy="32" r={winRateRadius} fill="none"
+   369→                stroke={analytics.winRate >= 50 ? '#10b981' : '#ef4444'}
+   370→                strokeWidth="5"
+   371→                strokeLinecap="round"
+   372→                strokeDasharray={winRateCircumference}
+   373→                strokeDashoffset={winRateOffset}
+   374→                transform="rotate(-90 32 32)"
+   375→                className="transition-all duration-700"
+   376→              />
+   377→              <text x="32" y="30" textAnchor="middle" className="fill-foreground text-[11px] font-bold tabular-nums" fontSize="11">
+   378→                {analytics.winRate.toFixed(0)}%
+   379→              </text>
+   380→              <text x="32" y="40" textAnchor="middle" className="fill-muted-foreground" fontSize="7">
+   381→                {analytics.wins}W / {analytics.losses}L
+   382→              </text>
+   383→            </svg>
+   384→            <div>
+   385→              <div className="text-[10px] text-muted-foreground">Trades</div>
+   386→              <div className="text-sm font-semibold tabular-nums">{analytics.totalTrades}</div>
+   387→            </div>
+   388→          </div>
+   389→        </div>
+   390→
+   391→        {/* Profit Factor */}
+   392→        <div className="glass-card elevated-card card-hover rounded-lg p-4">
+   393→          <div className="flex items-center gap-1.5 mb-2">
+   394→            <Award className="h-3.5 w-3.5 text-muted-foreground" />
+   395→            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Profit Factor</span>
+   396→          </div>
+   397→          <div className={`text-xl font-bold tabular-nums ${analytics.profitFactor >= 1.5 ? 'text-emerald-500' : analytics.profitFactor >= 1 ? 'text-amber-500' : 'text-red-500'}`}>
+   398→            {analytics.profitFactor === 999 ? '∞' : analytics.profitFactor.toFixed(2)}
+   399→          </div>
+   400→          <div className="text-[10px] text-muted-foreground mt-1">
+   401→            {analytics.profitFactor >= 1.5 ? 'Excellent' : analytics.profitFactor >= 1 ? 'Moderate' : 'Needs improvement'}
+   402→          </div>
+   403→        </div>
+   404→
+   405→        {/* Avg Trade Duration */}
+   406→        <div className="glass-card elevated-card card-hover rounded-lg p-4">
+   407→          <div className="flex items-center gap-1.5 mb-2">
+   408→            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+   409→            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Avg Duration</span>
+   410→          </div>
+   411→          <div className="text-xl font-bold tabular-nums">{analytics.avgDuration}</div>
+   412→          <div className="text-[10px] text-muted-foreground mt-1">per trade</div>
+   413→        </div>
+   414→
+   415→        {/* Best/Worst Day */}
+   416→        <div className="glass-card elevated-card card-hover rounded-lg p-4">
+   417→          <div className="flex items-center gap-1.5 mb-2">
+   418→            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+   419→            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Best / Worst Day</span>
+   420→          </div>
+   421→          <div className="flex items-center gap-2">
+   422→            <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />
+   423→            <span className="text-sm font-bold tabular-nums text-emerald-500">+${analytics.bestDay.toFixed(0)}</span>
+   424→          </div>
+   425→          <div className="flex items-center gap-2 mt-1">
+   426→            <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />
+   427→            <span className="text-sm font-bold tabular-nums text-red-500">${analytics.worstDay.toFixed(0)}</span>
+   428→          </div>
+   429→        </div>
+   430→      </motion.div>
+   431→
+   432→      {/* Equity Curve Chart */}
+   433→      <motion.div variants={item} className="glass-card parallax-hover card-hover rounded-lg p-4">
+   434→        <div className="flex items-center justify-between mb-3">
+   435→          <div>
+   436→            <h3 className="text-sm font-semibold">Equity Curve</h3>
+   437→            <p className="text-[10px] text-muted-foreground">30-day equity progression with drawdown overlay</p>
+   438→          </div>
+   439→          <div className="flex items-center gap-3 text-[10px]">
+   440→            <div className="flex items-center gap-1.5">
+   441→              <div className="w-2.5 h-0.5 bg-emerald-500 rounded" />
+   442→              <span className="text-muted-foreground">Equity</span>
+   443→            </div>
+   444→            <div className="flex items-center gap-1.5">
+   445→              <div className="w-2.5 h-0.5 bg-red-500/60 rounded" />
+   446→              <span className="text-muted-foreground">Drawdown</span>
+   447→            </div>
+   448→          </div>
+   449→        </div>
+   450→        <ResponsiveContainer width="100%" height={220}>
+   451→          <ComposedChart data={equityCurve} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+   452→            <defs>
+   453→              <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
+   454→                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+   455→                <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+   456→              </linearGradient>
+   457→              <linearGradient id="drawdownGradient" x1="0" y1="0" x2="0" y2="1">
+   458→                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.02} />
+   459→                <stop offset="95%" stopColor="#ef4444" stopOpacity={0.2} />
+   460→              </linearGradient>
+   461→            </defs>
+   462→            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+   463→            <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} interval={4} />
+   464→            <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} domain={['auto', 'auto']} tickFormatter={(v: number) => `$${(v / 1000).toFixed(1)}k`} />
+   465→            <Tooltip content={<DarkTooltip />} />
+   466→            <ReferenceLine y={10000} stroke="rgba(255,255,255,0.15)" strokeDasharray="6 3" />
+   467→            <Area type="monotone" dataKey="drawdown" fill="url(#drawdownGradient)" stroke="none" fillOpacity={1} />
+   468→            <Area type="monotone" dataKey="equity" fill="url(#equityGradient)" stroke="#10b981" strokeWidth={1.5} fillOpacity={1} />
+   469→          </ComposedChart>
+   470→        </ResponsiveContainer>
+   471→      </motion.div>
+   472→
+   473→      {/* Daily P&L Bar Chart */}
+   474→      <motion.div variants={item} className="glass-card parallax-hover card-hover rounded-lg p-4">
+   475→        <div className="flex items-center justify-between mb-1">
+   476→          <div>
+   477→            <h3 className="text-sm font-semibold">Daily P&L</h3>
+   478→            <p className="text-[10px] text-muted-foreground">Daily profit and loss breakdown</p>
+   479→          </div>
+   480→        </div>
+   481→        <div className="flex items-center gap-4 mb-3 text-[10px]">
+   482→          <div className="flex items-center gap-1">
+   483→            <span className="text-muted-foreground">Total:</span>
+   484→            <span className={`font-semibold tabular-nums ${totalFilteredPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   485→              ${totalFilteredPnl >= 0 ? '+' : ''}{totalFilteredPnl.toFixed(2)}
+   486→            </span>
+   487→          </div>
+   488→          <div className="flex items-center gap-1">
+   489→            <span className="text-muted-foreground">Avg:</span>
+   490→            <span className={`font-semibold tabular-nums ${avgDailyPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   491→              ${avgDailyPnl >= 0 ? '+' : ''}{avgDailyPnl.toFixed(2)}
+   492→            </span>
+   493→          </div>
+   494→          <div className="flex items-center gap-1">
+   495→            <span className="text-emerald-500 font-semibold tabular-nums">{positiveDays}W</span>
+   496→            <span className="text-muted-foreground">/</span>
+   497→            <span className="text-red-500 font-semibold tabular-nums">{negativeDays}L</span>
+   498→          </div>
+   499→        </div>
+   500→        <ResponsiveContainer width="100%" height={180}>
+   501→          <BarChart data={filteredDailyPnl} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+   502→            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+   503→            <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} interval={timeframe === 'all' ? 4 : 1} />
+   504→            <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v}`} />
+   505→            <Tooltip content={<DarkTooltip />} />
+   506→            <ReferenceLine y={avgDailyPnl} stroke="#f59e0b" strokeDasharray="4 4" strokeWidth={1} />
+   507→            <Bar dataKey="pnl" radius={[2, 2, 0, 0]}>
+   508→              {filteredDailyPnl.map((entry, index) => (
+   509→                <Cell key={`cell-${index}`} fill={entry.pnl >= 0 ? '#10b981' : '#ef4444'} fillOpacity={0.8} />
+   510→              ))}
+   511→            </Bar>
+   512→          </BarChart>
+   513→        </ResponsiveContainer>
+   514→      </motion.div>
+   515→
+   516→      {/* Performance by Symbol + Performance by Session */}
+   517→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
+   518→        {/* Performance by Symbol */}
+   519→        <motion.div variants={item} className="glass-card card-hover rounded-lg p-4">
+   520→          <div className="mb-3">
+   521→            <h3 className="text-sm font-semibold">Performance by Symbol</h3>
+   522→            <p className="text-[10px] text-muted-foreground">Per-symbol breakdown of trading performance</p>
+   523→          </div>
+   524→          <div className="space-y-2.5">
+   525→            {symbolPerfData.map(sym => (
+   526→              <div key={sym.symbol} className="flex items-center gap-3">
+   527→                <div className="w-16 flex-shrink-0">
+   528→                  <div className="text-[11px] font-semibold">{sym.name}</div>
+   529→                  <div className="text-[9px] text-muted-foreground">{sym.trades} trades</div>
+   530→                </div>
+   531→                <div className="flex-1 min-w-0">
+   532→                  <div className="flex items-center justify-between mb-0.5">
+   533→                    <span className="text-[9px] text-muted-foreground">Win Rate</span>
+   534→                    <span className={`text-[10px] font-semibold tabular-nums ${sym.winRate >= 55 ? 'text-emerald-500' : sym.winRate >= 45 ? 'text-amber-500' : 'text-red-500'}`}>
+   535→                      {sym.winRate.toFixed(1)}%
+   536→                    </span>
+   537→                  </div>
+   538→                  <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+   539→                    <div
+   540→                      className={`h-full rounded-full transition-all duration-500 ${sym.winRate >= 55 ? 'bg-emerald-500' : sym.winRate >= 45 ? 'bg-amber-500' : 'bg-red-500'}`}
+   541→                      style={{ width: `${sym.winRate}%` }}
+   542→                    />
+   543→                  </div>
+   544→                </div>
+   545→                <div className="w-16 text-right flex-shrink-0">
+   546→                  <div className={`text-[11px] font-semibold tabular-nums ${sym.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   547→                    {sym.pnl >= 0 ? '+' : ''}${sym.pnl.toFixed(0)}
+   548→                  </div>
+   549→                  <div className="text-[9px] text-muted-foreground tabular-nums">{sym.avgPips.toFixed(1)} pips avg</div>
+   550→                </div>
+   551→              </div>
+   552→            ))}
+   553→          </div>
+   554→        </motion.div>
+   555→
+   556→        {/* Performance by Session */}
+   557→        <motion.div variants={item} className="glass-card card-hover rounded-lg p-4">
+   558→          <div className="mb-3">
+   559→            <h3 className="text-sm font-semibold">Performance by Session</h3>
+   560→            <p className="text-[10px] text-muted-foreground">Trading session performance comparison</p>
+   561→          </div>
+   562→          <div className="grid grid-cols-2 gap-2.5 stagger-children">
+   563→            {sessionData.map(session => (
+   564→              <div key={session.session} className="rounded-lg p-3 bg-background/40 border border-border/50">
+   565→                <div className="flex items-center gap-2 mb-2">
+   566→                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: session.color }} />
+   567→                  <span className="text-[11px] font-semibold truncate">{session.session}</span>
+   568→                </div>
+   569→                <div className="space-y-1">
+   570→                  <div className="flex justify-between">
+   571→                    <span className="text-[9px] text-muted-foreground">Trades</span>
+   572→                    <span className="text-[10px] tabular-nums font-medium">{session.trades}</span>
+   573→                  </div>
+   574→                  <div className="flex justify-between">
+   575→                    <span className="text-[9px] text-muted-foreground">Win Rate</span>
+   576→                    <span className={`text-[10px] tabular-nums font-medium ${session.winRate >= 55 ? 'text-emerald-500' : session.winRate >= 45 ? 'text-amber-500' : 'text-red-500'}`}>
+   577→                      {session.winRate.toFixed(1)}%
+   578→                    </span>
+   579→                  </div>
+   580→                  <div className="flex justify-between">
+   581→                    <span className="text-[9px] text-muted-foreground">P&L</span>
+   582→                    <span className={`text-[10px] tabular-nums font-semibold ${session.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   583→                      {session.pnl >= 0 ? '+' : ''}${session.pnl.toFixed(0)}
+   584→                    </span>
+   585→                  </div>
+   586→                </div>
+   587→              </div>
+   588→            ))}
+   589→          </div>
+   590→        </motion.div>
+   591→      </div>
+   592→
+   593→      {/* Weekly Heatmap */}
+   594→      <motion.div variants={item} className="glass-card glass-card-premium card-hover rounded-lg p-4">
+   595→        <div className="flex items-center justify-between mb-3">
+   596→          <div>
+   597→            <h3 className="text-sm font-semibold">Weekly Heatmap</h3>
+   598→            <p className="text-[10px] text-muted-foreground">Daily P&L color-coded by performance</p>
+   599→          </div>
+   600→          <div className="flex items-center gap-3 text-[9px] text-muted-foreground">
+   601→            <div className="flex items-center gap-1">
+   602→              <div className="w-3 h-3 rounded bg-emerald-500/60" />
+   603→              <span>Profit</span>
+   604→            </div>
+   605→            <div className="flex items-center gap-1">
+   606→              <div className="w-3 h-3 rounded bg-red-500/60" />
+   607→              <span>Loss</span>
+   608→            </div>
+   609→            <div className="flex items-center gap-1">
+   610→              <div className="w-3 h-3 rounded bg-slate-800/30" />
+   611→              <span>Weekend</span>
+   612→            </div>
+   613→          </div>
+   614→        </div>
+   615→        <div className="overflow-x-auto">
+   616→          <div className="min-w-[480px]">
+   617→            {/* Week headers */}
+   618→            <div className="grid grid-cols-8 gap-1 mb-1">
+   619→              <div className="text-[9px] text-muted-foreground" />
+   620→              {Array.from({ length: 5 }).map((_, i) => (
+   621→                <div key={i} className="text-[9px] text-muted-foreground text-center">W{i + 1}</div>
+   622→              ))}
+   623→            </div>
+   624→            {/* Days grid */}
+   625→            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
+   626→              const isToday = day === todayDayName;
+   627→              return (
+   628→                <div key={day} className="grid grid-cols-8 gap-1 mb-1">
+   629→                  <div className={`text-[10px] flex items-center ${isToday ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+   630→                    {day}{isToday ? ' *' : ''}
+   631→                  </div>
+   632→                  {Array.from({ length: 5 }).map((_, w) => {
+   633→                    const cell = heatmapData.find(h => h.day === day && h.week === w);
+   634→                    const pnl = cell?.pnl ?? 0;
+   635→                    const isWeekend = day === 'Sat' || day === 'Sun';
+   636→                    return (
+   637→                      <div
+   638→                        key={w}
+   639→                        className={`h-8 rounded text-[9px] flex items-center justify-center tabular-nums font-medium ${heatmapColor(pnl)} ${isToday ? 'ring-1 ring-primary/50' : ''}`}
+   640→                        title={`${day} W${w + 1}: $${pnl}`}
+   641→                      >
+   642→                        {!isWeekend && pnl !== 0 && (
+   643→                          <span className={pnl > 0 ? 'text-emerald-400' : 'text-red-400'}>
+   644→                            {pnl > 0 ? '+' : ''}{pnl}
+   645→                          </span>
+   646→                        )}
+   647→                      </div>
+   648→                    );
+   649→                  })}
+   650→                </div>
+   651→              );
+   652→            })}
+   653→            {/* Monthly summary */}
+   654→            <div className="grid grid-cols-8 gap-1 mt-2 pt-2 border-t border-border/50">
+   655→              <div className="text-[9px] text-muted-foreground">Total</div>
+   656→              {Array.from({ length: 5 }).map((_, w) => {
+   657→                const weekTotal = heatmapData.filter(h => h.week === w).reduce((s, h) => s + h.pnl, 0);
+   658→                return (
+   659→                  <div key={w} className={`text-[10px] text-center tabular-nums font-semibold ${weekTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   660→                    {weekTotal >= 0 ? '+' : ''}{weekTotal}
+   661→                  </div>
+   662→                );
+   663→              })}
+   664→            </div>
+   665→          </div>
+   666→        </div>
+   667→      </motion.div>
+   668→
+   669→      {/* Trade Distribution: Pie + Direction Bar + Duration */}
+   670→      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 stagger-children">
+   671→        {/* Win/Loss Pie */}
+   672→        <motion.div variants={item} className="glass-card card-hover rounded-lg p-4">
+   673→          <h3 className="text-sm font-semibold mb-1">Win / Loss</h3>
+   674→          <p className="text-[10px] text-muted-foreground mb-3">Trade outcome distribution</p>
+   675→          <ResponsiveContainer width="100%" height={160}>
+   676→            <PieChart>
+   677→              <Pie
+   678→                data={pieData}
+   679→                cx="50%"
+   680→                cy="50%"
+   681→                innerRadius={40}
+   682→                outerRadius={58}
+   683→                paddingAngle={3}
+   684→                dataKey="value"
+   685→                stroke="none"
+   686→              >
+   687→                {pieData.map((entry, i) => (
+   688→                  <Cell key={`pie-${i}`} fill={entry.color} fillOpacity={0.85} />
+   689→                ))}
+   690→              </Pie>
+   691→              <Tooltip content={<DarkTooltip />} />
+   692→            </PieChart>
+   693→          </ResponsiveContainer>
+   694→          <div className="flex justify-center gap-4 text-[10px]">
+   695→            <div className="flex items-center gap-1.5">
+   696→              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+   697→              <span className="text-muted-foreground">Wins: <span className="text-foreground font-medium tabular-nums">{analytics.wins}</span></span>
+   698→            </div>
+   699→            <div className="flex items-center gap-1.5">
+   700→              <div className="w-2 h-2 rounded-full bg-red-500" />
+   701→              <span className="text-muted-foreground">Losses: <span className="text-foreground font-medium tabular-nums">{analytics.losses}</span></span>
+   702→            </div>
+   703→          </div>
+   704→        </motion.div>
+   705→
+   706→        {/* Long vs Short Stacked Bar */}
+   707→        <motion.div variants={item} className="glass-card card-hover rounded-lg p-4">
+   708→          <h3 className="text-sm font-semibold mb-1">Long vs Short</h3>
+   709→          <p className="text-[10px] text-muted-foreground mb-3">Direction performance breakdown</p>
+   710→          <div className="flex items-end justify-center gap-6 h-[160px]">
+   711→            {directionData.map(d => (
+   712→              <div key={d.name} className="flex flex-col items-center gap-2">
+   713→                <div className="flex flex-col-reverse w-14 gap-0.5" style={{ height: 140 }}>
+   714→                  <div
+   715→                    className="w-full bg-emerald-500/80 rounded-t transition-all duration-500"
+   716→                    style={{ height: `${(d.wins / (analytics.longTrades + analytics.shortTrades)) * 100}%`, minHeight: d.wins > 0 ? 8 : 0 }}
+   717→                    title={`${d.name} Wins: ${d.wins}`}
+   718→                  />
+   719→                  <div
+   720→                    className="w-full bg-red-500/80 rounded-b transition-all duration-500"
+   721→                    style={{ height: `${(d.losses / (analytics.longTrades + analytics.shortTrades)) * 100}%`, minHeight: d.losses > 0 ? 8 : 0 }}
+   722→                    title={`${d.name} Losses: ${d.losses}`}
+   723→                  />
+   724→                </div>
+   725→                <div className="text-center">
+   726→                  <div className="text-[10px] font-medium">{d.name}</div>
+   727→                  <div className="text-[9px] text-muted-foreground tabular-nums">{d.wins + d.losses} trades</div>
+   728→                </div>
+   729→              </div>
+   730→            ))}
+   731→          </div>
+   732→          <div className="flex justify-center gap-4 text-[10px] mt-2">
+   733→            <div className="flex items-center gap-1.5">
+   734→              <div className="w-2 h-2 rounded-full bg-emerald-500/80" />
+   735→              <span className="text-muted-foreground">Win</span>
+   736→            </div>
+   737→            <div className="flex items-center gap-1.5">
+   738→              <div className="w-2 h-2 rounded-full bg-red-500/80" />
+   739→              <span className="text-muted-foreground">Loss</span>
+   740→            </div>
+   741→          </div>
+   742→        </motion.div>
+   743→
+   744→        {/* Duration Distribution */}
+   745→        <motion.div variants={item} className="glass-card card-hover rounded-lg p-4">
+   746→          <h3 className="text-sm font-semibold mb-1">Holding Duration</h3>
+   747→          <p className="text-[10px] text-muted-foreground mb-3">Trade length distribution</p>
+   748→          <ResponsiveContainer width="100%" height={160}>
+   749→            <PieChart>
+   750→              <Pie
+   751→                data={durationData}
+   752→                cx="50%"
+   753→                cy="50%"
+   754→                innerRadius={40}
+   755→                outerRadius={58}
+   756→                paddingAngle={3}
+   757→                dataKey="value"
+   758→                stroke="none"
+   759→              >
+   760→                {durationData.map((entry, i) => (
+   761→                  <Cell key={`dur-${i}`} fill={entry.color} fillOpacity={0.85} />
+   762→                ))}
+   763→              </Pie>
+   764→              <Tooltip content={<DarkTooltip />} />
+   765→            </PieChart>
+   766→          </ResponsiveContainer>
+   767→          <div className="flex justify-center gap-3 text-[10px] flex-wrap">
+   768→            {durationData.map(d => (
+   769→              <div key={d.name} className="flex items-center gap-1.5">
+   770→                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
+   771→                <span className="text-muted-foreground">{d.name}: <span className="text-foreground font-medium tabular-nums">{d.value}</span></span>
+   772→              </div>
+   773→            ))}
+   774→          </div>
+   775→        </motion.div>
+   776→      </div>
+   777→
+   778→      {/* Key Metrics Table */}
+   779→      <motion.div variants={item} className="glass-card card-hover rounded-lg p-4">
+   780→        <div className="mb-3">
+   781→          <h3 className="text-sm font-semibold">Key Metrics</h3>
+   782→          <p className="text-[10px] text-muted-foreground">Detailed performance statistics</p>
+   783→        </div>
+   784→        <div className="overflow-x-auto">
+   785→          <table className="w-full text-[11px]">
+   786→            <thead>
+   787→              <tr className="border-b border-border/50">
+   788→                <th className="text-left py-2 px-3 text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Metric</th>
+   789→                <th className="text-right py-2 px-3 text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Value</th>
+   790→              </tr>
+   791→            </thead>
+   792→            <tbody>
+   793→              <tr className="border-b border-border/30">
+   794→                <td className="py-2.5 px-3 text-muted-foreground">Largest Win</td>
+   795→                <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-emerald-500">+${analytics.largestWin.toFixed(2)}</td>
+   796→              </tr>
+   797→              <tr className="border-b border-border/30">
+   798→                <td className="py-2.5 px-3 text-muted-foreground">Largest Loss</td>
+   799→                <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-red-500">${analytics.largestLoss.toFixed(2)}</td>
+   800→              </tr>
+   801→              <tr className="border-b border-border/30">
+   802→                <td className="py-2.5 px-3 text-muted-foreground">Average Win</td>
+   803→                <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-emerald-500">+${analytics.avgWin.toFixed(2)}</td>
+   804→              </tr>
+   805→              <tr className="border-b border-border/30">
+   806→                <td className="py-2.5 px-3 text-muted-foreground">Average Loss</td>
+   807→                <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-red-500">${analytics.avgLoss.toFixed(2)}</td>
+   808→              </tr>
+   809→              <tr className="border-b border-border/30">
+   810→                <td className="py-2.5 px-3 text-muted-foreground">Consecutive Wins</td>
+   811→                <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-emerald-500">{analytics.maxConsWins}</td>
+   812→              </tr>
+   813→              <tr className="border-b border-border/30">
+   814→                <td className="py-2.5 px-3 text-muted-foreground">Consecutive Losses</td>
+   815→                <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-red-500">{analytics.maxConsLosses}</td>
+   816→              </tr>
+   817→              <tr className="border-b border-border/30">
+   818→                <td className="py-2.5 px-3 text-muted-foreground">Max Drawdown</td>
+   819→                <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-amber-500">{analytics.maxDrawdown.toFixed(2)}%</td>
+   820→              </tr>
+   821→              <tr>
+   822→                <td className="py-2.5 px-3 text-muted-foreground">Recovery Factor</td>
+   823→                <td className={`py-2.5 px-3 text-right font-semibold tabular-nums ${analytics.recoveryFactor >= 2 ? 'text-emerald-500' : analytics.recoveryFactor >= 1 ? 'text-amber-500' : 'text-red-500'}`}>
+   824→                  {analytics.recoveryFactor === 999 ? '∞' : analytics.recoveryFactor.toFixed(2)}
+   825→                </td>
+   826→              </tr>
+   827→            </tbody>
+   828→          </table>
+   829→        </div>
+   830→
+   831→        {/* Performance Scorecard - Weekly/Monthly Breakdown */}
+   832→        <PerformanceScorecard />
+   833→      </motion.div>
+   834→    </motion.div>
+   835→  );
+   836→}
+   837→
