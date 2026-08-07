@@ -14,7 +14,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Shield, Bell, Server, TriangleAlert, Plus, RefreshCw, Trash2, Wifi, WifiOff, Globe, HardDrive, CheckCircle, AlertCircle, Info, Filter, Zap, DollarSign, Activity, Clock, Target, Volume2 } from 'lucide-react';
+import { Shield, Bell, Server, TriangleAlert, Plus, RefreshCw, Trash2, Wifi, WifiOff, Globe, HardDrive, CheckCircle, AlertCircle, Info, Filter, Zap, DollarSign, Activity, Clock, Target, Volume2, Cpu } from 'lucide-react';
+import TradingRulesEngine from './TradingRulesEngine';
 import { setSoundEnabled } from '@/lib/sounds';
 import { SYMBOLS, type Symbol } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -141,6 +142,10 @@ export default function SettingsView() {
           <TabsTrigger value="logs" className="text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
             <TriangleAlert className="h-3.5 w-3.5 mr-1" />
             Error Logs
+          </TabsTrigger>
+          <TabsTrigger value="rules" className="text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+            <Cpu className="h-3.5 w-3.5 mr-1" />
+            Rules
           </TabsTrigger>
         </TabsList>
 
@@ -766,6 +771,10 @@ export default function SettingsView() {
               )}
             </div>
           </div>
+        </TabsContent>
+        {/* ==================== RULES TAB ==================== */}
+        <TabsContent value="rules" className="space-y-4">
+          <TradingRulesEngine />
         </TabsContent>
       </Tabs>
     </div>

@@ -1,20 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, CheckCircle, AlertTriangle, Info, AlertCircle, Menu, Trash2 } from 'lucide-react';
 import { useTradingStore } from '@/store/trading-store';
 import Sidebar from '@/components/trading/Sidebar';
-import DashboardView from '@/components/trading/DashboardView';
-import TradingView from '@/components/trading/TradingView';
-import AnalysisView from '@/components/trading/AnalysisView';
-import IndicatorsView from '@/components/trading/IndicatorsView';
-import NewsView from '@/components/trading/NewsView';
-import RiskView from '@/components/trading/RiskView';
-import BacktestingView from '@/components/trading/BacktestingView';
-import TradeJournalView from '@/components/trading/TradeJournalView';
-import PerformanceAnalyticsView from '@/components/trading/PerformanceAnalyticsView';
-import SettingsView from '@/components/trading/SettingsView';
 import QuickTradePanel from '@/components/trading/QuickTradePanel';
 import KeyboardShortcutsHelp from '@/components/trading/KeyboardShortcutsHelp';
 import OnboardingTour from '@/components/trading/OnboardingTour';
@@ -24,6 +15,72 @@ import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { usePriceSimulator } from '@/hooks/use-price-simulator';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+
+function ViewSkeleton() {
+  return (
+    <div className="p-4 pt-5 space-y-4">
+      <div className="glass-card rounded-lg p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-5 w-32 bg-white/5 rounded animate-pulse" />
+          <div className="h-4 w-48 bg-white/5 rounded animate-pulse" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-lg p-4 bg-white/[0.02] border border-border/30">
+              <div className="h-3 w-16 bg-white/5 rounded animate-pulse mb-2" />
+              <div className="h-6 w-24 bg-white/5 rounded animate-pulse mb-1" />
+              <div className="h-3 w-20 bg-white/5 rounded animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="glass-card rounded-lg p-6">
+        <div className="h-48 bg-white/[0.02] rounded animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
+const DashboardView = dynamic(() => import('@/components/trading/DashboardView'), {
+  loading: () => <ViewSkeleton />,
+  ssr: false,
+});
+const TradingView = dynamic(() => import('@/components/trading/TradingView'), {
+  loading: () => <ViewSkeleton />,
+  ssr: false,
+});
+const AnalysisView = dynamic(() => import('@/components/trading/AnalysisView'), {
+  loading: () => <ViewSkeleton />,
+  ssr: false,
+});
+const IndicatorsView = dynamic(() => import('@/components/trading/IndicatorsView'), {
+  loading: () => <ViewSkeleton />,
+  ssr: false,
+});
+const NewsView = dynamic(() => import('@/components/trading/NewsView'), {
+  loading: () => <ViewSkeleton />,
+  ssr: false,
+});
+const RiskView = dynamic(() => import('@/components/trading/RiskView'), {
+  loading: () => <ViewSkeleton />,
+  ssr: false,
+});
+const BacktestingView = dynamic(() => import('@/components/trading/BacktestingView'), {
+  loading: () => <ViewSkeleton />,
+  ssr: false,
+});
+const TradeJournalView = dynamic(() => import('@/components/trading/TradeJournalView'), {
+  loading: () => <ViewSkeleton />,
+  ssr: false,
+});
+const PerformanceAnalyticsView = dynamic(() => import('@/components/trading/PerformanceAnalyticsView'), {
+  loading: () => <ViewSkeleton />,
+  ssr: false,
+});
+const SettingsView = dynamic(() => import('@/components/trading/SettingsView'), {
+  loading: () => <ViewSkeleton />,
+  ssr: false,
+});
 
 const TOAST_LIFETIME = 5000;
 

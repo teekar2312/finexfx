@@ -1,7 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
-import type { PriceHistory } from '@/lib/types';
+import { useMemo, useState } from 'react';
+import type { PriceHistory, Symbol } from '@/lib/types';
+import { SYMBOLS, SYMBOL_INFO } from '@/lib/types';
+import { useTradingStore } from '@/store/trading-store';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CandlestickChart,
@@ -17,6 +19,13 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -27,89 +36,6 @@ interface DetectedPattern {
   description: string;
   startIndex: number;
   endIndex: number;
-}
-
-// ─── Mock Data Generator ─────────────────────────────────────────────────────
-
-function generateMockCandles(): PriceHistory[] {
-  const baseTime = Date.now() - 30 * 60 * 60 * 1000; // 30 hours ago
-  const candles: PriceHistory[] = [];
-
-  // Intentionally crafted EURUSD candles forming recognizable patterns
-  // Price range around 1.0850 - 1.0950
-
-  // Candles 0-2: Small random moves
-  candles.push({ time: baseTime, open: 1.0870, high: 1.0878, low: 1.0865, close: 1.0874, volume: 1450 });
-  candles.push({ time: baseTime + 3600000, open: 1.0874, high: 1.0882, low: 1.0868, close: 1.0870, volume: 1320 });
-  candles.push({ time: baseTime + 7200000, open: 1.0870, high: 1.0880, low: 1.0862, close: 1.0865, volume: 1580 });
-
-  // Candle 3: Small red body (pre-bullish engulfing)
-  candles.push({ time: baseTime + 10800000, open: 1.0865, high: 1.0870, low: 1.0855, close: 1.0858, volume: 1200 });
-
-  // Candle 4: Large green body engulfing candle 3 → Bullish Engulfing
-  candles.push({ time: baseTime + 14400000, open: 1.0855, high: 1.0880, low: 1.0852, close: 1.0878, volume: 2100 });
-
-  // Candle 5-6: Small moves
-  candles.push({ time: baseTime + 18000000, open: 1.0878, high: 1.0885, low: 1.0872, close: 1.0880, volume: 1400 });
-  candles.push({ time: baseTime + 21600000, open: 1.0880, high: 1.0888, low: 1.0874, close: 1.0876, volume: 1100 });
-
-  // Candle 7: Spinning Top (small body, equal wicks)
-  candles.push({ time: baseTime + 25200000, open: 1.0876, high: 1.0892, low: 1.0860, close: 1.0878, volume: 1350 });
-
-  // Candles 8-10: Morning Star pattern
-  // Candle 8: Large red (downtrend continuation)
-  candles.push({ time: baseTime + 28800000, open: 1.0878, high: 1.0882, low: 1.0858, close: 1.0860, volume: 1800 });
-  // Candle 9: Small body (star/hesitation)
-  candles.push({ time: baseTime + 32400000, open: 1.0860, high: 1.0868, low: 1.0856, close: 1.0864, volume: 900 });
-  // Candle 10: Large green (reversal confirmation)
-  candles.push({ time: baseTime + 36000000, open: 1.0866, high: 1.0892, low: 1.0864, close: 1.0888, volume: 2200 });
-
-  // Candle 11: Uptrend continuation
-  candles.push({ time: baseTime + 39600000, open: 1.0888, high: 1.0900, low: 1.0884, close: 1.0896, volume: 1600 });
-
-  // Candle 12: Doji (open ≈ close)
-  candles.push({ time: baseTime + 43200000, open: 1.0896, high: 1.0908, low: 1.0886, close: 1.0897, volume: 1050 });
-
-  // Candles 13-14: Small green then big red → Bearish Engulfing
-  candles.push({ time: baseTime + 46800000, open: 1.0897, high: 1.0906, low: 1.0892, close: 1.0904, volume: 1250 });
-  candles.push({ time: baseTime + 50400000, open: 1.0908, high: 1.0912, low: 1.0882, close: 1.0884, volume: 2050 });
-
-  // Candle 15-16: Downtrend continuation
-  candles.push({ time: baseTime + 54000000, open: 1.0884, high: 1.0890, low: 1.0872, close: 1.0876, volume: 1550 });
-  candles.push({ time: baseTime + 57600000, open: 1.0876, high: 1.0880, low: 1.0860, close: 1.0864, volume: 1700 });
-
-  // Candle 17: Hammer (small body at top, long lower wick)
-  candles.push({ time: baseTime + 61200000, open: 1.0864, high: 1.0872, low: 1.0842, close: 1.0868, volume: 1450 });
-
-  // Candle 18: Recovery
-  candles.push({ time: baseTime + 64800000, open: 1.0868, high: 1.0886, low: 1.0864, close: 1.0882, volume: 1650 });
-
-  // Candles 19-21: Evening Star pattern
-  // Candle 19: Large green (uptrend)
-  candles.push({ time: baseTime + 68400000, open: 1.0882, high: 1.0910, low: 1.0878, close: 1.0906, volume: 1900 });
-  // Candle 20: Small body (star/hesitation)
-  candles.push({ time: baseTime + 72000000, open: 1.0906, high: 1.0912, low: 1.0902, close: 1.0908, volume: 850 });
-  // Candle 21: Large red (reversal)
-  candles.push({ time: baseTime + 75600000, open: 1.0904, high: 1.0910, low: 1.0876, close: 1.0878, volume: 2150 });
-
-  // Candle 22: Downtrend
-  candles.push({ time: baseTime + 79200000, open: 1.0878, high: 1.0884, low: 1.0864, close: 1.0868, volume: 1400 });
-
-  // Candle 23: Inverted Hammer (small body at bottom, long upper wick)
-  candles.push({ time: baseTime + 82800000, open: 1.0868, high: 1.0894, low: 1.0864, close: 1.0870, volume: 1300 });
-
-  // Candle 24-25: Another Spinning Top
-  candles.push({ time: baseTime + 86400000, open: 1.0870, high: 1.0888, low: 1.0854, close: 1.0872, volume: 1500 });
-  candles.push({ time: baseTime + 90000000, open: 1.0872, high: 1.0884, low: 1.0858, close: 1.0866, volume: 1150 });
-
-  // Candle 26: Doji #2
-  candles.push({ time: baseTime + 93600000, open: 1.0866, high: 1.0878, low: 1.0856, close: 1.0867, volume: 980 });
-
-  // Candle 27-28: Bearish Engulfing #2
-  candles.push({ time: baseTime + 97200000, open: 1.0867, high: 1.0880, low: 1.0862, close: 1.0876, volume: 1380 });
-  candles.push({ time: baseTime + 100800000, open: 1.0882, high: 1.0886, low: 1.0848, close: 1.0852, volume: 1980 });
-
-  return candles;
 }
 
 // ─── Pattern Detection ────────────────────────────────────────────────────────
@@ -333,14 +259,6 @@ function patternBorderColor(type: 'bullish' | 'bearish' | 'neutral'): string {
       : '#fbbf24';
 }
 
-function patternLabelColor(type: 'bullish' | 'bearish' | 'neutral'): string {
-  return type === 'bullish'
-    ? 'text-emerald-400'
-    : type === 'bearish'
-      ? 'text-red-400'
-      : 'text-amber-400';
-}
-
 // ─── SVG Candlestick Chart ───────────────────────────────────────────────────
 
 interface ChartProps {
@@ -350,6 +268,8 @@ interface ChartProps {
   chartHeight: number;
   priceTop: number;
   priceBottom: number;
+  symbolLabel: string;
+  digits: number;
 }
 
 function CandlestickChartSVG({
@@ -359,6 +279,8 @@ function CandlestickChartSVG({
   chartHeight,
   priceTop,
   priceBottom,
+  symbolLabel,
+  digits,
 }: ChartProps) {
   const padding = { top: 40, right: 12, bottom: 32, left: 56 };
   const plotWidth = chartWidth - padding.left - padding.right;
@@ -372,12 +294,12 @@ function CandlestickChartSVG({
   const xScale = (index: number) =>
     padding.left + candleSpacing * index + candleSpacing / 2;
 
-  // Price grid lines
+  // Price grid lines — dynamic step based on visible range
   const priceRange = priceTop - priceBottom;
-  const gridStep = priceRange > 0.01 ? 0.002 : priceRange > 0.005 ? 0.001 : 0.0005;
+  const gridStep = priceRange > 50 ? 10 : priceRange > 5 ? 1 : priceRange > 1 ? 0.1 : priceRange > 0.01 ? 0.002 : priceRange > 0.005 ? 0.001 : 0.0005;
   const gridPrices: number[] = [];
   for (let p = Math.ceil(priceBottom / gridStep) * gridStep; p <= priceTop; p += gridStep) {
-    gridPrices.push(parseFloat(p.toFixed(5)));
+    gridPrices.push(parseFloat(p.toFixed(digits)));
   }
 
   // Build highlighted zones for patterns
@@ -430,7 +352,7 @@ function CandlestickChartSVG({
             fontSize={9}
             fontFamily="monospace"
           >
-            {price.toFixed(4)}
+            {price.toFixed(digits - 1)}
           </text>
         </g>
       ))}
@@ -539,7 +461,7 @@ function CandlestickChartSVG({
         fontWeight={600}
         fontFamily="system-ui, sans-serif"
       >
-        EUR/USD · H1
+        {symbolLabel} · H1
       </text>
     </svg>
   );
@@ -548,16 +470,24 @@ function CandlestickChartSVG({
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function CandlestickPatternRecognition() {
-  const candles = useMemo(() => generateMockCandles(), []);
+  const priceHistory = useTradingStore((s) => s.priceHistory);
+  const activeTab = useTradingStore((s) => s.activeTab);
+  const [selectedSymbol, setSelectedSymbol] = useState<Symbol>('EURUSD');
+
+  const candles = priceHistory[selectedSymbol] ?? [];
+
+  const digits = SYMBOL_INFO[selectedSymbol].digits;
+  const symbolLabel = SYMBOL_INFO[selectedSymbol].name;
+
   const patterns = useMemo(() => detectPatterns(candles), [candles]);
 
-  // Compute price bounds for chart
+  // Compute price bounds for chart — padding proportional to range
   const priceTop = useMemo(
-    () => Math.max(...candles.map((c) => c.high)) + 0.0005,
+    () => Math.max(...candles.map((c) => c.high)) + (candles.length > 0 ? (Math.max(...candles.map((c) => c.high)) - Math.min(...candles.map((c) => c.low))) * 0.05 : 0.001),
     [candles],
   );
   const priceBottom = useMemo(
-    () => Math.min(...candles.map((c) => c.low)) - 0.0005,
+    () => Math.min(...candles.map((c) => c.low)) - (candles.length > 0 ? (Math.max(...candles.map((c) => c.high)) - Math.min(...candles.map((c) => c.low))) * 0.05 : 0.001),
     [candles],
   );
 
@@ -590,6 +520,8 @@ export default function CandlestickPatternRecognition() {
     },
   } as const;
 
+  const hasData = candles.length > 0;
+
   return (
     <div className="glass-card-premium rounded-xl overflow-hidden">
       {/* Header */}
@@ -603,218 +535,251 @@ export default function CandlestickPatternRecognition() {
               Candlestick Pattern Recognition
             </h3>
             <p className="text-[10px] text-muted-foreground mt-0.5">
-              {candles.length} candles analyzed · {patterns.length} patterns detected
+              {hasData
+                ? `${candles.length} candles analyzed · ${patterns.length} patterns detected`
+                : 'No candle data available'}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
-          <Eye className="h-3.5 w-3.5 text-amber-400" />
-          <span className="text-[10px] text-amber-300 font-medium">AI Scan</span>
-        </div>
-      </div>
-
-      {/* Statistics Bar */}
-      <div className="mx-4 mb-3 grid grid-cols-2 md:grid-cols-4 gap-2">
-        <div className="glass-card rounded-lg px-3 py-2 flex items-center gap-2">
-          <BarChart3 className="h-3.5 w-3.5 text-slate-400" />
-          <div className="flex flex-col">
-            <span className="text-[9px] text-muted-foreground leading-none">
-              Total Patterns
-            </span>
-            <span className="text-xs font-semibold text-foreground font-mono mt-0.5">
-              {patterns.length}
-            </span>
-          </div>
-        </div>
-        <div className="glass-card rounded-lg px-3 py-2 flex items-center gap-2">
-          <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
-          <div className="flex flex-col">
-            <span className="text-[9px] text-muted-foreground leading-none">
-              Bullish
-            </span>
-            <span className="text-xs font-semibold text-emerald-400 font-mono mt-0.5">
-              {bullishCount}
-            </span>
-          </div>
-        </div>
-        <div className="glass-card rounded-lg px-3 py-2 flex items-center gap-2">
-          <TrendingDown className="h-3.5 w-3.5 text-red-400" />
-          <div className="flex flex-col">
-            <span className="text-[9px] text-muted-foreground leading-none">
-              Bearish
-            </span>
-            <span className="text-xs font-semibold text-red-400 font-mono mt-0.5">
-              {bearishCount}
-            </span>
-          </div>
-        </div>
-        <div className="glass-card rounded-lg px-3 py-2 flex items-center gap-2">
-          <Flame className="h-3.5 w-3.5 text-amber-400" />
-          <div className="flex flex-col">
-            <span className="text-[9px] text-muted-foreground leading-none">
-              Most Common
-            </span>
-            <span className="text-[10px] font-semibold text-foreground leading-tight mt-0.5 truncate max-w-[80px]">
-              {mostCommon}
-            </span>
+        <div className="flex items-center gap-2">
+          <Select value={selectedSymbol} onValueChange={(v) => setSelectedSymbol(v as Symbol)}>
+            <SelectTrigger size="sm" className="h-7 text-[10px] font-medium border-white/10 bg-white/[0.04] w-[100px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SYMBOLS.map((sym) => (
+                <SelectItem key={sym} value={sym} className="text-xs">
+                  {SYMBOL_INFO[sym].name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <Eye className="h-3.5 w-3.5 text-amber-400" />
+            <span className="text-[10px] text-amber-300 font-medium">AI Scan</span>
           </div>
         </div>
       </div>
 
-      {/* Candlestick Chart */}
-      <div className="mx-4 mb-3 rounded-lg overflow-hidden border border-white/[0.04]">
-        <div className="w-full" style={{ height: 280 }}>
-          <CandlestickChartSVG
-            candles={candles}
-            patterns={patterns}
-            chartWidth={900}
-            chartHeight={280}
-            priceTop={priceTop}
-            priceBottom={priceBottom}
-          />
+      {!hasData ? (
+        /* Empty state */
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <div className="w-12 h-12 rounded-full bg-slate-500/10 flex items-center justify-center mb-3">
+            <CandlestickChart className="h-6 w-6 text-slate-500" />
+          </div>
+          <p className="text-sm text-muted-foreground font-medium">Waiting for candle data</p>
+          <p className="text-[11px] text-muted-foreground/60 mt-1">
+            {symbolLabel} price history will appear here once ticks arrive
+          </p>
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Statistics Bar */}
+          <div className="mx-4 mb-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="glass-card rounded-lg px-3 py-2 flex items-center gap-2">
+              <BarChart3 className="h-3.5 w-3.5 text-slate-400" />
+              <div className="flex flex-col">
+                <span className="text-[9px] text-muted-foreground leading-none">
+                  Total Patterns
+                </span>
+                <span className="text-xs font-semibold text-foreground font-mono mt-0.5">
+                  {patterns.length}
+                </span>
+              </div>
+            </div>
+            <div className="glass-card rounded-lg px-3 py-2 flex items-center gap-2">
+              <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+              <div className="flex flex-col">
+                <span className="text-[9px] text-muted-foreground leading-none">
+                  Bullish
+                </span>
+                <span className="text-xs font-semibold text-emerald-400 font-mono mt-0.5">
+                  {bullishCount}
+                </span>
+              </div>
+            </div>
+            <div className="glass-card rounded-lg px-3 py-2 flex items-center gap-2">
+              <TrendingDown className="h-3.5 w-3.5 text-red-400" />
+              <div className="flex flex-col">
+                <span className="text-[9px] text-muted-foreground leading-none">
+                  Bearish
+                </span>
+                <span className="text-xs font-semibold text-red-400 font-mono mt-0.5">
+                  {bearishCount}
+                </span>
+              </div>
+            </div>
+            <div className="glass-card rounded-lg px-3 py-2 flex items-center gap-2">
+              <Flame className="h-3.5 w-3.5 text-amber-400" />
+              <div className="flex flex-col">
+                <span className="text-[9px] text-muted-foreground leading-none">
+                  Most Common
+                </span>
+                <span className="text-[10px] font-semibold text-foreground leading-tight mt-0.5 truncate max-w-[80px]">
+                  {mostCommon}
+                </span>
+              </div>
+            </div>
+          </div>
 
-      {/* Pattern List */}
-      <div className="px-4 pb-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Target className="h-3.5 w-3.5 text-slate-400" />
-          <span className="text-[11px] font-medium text-muted-foreground">
-            Detected Patterns
-          </span>
-          <div className="flex-1 h-px bg-white/[0.06]" />
-        </div>
+          {/* Candlestick Chart */}
+          <div className="mx-4 mb-3 rounded-lg overflow-hidden border border-white/[0.04]">
+            <div className="w-full" style={{ height: 280 }}>
+              <CandlestickChartSVG
+                candles={candles}
+                patterns={patterns}
+                chartWidth={900}
+                chartHeight={280}
+                priceTop={priceTop}
+                priceBottom={priceBottom}
+                symbolLabel={symbolLabel}
+                digits={digits}
+              />
+            </div>
+          </div>
 
-        <div className="max-h-72 overflow-y-auto scrollbar-thin space-y-1.5 pr-1">
-          <AnimatePresence mode="popLayout">
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="space-y-1.5"
-            >
-              {patterns.map((pattern, idx) => (
+          {/* Pattern List */}
+          <div className="px-4 pb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="h-3.5 w-3.5 text-slate-400" />
+              <span className="text-[11px] font-medium text-muted-foreground">
+                Detected Patterns
+              </span>
+              <div className="flex-1 h-px bg-white/[0.06]" />
+            </div>
+
+            <div className="max-h-72 overflow-y-auto scrollbar-thin space-y-1.5 pr-1">
+              <AnimatePresence mode="popLayout">
                 <motion.div
-                  key={`pattern-${idx}-${pattern.name}-${pattern.startIndex}`}
-                  variants={itemVariants}
-                  layout
-                  className={`glass-card rounded-lg px-3 py-2.5 transition-colors border ${
-                    pattern.type === 'bullish'
-                      ? 'border-emerald-500/15 hover:border-emerald-500/30'
-                      : pattern.type === 'bearish'
-                        ? 'border-red-500/15 hover:border-red-500/30'
-                        : 'border-amber-500/15 hover:border-amber-500/30'
-                  }`}
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="space-y-1.5"
                 >
-                  <div className="flex items-start gap-2.5">
-                    {/* Icon */}
-                    <div
-                      className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${
+                  {patterns.map((pattern, idx) => (
+                    <motion.div
+                      key={`pattern-${idx}-${pattern.name}-${pattern.startIndex}`}
+                      variants={itemVariants}
+                      layout
+                      className={`glass-card rounded-lg px-3 py-2.5 transition-colors border ${
                         pattern.type === 'bullish'
-                          ? 'bg-emerald-500/15 text-emerald-400'
+                          ? 'border-emerald-500/15 hover:border-emerald-500/30'
                           : pattern.type === 'bearish'
-                            ? 'bg-red-500/15 text-red-400'
-                            : 'bg-amber-500/15 text-amber-400'
+                            ? 'border-red-500/15 hover:border-red-500/30'
+                            : 'border-amber-500/15 hover:border-amber-500/30'
                       }`}
                     >
-                      {patternIcon(pattern.name)}
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-semibold text-foreground">
-                          {pattern.name}
-                        </span>
-                        {/* Type badge */}
-                        <span
-                          className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full leading-none ${
+                      <div className="flex items-start gap-2.5">
+                        {/* Icon */}
+                        <div
+                          className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${
                             pattern.type === 'bullish'
-                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
+                              ? 'bg-emerald-500/15 text-emerald-400'
                               : pattern.type === 'bearish'
-                                ? 'bg-red-500/15 text-red-400 border border-red-500/25'
-                                : 'bg-amber-500/15 text-amber-400 border border-amber-500/25'
+                                ? 'bg-red-500/15 text-red-400'
+                                : 'bg-amber-500/15 text-amber-400'
                           }`}
                         >
-                          {pattern.type.charAt(0).toUpperCase() + pattern.type.slice(1)}
-                        </span>
-                        {/* Reliability */}
-                        <span className="flex items-center gap-0.5">
-                          {Array.from({ length: 3 }).map((_, s) => (
-                            <Star
-                              key={s}
-                              className={`h-2.5 w-2.5 ${
-                                s < reliabilityStars(pattern.reliability)
-                                  ? pattern.reliability === 'High'
-                                    ? 'text-emerald-400 fill-emerald-400/80'
-                                    : pattern.reliability === 'Medium'
-                                      ? 'text-amber-400 fill-amber-400/80'
-                                      : 'text-slate-500 fill-slate-500/60'
-                                  : 'text-slate-700 fill-transparent'
+                          {patternIcon(pattern.name)}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-semibold text-foreground">
+                              {pattern.name}
+                            </span>
+                            {/* Type badge */}
+                            <span
+                              className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full leading-none ${
+                                pattern.type === 'bullish'
+                                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
+                                  : pattern.type === 'bearish'
+                                    ? 'bg-red-500/15 text-red-400 border border-red-500/25'
+                                    : 'bg-amber-500/15 text-amber-400 border border-amber-500/25'
                               }`}
-                            />
-                          ))}
-                          <span className="text-[9px] text-muted-foreground ml-1">
-                            {pattern.reliability}
-                          </span>
-                        </span>
+                            >
+                              {pattern.type.charAt(0).toUpperCase() + pattern.type.slice(1)}
+                            </span>
+                            {/* Reliability */}
+                            <span className="flex items-center gap-0.5">
+                              {Array.from({ length: 3 }).map((_, s) => (
+                                <Star
+                                  key={s}
+                                  className={`h-2.5 w-2.5 ${
+                                    s < reliabilityStars(pattern.reliability)
+                                      ? pattern.reliability === 'High'
+                                        ? 'text-emerald-400 fill-emerald-400/80'
+                                        : pattern.reliability === 'Medium'
+                                          ? 'text-amber-400 fill-amber-400/80'
+                                          : 'text-slate-500 fill-slate-500/60'
+                                      : 'text-slate-700 fill-transparent'
+                                  }`}
+                                />
+                              ))}
+                              <span className="text-[9px] text-muted-foreground ml-1">
+                                {pattern.reliability}
+                              </span>
+                            </span>
+                          </div>
+
+                          {/* Description */}
+                          <p className="text-[10px] text-muted-foreground leading-relaxed mt-1 line-clamp-2">
+                            {pattern.description}
+                          </p>
+
+                          {/* Candle index & time range */}
+                          <div className="flex items-center gap-3 mt-1.5">
+                            <span className="text-[9px] text-muted-foreground/70 font-mono">
+                              Candle #{pattern.startIndex}
+                              {pattern.endIndex !== pattern.startIndex &&
+                                `–#${pattern.endIndex}`}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground/70 font-mono">
+                              {formatTime(candles[pattern.startIndex].time)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Price context */}
+                        <div className="flex flex-col items-end shrink-0">
+                          {pattern.endIndex !== pattern.startIndex ? (
+                            <>
+                              <span className="text-[10px] font-mono text-muted-foreground">
+                                {candles[pattern.startIndex].close.toFixed(digits)}
+                              </span>
+                              <span
+                                className={`text-[10px] font-mono font-medium ${
+                                  candles[pattern.endIndex].close >
+                                  candles[pattern.startIndex].close
+                                    ? 'text-emerald-400'
+                                    : 'text-red-400'
+                                }`}
+                              >
+                                {candles[pattern.endIndex].close.toFixed(digits)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-[10px] font-mono text-muted-foreground">
+                              {candles[pattern.startIndex].close.toFixed(digits)}
+                            </span>
+                          )}
+                        </div>
                       </div>
-
-                      {/* Description */}
-                      <p className="text-[10px] text-muted-foreground leading-relaxed mt-1 line-clamp-2">
-                        {pattern.description}
-                      </p>
-
-                      {/* Candle index & time range */}
-                      <div className="flex items-center gap-3 mt-1.5">
-                        <span className="text-[9px] text-muted-foreground/70 font-mono">
-                          Candle #{pattern.startIndex}
-                          {pattern.endIndex !== pattern.startIndex &&
-                            `–#${pattern.endIndex}`}
-                        </span>
-                        <span className="text-[9px] text-muted-foreground/70 font-mono">
-                          {formatTime(candles[pattern.startIndex].time)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Price context */}
-                    <div className="flex flex-col items-end shrink-0">
-                      {pattern.endIndex !== pattern.startIndex ? (
-                        <>
-                          <span className="text-[10px] font-mono text-muted-foreground">
-                            {candles[pattern.startIndex].close.toFixed(5)}
-                          </span>
-                          <span
-                            className={`text-[10px] font-mono font-medium ${
-                              candles[pattern.endIndex].close >
-                              candles[pattern.startIndex].close
-                                ? 'text-emerald-400'
-                                : 'text-red-400'
-                            }`}
-                          >
-                            {candles[pattern.endIndex].close.toFixed(5)}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-[10px] font-mono text-muted-foreground">
-                          {candles[pattern.startIndex].close.toFixed(5)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                    </motion.div>
+                  ))}
                 </motion.div>
-              ))}
-            </motion.div>
-          </AnimatePresence>
+              </AnimatePresence>
 
-          {patterns.length === 0 && (
-            <div className="text-center py-6 text-muted-foreground text-xs">
-              No patterns detected in current data
+              {patterns.length === 0 && (
+                <div className="text-center py-6 text-muted-foreground text-xs">
+                  No patterns detected in current data
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

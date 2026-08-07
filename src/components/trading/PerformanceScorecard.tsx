@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Award,
@@ -14,6 +14,7 @@ import {
   Clock,
   Star,
 } from 'lucide-react';
+import { useTradingStore } from '@/store/trading-store';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -49,23 +50,272 @@ interface MonthlySummary {
   consistencyScore: number;
   grade: string;
   gradeColor: 'emerald' | 'amber' | 'red';
+  totalSessions: number;
+  monthLabel: string;
 }
 
 type Timeframe = 'weekly' | 'monthly';
 
-// ─── Seeded Random ──────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function createSeededRandom(seed: number) {
-  let s = seed;
-  return () => {
-    s = (s * 16807 + 0) % 2147483647;
-    return (s - 1) / 2147483646;
+function pnlColor(value: number): string {
+  if (value > 0) return 'text-emerald-400';
+  if (value < 0) return 'text-red-400';
+  return 'text-amber-400';
+}
+
+function formatPnl(value: number): string {
+  return `${value > 0 ? '+' : ''}$${value.toFixed(1)}`;
+}
+
+function getMonday(d: Date): Date {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  date.setDate(diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function buildWeeklyData(
+  closedTrades: { profit: number; symbol: string; strategy?: string; closedAt?: string }[],
+): WeekSummary[] {
+  if (closedTrades.length === 0) return [];
+
+  // Group trades by week (Monday-based) then by day
+  const weekMap = new Map<string, Map<string, typeof closedTrades>>();
+
+  for (const trade of closedTrades) {
+    if (!trade.closedAt) continue;
+    const closedDate = new Date(trade.closedAt);
+    const monday = getMonday(closedDate);
+    const weekKey = monday.toISOString().slice(0, 10);
+    const dayKey = closedDate.toISOString().slice(0, 10);
+
+    if (!weekMap.has(weekKey)) weekMap.set(weekKey, new Map());
+    const dayMap = weekMap.get(weekKey)!;
+    if (!dayMap.has(dayKey)) dayMap.set(dayKey, []);
+    dayMap.get(dayKey)!.push(trade);
+  }
+
+  // Sort weeks chronologically
+  const sortedWeeks = [...weekMap.entries()].sort(
+    (a, b) => a[0].localeCompare(b[0]),
+  );
+
+  const weeks: WeekSummary[] = [];
+
+  sortedWeeks.forEach(([weekKey, dayMap], wIdx) => {
+    const monday = new Date(weekKey + 'T00:00:00');
+    const friday = new Date(monday);
+    friday.setDate(friday.getDate() + 4);
+
+    const weekLabel = `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${friday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+
+    const days: DayData[] = [];
+    const sortedDays = [...dayMap.entries()].sort((a, b) =>
+      a[0].localeCompare(b[0]),
+    );
+
+    let weekPnl = 0;
+    let weekTradeCount = 0;
+    let weekWins = 0;
+
+    sortedDays.forEach(([, trades]) => {
+      const sortedTrades = [...trades].sort(
+        (a, b) =>
+          new Date(a.closedAt!).getTime() - new Date(b.closedAt!).getTime(),
+      );
+
+      const tradeCount = trades.length;
+      const wins = trades.filter((t) => t.profit > 0).length;
+      const pnl = trades.reduce((s, t) => s + t.profit, 0);
+      const winRate =
+        tradeCount > 0 ? Math.round((wins / tradeCount) * 1000) / 10 : 0;
+
+      // Best pair: pair with highest total profit
+      const pairPnl = new Map<string, number>();
+      const strategyPnl = new Map<string, number>();
+      for (const t of trades) {
+        pairPnl.set(t.symbol, (pairPnl.get(t.symbol) ?? 0) + t.profit);
+        const strat = t.strategy || 'Manual';
+        strategyPnl.set(strat, (strategyPnl.get(strat) ?? 0) + t.profit);
+      }
+      const bestPairEntry = [...pairPnl.entries()].sort(
+        (a, b) => b[1] - a[1],
+      )[0];
+      const bestStrategyEntry = [...strategyPnl.entries()].sort(
+        (a, b) => b[1] - a[1],
+      )[0];
+
+      // Sparkline: cumulative P&L per trade within day
+      const sparkline: number[] = [];
+      let running = 0;
+      for (const t of sortedTrades) {
+        running += t.profit;
+        sparkline.push(Math.round(running * 10) / 10);
+      }
+
+      const dayDate = new Date(sortedTrades[0].closedAt!);
+      const dateStr = dayDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+
+      days.push({
+        date: dateStr,
+        dayLabel: DAY_LABELS[dayDate.getDay()],
+        trades: tradeCount,
+        winRate,
+        pnl: Math.round(pnl * 10) / 10,
+        bestPair: bestPairEntry ? bestPairEntry[0] : '—',
+        bestStrategy: bestStrategyEntry ? bestStrategyEntry[0] : '—',
+        sparkline,
+      });
+
+      weekPnl += pnl;
+      weekTradeCount += tradeCount;
+      weekWins += wins;
+    });
+
+    const weekWinRate =
+      weekTradeCount > 0
+        ? Math.round((weekWins / weekTradeCount) * 1000) / 10
+        : 0;
+    const tradingDays = days.length || 1;
+    const avgDailyPnl = Math.round((weekPnl / tradingDays) * 10) / 10;
+
+    // Sharpe-like score
+    const mean = weekPnl / tradingDays;
+    const variance =
+      days.reduce((acc, day) => acc + Math.pow(day.pnl - mean, 2), 0) /
+      tradingDays;
+    const std = Math.sqrt(variance) || 1;
+    const sharpeScore = Math.round((mean / std) * 100) / 100;
+
+    const sorted = [...days].sort((a, b) => b.pnl - a.pnl);
+    const bestDay = `${sorted[0].dayLabel} (+$${sorted[0].pnl.toFixed(0)})`;
+    const worstDay = `${sorted[sorted.length - 1].dayLabel} ($${sorted[sorted.length - 1].pnl.toFixed(0)})`;
+
+    const sparkline = days.map((d) => d.pnl);
+
+    weeks.push({
+      weekIndex: wIdx,
+      label: `Week ${wIdx + 1}`,
+      totalPnl: Math.round(weekPnl * 10) / 10,
+      avgDailyPnl,
+      bestDay,
+      worstDay,
+      winRate: weekWinRate,
+      sharpeScore,
+      sparkline,
+      days,
+    });
+  });
+
+  return weeks;
+}
+
+function computeMonthlySummary(weeks: WeekSummary[]): MonthlySummary {
+  if (weeks.length === 0) {
+    return {
+      totalPnl: 0,
+      totalTrades: 0,
+      winRate: 0,
+      bestWeek: 0,
+      consistencyScore: 0,
+      grade: '—',
+      gradeColor: 'amber',
+      totalSessions: 0,
+      monthLabel: '',
+    };
+  }
+
+  const totalPnl = Math.round(
+    weeks.reduce((s, w) => s + w.totalPnl, 0) * 10,
+  ) / 10;
+  const totalTrades = weeks.reduce(
+    (s, w) => s + w.days.reduce((ds, d) => ds + d.trades, 0),
+    0,
+  );
+  const totalWins = weeks.reduce(
+    (s, w) =>
+      s + w.days.reduce((ds, d) => ds + d.trades * (d.winRate / 100), 0),
+    0,
+  );
+  const winRate =
+    totalTrades > 0
+      ? Math.round((totalWins / totalTrades) * 1000) / 10
+      : 0;
+
+  const bestWeekIdx = weeks.reduce(
+    (best, w, i) => (w.totalPnl > weeks[best].totalPnl ? i : best),
+    0,
+  );
+
+  const totalSessions = weeks.reduce(
+    (s, w) => s + w.days.length,
+    0,
+  );
+
+  const profitableWeeks = weeks.filter((w) => w.totalPnl > 0).length;
+  const consistencyScore = Math.round(
+    (profitableWeeks / weeks.length) * 100,
+  );
+
+  // Month label from first week's first day
+  const firstDate = weeks[0].days[0]?.date || '';
+  const monthLabel = firstDate
+    ? `${firstDate.split(' ')[0]} ${new Date().getFullYear()}`
+    : '';
+
+  let grade: string;
+  let gradeColor: 'emerald' | 'amber' | 'red';
+
+  if (totalPnl > 500 && consistencyScore > 65) {
+    grade = 'A+';
+    gradeColor = 'emerald';
+  } else if (totalPnl > 350 && consistencyScore >= 50) {
+    grade = 'A';
+    gradeColor = 'emerald';
+  } else if (totalPnl > 200 && consistencyScore >= 50) {
+    grade = 'B+';
+    gradeColor = 'emerald';
+  } else if (totalPnl > 100) {
+    grade = 'B';
+    gradeColor = 'amber';
+  } else if (totalPnl > 0 && consistencyScore >= 50) {
+    grade = 'C';
+    gradeColor = 'amber';
+  } else if (totalPnl > -50) {
+    grade = 'C-';
+    gradeColor = 'amber';
+  } else if (totalPnl > -200) {
+    grade = 'D';
+    gradeColor = 'red';
+  } else {
+    grade = 'F';
+    gradeColor = 'red';
+  }
+
+  return {
+    totalPnl,
+    totalTrades,
+    winRate,
+    bestWeek: bestWeekIdx,
+    consistencyScore,
+    grade,
+    gradeColor,
+    totalSessions,
+    monthLabel,
   };
 }
 
 // ─── Sparkline SVG ────────────────────────────────────────────────────────────
 
-function MiniSparkline({
+const MiniSparkline = memo(function MiniSparkline({
   values,
   width = 64,
   height = 22,
@@ -89,21 +339,13 @@ function MiniSparkline({
   const isUp = values[values.length - 1] >= values[0];
   const color = isUp ? '#10b981' : '#ef4444';
 
-  // Compute area fill
-  const areaPoints = values
-    .map((v, i) => {
-      const x = pad + (i / (values.length - 1)) * (width - pad * 2);
-      const y = pad + (1 - (v - min) / range) * (height - pad * 2);
-      return `${x},${y}`;
-    })
-    .join(' ');
   const areaClose = `${pad + (width - pad * 2)},${height} ${pad},${height}`;
 
   return (
     <svg width={width} height={height} className="inline-block flex-shrink-0">
       <polygon
         fill={isUp ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)'}
-        points={`${areaPoints} ${areaClose}`}
+        points={`${points} ${areaClose}`}
       />
       <polyline
         fill="none"
@@ -115,11 +357,11 @@ function MiniSparkline({
       />
     </svg>
   );
-}
+});
 
 // ─── Circular Mini Gauge ─────────────────────────────────────────────────────
 
-function WinRateGauge({ value }: { value: number }) {
+const WinRateGauge = memo(function WinRateGauge({ value }: { value: number }) {
   const radius = 14;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (value / 100) * circumference;
@@ -162,189 +404,7 @@ function WinRateGauge({ value }: { value: number }) {
       </text>
     </svg>
   );
-}
-
-// ─── Mock Data Generator ──────────────────────────────────────────────────────
-
-const PAIRS = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'AUDUSD', 'USDCAD'];
-const STRATEGIES = [
-  'Scalp',
-  'Breakout',
-  'Swing',
-  'Momentum',
-  'Mean Revert',
-  'Trend Follow',
-];
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-
-function generateWeeklyData(): WeekSummary[] {
-  const weeks: WeekSummary[] = [];
-  const baseDate = new Date(2025, 0, 6); // Monday Jan 6 2025
-
-  for (let w = 0; w < 4; w++) {
-    const rng = createSeededRandom(42 + w * 137);
-    const days: DayData[] = [];
-    let weekPnl = 0;
-    let weekTrades = 0;
-    let weekWins = 0;
-
-    for (let d = 0; d < 5; d++) {
-      const date = new Date(baseDate);
-      date.setDate(date.getDate() + w * 7 + d);
-      const dateStr = date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      });
-
-      const trades = Math.floor(rng() * 8) + 3; // 3-10 trades
-      const winRate = 35 + rng() * 40; // 35-75%
-      const pnlBase = (rng() - 0.38) * 120; // slight positive bias
-      const pnl = Math.round(pnlBase * 10) / 10;
-      const bestPair = PAIRS[Math.floor(rng() * PAIRS.length)];
-      const bestStrategy = STRATEGIES[Math.floor(rng() * STRATEGIES.length)];
-
-      // Generate 5 intraday points for sparkline
-      const sparkline: number[] = [];
-      let running = 0;
-      for (let s = 0; s < 5; s++) {
-        running += (rng() - 0.4) * 30;
-        sparkline.push(Math.round(running * 10) / 10);
-      }
-
-      weekPnl += pnl;
-      weekTrades += trades;
-      weekWins += trades * (winRate / 100);
-
-      days.push({
-        date: dateStr,
-        dayLabel: DAY_LABELS[d],
-        trades,
-        winRate,
-        pnl,
-        bestPair,
-        bestStrategy,
-        sparkline,
-      });
-    }
-
-    const weekWinRate = Math.round((weekWins / weekTrades) * 1000) / 10;
-    const avgDailyPnl = Math.round((weekPnl / 5) * 10) / 10;
-
-    // Sharpe-like score: reward high avg pnl, penalize variance
-    const mean = weekPnl / 5;
-    const variance =
-      days.reduce((acc, day) => acc + Math.pow(day.pnl - mean, 2), 0) / 5;
-    const std = Math.sqrt(variance) || 1;
-    const sharpeScore = Math.round((mean / std) * 100) / 100;
-
-    const sorted = [...days].sort((a, b) => b.pnl - a.pnl);
-    const bestDay = `${sorted[0].dayLabel} (+$${sorted[0].pnl.toFixed(0)})`;
-    const worstDay = `${sorted[sorted.length - 1].dayLabel} ($${sorted[sorted.length - 1].pnl.toFixed(0)})`;
-
-    const sparkline = days.map((d) => d.pnl);
-
-    weeks.push({
-      weekIndex: w,
-      label: `Week ${w + 1}`,
-      totalPnl: Math.round(weekPnl * 10) / 10,
-      avgDailyPnl,
-      bestDay,
-      worstDay,
-      winRate: weekWinRate,
-      sharpeScore,
-      sparkline,
-      days,
-    });
-  }
-
-  return weeks;
-}
-
-function computeMonthlySummary(weeks: WeekSummary[]): MonthlySummary {
-  const totalPnl = Math.round(
-    weeks.reduce((s, w) => s + w.totalPnl, 0) * 10
-  ) / 10;
-  const totalTrades = weeks.reduce(
-    (s, w) => s + w.days.reduce((ds, d) => ds + d.trades, 0),
-    0
-  );
-  const totalWins = weeks.reduce(
-    (s, w) => s + w.days.reduce((ds, d) => ds + d.trades * (d.winRate / 100), 0),
-    0
-  );
-  const winRate = Math.round((totalWins / totalTrades) * 1000) / 10;
-
-  const bestWeekIdx = weeks.reduce(
-    (best, w, i) => (w.totalPnl > weeks[best].totalPnl ? i : best),
-    0
-  );
-
-  // Consistency: how many weeks are profitable
-  const profitableWeeks = weeks.filter((w) => w.totalPnl > 0).length;
-  const consistencyScore = Math.round((profitableWeeks / 4) * 100);
-
-  // Grade calculation
-  let grade: string;
-  let gradeColor: 'emerald' | 'amber' | 'red';
-
-  if (totalPnl > 500 && consistencyScore > 65) {
-    grade = 'A+';
-    gradeColor = 'emerald';
-  } else if (totalPnl > 350 && consistencyScore >= 50) {
-    grade = 'A';
-    gradeColor = 'emerald';
-  } else if (totalPnl > 200 && consistencyScore >= 50) {
-    grade = 'B+';
-    gradeColor = 'emerald';
-  } else if (totalPnl > 100) {
-    grade = 'B';
-    gradeColor = 'amber';
-  } else if (totalPnl > 0 && consistencyScore >= 50) {
-    grade = 'C';
-    gradeColor = 'amber';
-  } else if (totalPnl > -50) {
-    grade = 'C-';
-    gradeColor = 'amber';
-  } else if (totalPnl > -200) {
-    grade = 'D';
-    gradeColor = 'red';
-  } else {
-    grade = 'F';
-    gradeColor = 'red';
-  }
-
-  return {
-    totalPnl,
-    totalTrades,
-    winRate,
-    bestWeek: bestWeekIdx,
-    consistencyScore,
-    grade,
-    gradeColor,
-  };
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function pnlColor(value: number): string {
-  if (value > 0) return 'text-emerald-400';
-  if (value < 0) return 'text-red-400';
-  return 'text-amber-400';
-}
-
-function pnlBg(value: number): string {
-  if (value > 0) return 'bg-emerald-500/10';
-  if (value < 0) return 'bg-red-500/10';
-  return 'bg-amber-500/10';
-}
-
-function pnlSign(value: number): string {
-  return value > 0 ? '+' : '';
-}
-
-function formatPnl(value: number): string {
-  return `${pnlSign(value)}$${value.toFixed(1)}`;
-}
+});
 
 // ─── Animation Variants ───────────────────────────────────────────────────────
 
@@ -361,7 +421,10 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] as const },
+    transition: {
+      duration: 0.35,
+      ease: [0.25, 0.46, 0.45, 0.94] as const,
+    },
   },
 } as const;
 
@@ -370,11 +433,43 @@ const itemVariants = {
 export default function PerformanceScorecard() {
   const [timeframe, setTimeframe] = useState<Timeframe>('weekly');
   const [selectedWeek, setSelectedWeek] = useState(0);
+  const closedTrades = useTradingStore((s) => s.closedTrades);
 
-  const weeks = useMemo(() => generateWeeklyData(), []);
+  const weeks = useMemo(() => buildWeeklyData(closedTrades), [closedTrades]);
   const monthly = useMemo(() => computeMonthlySummary(weeks), [weeks]);
 
-  const currentWeek = weeks[selectedWeek];
+  // Clamp selectedWeek when weeks shrink
+  const safeSelectedWeek = Math.min(selectedWeek, Math.max(0, weeks.length - 1));
+  const currentWeek = weeks[safeSelectedWeek];
+
+  if (weeks.length === 0) {
+    return (
+      <div className="glass-card-premium rounded-xl p-4 md:p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-1.5 rounded-lg bg-emerald-500/10">
+            <Award className="w-4 h-4 text-emerald-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-white">
+              Performance Scorecard
+            </h3>
+            <p className="text-[11px] text-slate-500">
+              Weekly &amp; monthly trading metrics
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-col items-center justify-center py-12 space-y-3">
+          <div className="p-3 rounded-full bg-white/[0.04]">
+            <Award className="w-8 h-8 text-slate-600" />
+          </div>
+          <p className="text-sm text-slate-500 text-center max-w-[260px]">
+            No trading history yet. Complete trades to see your performance
+            scorecard.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="glass-card-premium rounded-xl p-4 md:p-5 space-y-4">
@@ -432,7 +527,7 @@ export default function PerformanceScorecard() {
                   variants={itemVariants}
                   onClick={() => setSelectedWeek(week.weekIndex)}
                   className={`relative p-3 rounded-lg text-left transition-all duration-200 ${
-                    selectedWeek === week.weekIndex
+                    safeSelectedWeek === week.weekIndex
                       ? 'bg-emerald-500/10 border border-emerald-500/25 shadow-sm'
                       : 'stat-card-premium hover:bg-white/[0.03] border border-transparent'
                   }`}
@@ -440,7 +535,7 @@ export default function PerformanceScorecard() {
                   <div className="flex items-center justify-between mb-1.5">
                     <span
                       className={`text-[11px] font-medium ${
-                        selectedWeek === week.weekIndex
+                        safeSelectedWeek === week.weekIndex
                           ? 'text-emerald-400'
                           : 'text-slate-400'
                       }`}
@@ -455,20 +550,21 @@ export default function PerformanceScorecard() {
                   </div>
                   <p
                     className={`font-mono text-sm font-semibold ${pnlColor(
-                      week.totalPnl
+                      week.totalPnl,
                     )}`}
                   >
                     {formatPnl(week.totalPnl)}
                   </p>
                   <p className="text-[10px] text-slate-500 font-mono mt-0.5">
-                    {week.winRate}% win &middot; {week.sharpeScore > 0 ? '↑' : '↓'}{' '}
+                    {week.winRate}% win &middot;{' '}
+                    {week.sharpeScore > 0 ? '↑' : '↓'}{' '}
                     {Math.abs(week.sharpeScore).toFixed(2)}
                   </p>
                 </motion.button>
               ))}
             </div>
 
-            {/* Selected week detail: 5 day cards */}
+            {/* Selected week detail: day cards */}
             <div>
               <div className="flex items-center gap-1.5 mb-2">
                 <Calendar className="w-3.5 h-3.5 text-slate-500" />
@@ -509,7 +605,7 @@ export default function PerformanceScorecard() {
                       </span>
                       <span
                         className={`font-mono text-sm font-bold ${pnlColor(
-                          day.pnl
+                          day.pnl,
                         )}`}
                       >
                         {formatPnl(day.pnl)}
@@ -517,19 +613,19 @@ export default function PerformanceScorecard() {
                     </div>
 
                     {/* Day sparkline */}
-                    <MiniSparkline values={day.sparkline} width={80} height={18} />
+                    <MiniSparkline
+                      values={day.sparkline}
+                      width={80}
+                      height={18}
+                    />
 
                     {/* Best pair & strategy */}
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span
-                        className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/15`}
-                      >
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
                         <Target className="w-2.5 h-2.5" />
                         {day.bestPair}
                       </span>
-                      <span
-                        className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/15`}
-                      >
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/15">
                         <Zap className="w-2.5 h-2.5" />
                         {day.bestStrategy}
                       </span>
@@ -584,7 +680,9 @@ export default function PerformanceScorecard() {
                     <p className="text-[10px] text-slate-500 truncate">
                       {stat.label}
                     </p>
-                    <p className={`font-mono text-xs font-semibold ${stat.color} truncate`}>
+                    <p
+                      className={`font-mono text-xs font-semibold ${stat.color} truncate`}
+                    >
                       {stat.value}
                     </p>
                   </div>
@@ -611,7 +709,7 @@ export default function PerformanceScorecard() {
               <div className="flex items-center gap-2 mb-1">
                 <Calendar className="w-4 h-4 text-emerald-400" />
                 <span className="text-xs font-medium text-slate-400">
-                  January 2025 — Monthly Overview
+                  {monthly.monthLabel || 'Monthly'} — Monthly Overview
                 </span>
               </div>
 
@@ -623,7 +721,7 @@ export default function PerformanceScorecard() {
                   </p>
                   <p
                     className={`font-mono text-2xl md:text-3xl font-bold ${pnlColor(
-                      monthly.totalPnl
+                      monthly.totalPnl,
                     )}`}
                   >
                     {formatPnl(monthly.totalPnl)}
@@ -636,7 +734,9 @@ export default function PerformanceScorecard() {
                     ) : (
                       <Activity className="w-3 h-3 text-amber-400" />
                     )}
-                    <span className="text-[10px] text-slate-500">net profit</span>
+                    <span className="text-[10px] text-slate-500">
+                      net profit
+                    </span>
                   </div>
                 </div>
 
@@ -651,7 +751,7 @@ export default function PerformanceScorecard() {
                   <div className="flex items-center justify-center gap-1 mt-1">
                     <BarChart3 className="w-3 h-3 text-slate-500" />
                     <span className="text-[10px] text-slate-500">
-                      across 20 sessions
+                      across {monthly.totalSessions} sessions
                     </span>
                   </div>
                 </div>
@@ -696,7 +796,9 @@ export default function PerformanceScorecard() {
                       key={week.weekIndex}
                       variants={itemVariants}
                       className={`stat-card-premium rounded-lg p-3 space-y-2 ${
-                        isBest ? 'border border-emerald-500/25 bg-emerald-500/[0.04]' : ''
+                        isBest
+                          ? 'border border-emerald-500/25 bg-emerald-500/[0.04]'
+                          : ''
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -714,7 +816,7 @@ export default function PerformanceScorecard() {
                       />
                       <p
                         className={`font-mono text-sm font-bold ${pnlColor(
-                          week.totalPnl
+                          week.totalPnl,
                         )}`}
                       >
                         {formatPnl(week.totalPnl)}
@@ -724,7 +826,8 @@ export default function PerformanceScorecard() {
                           {week.winRate}% win
                         </span>
                         <span className="text-slate-500 font-mono">
-                          {week.days.reduce((s, d) => s + d.trades, 0)} trades
+                          {week.days.reduce((s, d) => s + d.trades, 0)}{' '}
+                          trades
                         </span>
                       </div>
                     </motion.div>
@@ -750,7 +853,10 @@ export default function PerformanceScorecard() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="relative w-16 h-16">
-                    <svg viewBox="0 0 64 64" className="w-full h-full -rotate-90">
+                    <svg
+                      viewBox="0 0 64 64"
+                      className="w-full h-full -rotate-90"
+                    >
                       <circle
                         cx={32}
                         cy={32}
@@ -774,10 +880,7 @@ export default function PerformanceScorecard() {
                         strokeWidth={5}
                         strokeDasharray={2 * Math.PI * 26}
                         strokeDashoffset={
-                          2 *
-                          Math.PI *
-                          26 *
-                          (1 - monthly.consistencyScore / 100)
+                          2 * Math.PI * 26 * (1 - monthly.consistencyScore / 100)
                         }
                         strokeLinecap="round"
                       />
@@ -790,8 +893,8 @@ export default function PerformanceScorecard() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-[11px] text-slate-400">
-                      {weeks.filter((w) => w.totalPnl > 0).length} of 4 weeks
-                      profitable
+                      {weeks.filter((w) => w.totalPnl > 0).length} of{' '}
+                      {weeks.length} weeks profitable
                     </p>
                     <p className="text-[10px] text-slate-500">
                       {monthly.consistencyScore >= 75

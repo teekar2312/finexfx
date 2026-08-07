@@ -18,6 +18,7 @@ import MultiTimeframePanel from './MultiTimeframePanel';
 import SignalDetailModal from './SignalDetailModal';
 import CorrelationMatrix from './CorrelationMatrix';
 import CandlestickPatternRecognition from './CandlestickPatternRecognition';
+import SocialTradingLeaderboard from './SocialTradingLeaderboard';
 import type { TradingSignal } from '@/lib/types';
 
 function getConditionIcon(condition: MarketCondition, size: number = 20) {
@@ -761,6 +762,9 @@ export default function AnalysisView() {
         open={signalModalOpen}
         onOpenChange={setSignalModalOpen}
       />
+
+      {/* Social Trading Leaderboard */}
+      <SocialTradingLeaderboard />
     </div>
     </TooltipProvider>);
 }

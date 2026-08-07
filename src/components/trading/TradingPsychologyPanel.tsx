@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Brain,
@@ -17,16 +17,9 @@ import {
   Meh,
   Zap,
 } from 'lucide-react';
-
-// ─── Seeded Random ──────────────────────────────────────────────────────────
-
-function createSeededRandom(seed: number) {
-  let s = seed;
-  return () => {
-    s = (s * 16807 + 0) % 2147483647;
-    return (s - 1) / 2147483646;
-  };
-}
+import { useTradingStore } from '@/store/trading-store';
+import type { Trade } from '@/lib/types';
+import type { JournalEntry } from '@/store/trading-store';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -70,122 +63,38 @@ interface StreakData {
   worstLoss: number;
 }
 
-// ─── Mock Data Generation ──────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
 
-function generateMockData() {
-  const rng = createSeededRandom(42);
+const MOOD_DISPLAY_MAP: Record<string, Mood> = {
+  great: 'Great',
+  good: 'Good',
+  neutral: 'Neutral',
+  bad: 'Frustrated',
+  terrible: 'Tilted',
+};
 
-  // Discipline sub-scores
-  const subScoreNames: Array<{ name: string; icon: React.ElementType }> = [
-    { name: 'Plan Adherence', icon: Target },
-    { name: 'Risk Management', icon: Shield },
-    { name: 'Patience', icon: Meh },
-    { name: 'Emotional Control', icon: Brain },
-    { name: 'Trade Selection', icon: Activity },
-    { name: 'Position Sizing', icon: TrendingUp },
-    { name: 'Exit Discipline', icon: Zap },
-  ];
-
-  const subScores: DisciplineSubScore[] = subScoreNames.map((item) => ({
-    name: item.name,
-    score: Math.round(rng() * 35 + 60), // 60-95 range for realistic good trader
-    icon: item.icon,
-  }));
-
-  const overall = Math.round(
-    subScores.reduce((sum, s) => sum + s.score, 0) / subScores.length
-  );
-
-  const grade =
-    overall >= 90 ? 'A' : overall >= 80 ? 'B' : overall >= 70 ? 'C' : overall >= 60 ? 'D' : 'F';
-
-  const disciplineData: DisciplineData = { overall, grade, subScores };
-
-  // Session mood timeline — last 8 sessions
-  const moods: Mood[] = ['Great', 'Good', 'Neutral', 'Frustrated', 'Tilted'];
-  const moodNotes: Record<Mood, string[]> = {
-    Great: [
-      'Followed plan perfectly, no deviations',
-      'Best session this week, excellent focus',
-    ],
-    Good: [
-      'Solid session, minor overtrading',
-      'Good execution on main setups',
-    ],
-    Neutral: [
-      'Mixed results, mostly wait-and-see',
-      'No strong conviction, kept size small',
-    ],
-    Frustrated: [
-      'Missed entry on USD/JPY breakout',
-      'Two stop-outs early, confidence shaken',
-    ],
-    Tilted: [
-      'Revenge traded after GBP/USD loss',
-      'Overleveraged on XAU/USD, need cooldown',
-    ],
-  };
-
-  const sessions: SessionMood[] = [];
-  const baseDates = [
-    '2024-12-02', '2024-12-03', '2024-12-04', '2024-12-05',
-    '2024-12-08', '2024-12-09', '2024-12-10', '2024-12-11',
-  ];
-
-  for (let i = 0; i < 8; i++) {
-    const mood = moods[Math.floor(rng() * moods.length)];
-    const pnl =
-      mood === 'Great' ? Math.round(rng() * 300 + 100) :
-      mood === 'Good' ? Math.round(rng() * 200 - 30) :
-      mood === 'Neutral' ? Math.round(rng() * 100 - 50) :
-      mood === 'Frustrated' ? Math.round(rng() * 200 - 250) :
-      Math.round(rng() * 300 - 400);
-
-    const notesArr = moodNotes[mood];
-    const notes = notesArr[Math.floor(rng() * notesArr.length)];
-
-    sessions.push({
-      date: baseDates[i],
-      shortDate: baseDates[i].slice(5).replace('-', '/'),
-      mood,
-      pnl,
-      notes,
-      tradeCount: Math.round(rng() * 8 + 2),
-      isCurrent: i === 7,
-    });
-  }
-
-  // Emotion stats
-  const emotionStats: EmotionStat[] = [
-    { name: 'Confident', count: 12, winRate: 72, color: 'text-emerald-400', bgColor: 'bg-emerald-500', icon: SmilePlus },
-    { name: 'Anxious', count: 8, winRate: 45, color: 'text-amber-400', bgColor: 'bg-amber-500', icon: AlertTriangle },
-    { name: 'FOMO', count: 5, winRate: 30, color: 'text-orange-400', bgColor: 'bg-orange-500', icon: Zap },
-    { name: 'Revenge', count: 3, winRate: 15, color: 'text-red-400', bgColor: 'bg-red-500', icon: Frown },
-  ];
-
-  // Streak data
-  const streakData: StreakData = {
-    currentWin: 4,
-    currentLoss: 0,
-    bestWin: 12,
-    worstLoss: 5,
-  };
-
-  return { disciplineData, sessions, emotionStats, streakData };
-}
+const MOOD_SCORE_MAP: Record<string, number> = {
+  great: 95,
+  good: 82,
+  neutral: 65,
+  bad: 40,
+  terrible: 18,
+};
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
+
+function parseDurationToMinutes(duration: string): number {
+  const hourMatch = duration.match(/(\d+)h/);
+  const minuteMatch = duration.match(/(\d+)m/);
+  const hours = hourMatch ? parseInt(hourMatch[1], 10) : 0;
+  const minutes = minuteMatch ? parseInt(minuteMatch[1], 10) : 0;
+  return hours * 60 + minutes;
+}
 
 function getGaugeColor(score: number): string {
   if (score <= 30) return 'rgb(239, 68, 68)';   // red-500
   if (score <= 60) return 'rgb(245, 158, 11)';   // amber-500
   return 'rgb(16, 185, 129)';                    // emerald-500
-}
-
-function getGaugeStroke(score: number): string {
-  if (score <= 30) return 'stroke-red-500';
-  if (score <= 60) return 'stroke-amber-500';
-  return 'stroke-emerald-500';
 }
 
 function getGaugeGlowClass(score: number): string {
@@ -216,7 +125,119 @@ function getMoodRing(mood: Mood): string {
 
 function formatPnl(val: number): string {
   const sign = val >= 0 ? '+' : '';
-  return `${sign}$${val}`;
+  return `${sign}$${val.toFixed(2)}`;
+}
+
+// ─── Discipline Computation Helpers ────────────────────────────────────────
+
+function computePlanAdherence(trades: Trade[]): number {
+  if (trades.length === 0) return 0;
+  const withStrategy = trades.filter(t => t.strategy && t.strategy.trim() !== '').length;
+  return Math.round((withStrategy / trades.length) * 100);
+}
+
+function computeRiskManagement(trades: Trade[]): number {
+  if (trades.length === 0) return 0;
+  const withSL = trades.filter(t => t.stopLoss !== undefined && t.stopLoss !== null).length;
+  return Math.round((withSL / trades.length) * 100);
+}
+
+function computeEmotionalControl(entries: JournalEntry[]): number {
+  if (entries.length === 0) return 0;
+  const total = entries.reduce((sum, e) => sum + (MOOD_SCORE_MAP[e.mood] ?? 50), 0);
+  return Math.round(total / entries.length);
+}
+
+function computePatience(entries: JournalEntry[]): number {
+  if (entries.length === 0) return 0;
+  const durations = entries.map(e => parseDurationToMinutes(e.duration)).filter(d => d > 0);
+  if (durations.length === 0) return 0;
+  const avgMinutes = durations.reduce((a, b) => a + b, 0) / durations.length;
+  return Math.round(100 * (1 - Math.exp(-avgMinutes / 45)));
+}
+
+function computeConsistency(trades: Trade[]): number {
+  const dailyPnl: Record<string, number> = {};
+  for (const trade of trades) {
+    if (!trade.closedAt) continue;
+    const date = trade.closedAt.slice(0, 10);
+    dailyPnl[date] = (dailyPnl[date] || 0) + (trade.profit ?? 0);
+  }
+  const values = Object.values(dailyPnl);
+  if (values.length < 2) return 50;
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+  const sd = Math.sqrt(variance);
+  return Math.round(100 * Math.exp(-sd / 200));
+}
+
+function computeRecovery(trades: Trade[]): number {
+  const sorted = [...trades]
+    .filter(t => t.closedAt)
+    .sort((a, b) => new Date(a.closedAt!).getTime() - new Date(b.closedAt!).getTime());
+  if (sorted.length < 3) return 50;
+  const recoveryTrades: boolean[] = [];
+  let consecutiveLosses = 0;
+  for (const trade of sorted) {
+    const isWin = (trade.profit ?? 0) >= 0;
+    if (consecutiveLosses >= 2) {
+      recoveryTrades.push(isWin);
+      consecutiveLosses = isWin ? 0 : consecutiveLosses + 1;
+    } else if (isWin) {
+      consecutiveLosses = 0;
+    } else {
+      consecutiveLosses++;
+    }
+  }
+  if (recoveryTrades.length === 0) return 50;
+  const wins = recoveryTrades.filter(Boolean).length;
+  return Math.round((wins / recoveryTrades.length) * 100);
+}
+
+function computeWinRate(trades: Trade[]): number {
+  if (trades.length === 0) return 0;
+  const wins = trades.filter(t => (t.profit ?? 0) >= 0).length;
+  return Math.round((wins / trades.length) * 100);
+}
+
+function computeStreaks(trades: Trade[]): StreakData {
+  const sorted = [...trades]
+    .filter(t => t.closedAt)
+    .sort((a, b) => new Date(a.closedAt!).getTime() - new Date(b.closedAt!).getTime());
+  if (sorted.length === 0) {
+    return { currentWin: 0, currentLoss: 0, bestWin: 0, worstLoss: 0 };
+  }
+  let bestWin = 0;
+  let worstLoss = 0;
+  let tempWin = 0;
+  let tempLoss = 0;
+  for (const trade of sorted) {
+    const isWin = (trade.profit ?? 0) >= 0;
+    if (isWin) {
+      tempWin++;
+      tempLoss = 0;
+      bestWin = Math.max(bestWin, tempWin);
+    } else {
+      tempLoss++;
+      tempWin = 0;
+      worstLoss = Math.max(worstLoss, tempLoss);
+    }
+  }
+  let currentWin = 0;
+  let currentLoss = 0;
+  const lastIsWin = (sorted[sorted.length - 1].profit ?? 0) >= 0;
+  if (lastIsWin) {
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      if ((sorted[i].profit ?? 0) >= 0) currentWin++;
+      else break;
+    }
+  } else {
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      if ((sorted[i].profit ?? 0) < 0) currentLoss++;
+      else break;
+    }
+  }
+  return { currentWin, currentLoss, bestWin, worstLoss };
 }
 
 // ─── Discipline Gauge ───────────────────────────────────────────────────────
@@ -323,12 +344,30 @@ function DisciplineGauge({ data }: { data: DisciplineData }) {
 function MoodTimeline({ sessions }: { sessions: SessionMood[] }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
+  if (sessions.length === 0) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Heart className="w-3.5 h-3.5 text-pink-400" />
+          <h3 className="text-xs font-semibold">Session Mood Timeline</h3>
+        </div>
+        <div className="flex items-center justify-center py-8">
+          <div className="text-center space-y-2">
+            <Heart className="w-8 h-8 text-muted-foreground/30 mx-auto" />
+            <p className="text-[11px] text-muted-foreground">No journal entries yet</p>
+            <p className="text-[9px] text-muted-foreground/60">Start logging your trades to track mood patterns</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Heart className="w-3.5 h-3.5 text-pink-400" />
         <h3 className="text-xs font-semibold">Session Mood Timeline</h3>
-        <span className="text-[9px] text-muted-foreground ml-auto">Last 8 Sessions</span>
+        <span className="text-[9px] text-muted-foreground ml-auto">Last {sessions.length} Session{sessions.length !== 1 ? 's' : ''}</span>
       </div>
 
       {/* Timeline */}
@@ -425,7 +464,33 @@ function MoodTimeline({ sessions }: { sessions: SessionMood[] }) {
 // ─── Emotion Impact Chart ───────────────────────────────────────────────────
 
 function EmotionImpactChart({ stats }: { stats: EmotionStat[] }) {
-  const maxCount = Math.max(...stats.map((s) => s.count));
+  const maxCount = stats.length > 0 ? Math.max(...stats.map((s) => s.count)) : 1;
+
+  const sorted = useMemo(() => {
+    if (stats.length < 2) return null;
+    return [...stats].sort((a, b) => b.winRate - a.winRate);
+  }, [stats]);
+
+  const bestEmotion = sorted ? sorted[0] : null;
+  const worstEmotion = sorted ? sorted[sorted.length - 1] : null;
+
+  if (stats.length === 0) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Brain className="w-3.5 h-3.5 text-violet-400" />
+          <h3 className="text-xs font-semibold">Emotion Impact</h3>
+        </div>
+        <div className="flex items-center justify-center py-8">
+          <div className="text-center space-y-2">
+            <Brain className="w-8 h-8 text-muted-foreground/30 mx-auto" />
+            <p className="text-[11px] text-muted-foreground">No emotion data yet</p>
+            <p className="text-[9px] text-muted-foreground/60">Journal entries will populate this chart</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -467,18 +532,22 @@ function EmotionImpactChart({ stats }: { stats: EmotionStat[] }) {
       </div>
 
       {/* Insight */}
-      <motion.div
-        className="flex items-start gap-2 mt-3 p-2.5 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/10"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.2, duration: 0.5 }}
-      >
-        <Activity className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
-        <p className="text-[10px] text-emerald-400/90 leading-relaxed">
-          Your best trades come from a <span className="font-semibold text-emerald-400">Confident</span> state (72% WR). 
-          Avoid trading when feeling <span className="font-semibold text-red-400">Revenge</span> — only 15% win rate.
-        </p>
-      </motion.div>
+      {bestEmotion && worstEmotion && (
+        <motion.div
+          className="flex items-start gap-2 mt-3 p-2.5 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/10"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2, duration: 0.5 }}
+        >
+          <Activity className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
+          <p className="text-[10px] text-emerald-400/90 leading-relaxed">
+            Your best trades come from a <span className="font-semibold text-emerald-400">{bestEmotion.name}</span> state ({bestEmotion.winRate}% WR).{' '}
+            {bestEmotion.name !== worstEmotion.name && (
+              <>Avoid trading when feeling <span className="font-semibold text-red-400">{worstEmotion.name}</span> — only {worstEmotion.winRate}% win rate.</>
+            )}
+          </p>
+        </motion.div>
+      )}
     </div>
   );
 }
@@ -525,6 +594,26 @@ function StreakDisplay({ data }: { data: StreakData }) {
     },
   ];
 
+  const hasAnyStreak = data.currentWin > 0 || data.currentLoss > 0 || data.bestWin > 0 || data.worstLoss > 0;
+
+  if (!hasAnyStreak) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
+          <h3 className="text-xs font-semibold">Streak Tracker</h3>
+        </div>
+        <div className="flex items-center justify-center py-8">
+          <div className="text-center space-y-2">
+            <TrendingUp className="w-8 h-8 text-muted-foreground/30 mx-auto" />
+            <p className="text-[11px] text-muted-foreground">No streak data yet</p>
+            <p className="text-[9px] text-muted-foreground/60">Close some trades to track your streaks</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -559,9 +648,7 @@ function StreakDisplay({ data }: { data: StreakData }) {
   );
 }
 
-// ─── Main Component ─────────────────────────────────────────────────────────
-
-const mockData = generateMockData();
+// ─── Animation Variants ─────────────────────────────────────────────────────
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -576,7 +663,151 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' as const } },
 } as const;
 
+// ─── Main Component ─────────────────────────────────────────────────────────
+
 export default function TradingPsychologyPanel() {
+  const journalEntries = useTradingStore((s) => s.journalEntries);
+  const closedTrades = useTradingStore((s) => s.closedTrades);
+
+  // ── Discipline Data ──
+  const disciplineData = useMemo((): DisciplineData => {
+    const subScores: DisciplineSubScore[] = [
+      {
+        name: 'Plan Adherence',
+        score: computePlanAdherence(closedTrades),
+        icon: Target,
+      },
+      {
+        name: 'Risk Management',
+        score: computeRiskManagement(closedTrades),
+        icon: Shield,
+      },
+      {
+        name: 'Emotional Control',
+        score: computeEmotionalControl(journalEntries),
+        icon: Brain,
+      },
+      {
+        name: 'Patience',
+        score: computePatience(journalEntries),
+        icon: Meh,
+      },
+      {
+        name: 'Consistency',
+        score: computeConsistency(closedTrades),
+        icon: Activity,
+      },
+      {
+        name: 'Recovery',
+        score: computeRecovery(closedTrades),
+        icon: TrendingUp,
+      },
+      {
+        name: 'Win Rate',
+        score: computeWinRate(closedTrades),
+        icon: Zap,
+      },
+    ];
+
+    const overall = Math.round(
+      subScores.reduce((sum, s) => sum + s.score, 0) / subScores.length
+    );
+
+    const grade =
+      overall >= 90 ? 'A' : overall >= 80 ? 'B' : overall >= 70 ? 'C' : overall >= 60 ? 'D' : 'F';
+
+    return { overall, grade, subScores };
+  }, [closedTrades, journalEntries]);
+
+  // ── Mood Sessions ──
+  const sessions = useMemo((): SessionMood[] => {
+    if (journalEntries.length === 0) return [];
+
+    // Build daily P&L map from closedTrades
+    const dailyPnlMap: Record<string, number> = {};
+    const dailyTradeCountMap: Record<string, number> = {};
+    for (const trade of closedTrades) {
+      if (!trade.closedAt) continue;
+      const date = trade.closedAt.slice(0, 10);
+      dailyPnlMap[date] = (dailyPnlMap[date] || 0) + (trade.profit ?? 0);
+      dailyTradeCountMap[date] = (dailyTradeCountMap[date] || 0) + 1;
+    }
+
+    // Group journal entries by date, keeping last entry per date
+    const byDate = new Map<string, JournalEntry>();
+    const entriesByDate = new Map<string, JournalEntry[]>();
+    for (const entry of journalEntries) {
+      const date = entry.createdAt.slice(0, 10);
+      byDate.set(date, entry);
+      if (!entriesByDate.has(date)) entriesByDate.set(date, []);
+      entriesByDate.get(date)!.push(entry);
+    }
+
+    const sortedDates = Array.from(byDate.keys()).sort();
+    const last8 = sortedDates.slice(-8);
+
+    return last8.map((date, i) => {
+      const entry = byDate.get(date)!;
+      const allEntriesForDate = entriesByDate.get(date) || [];
+      const mood = MOOD_DISPLAY_MAP[entry.mood] || 'Neutral';
+      const pnl = dailyPnlMap[date] || 0;
+      const tradeCount = dailyTradeCountMap[date] || allEntriesForDate.length;
+      const shortDate = date.slice(5).replace('-', '/');
+      const notes = allEntriesForDate.length === 1
+        ? entry.notes
+        : allEntriesForDate.map(e => e.notes).filter(n => n).join(' | ').slice(0, 200);
+
+      return {
+        date,
+        shortDate,
+        mood,
+        pnl,
+        notes,
+        tradeCount,
+        isCurrent: i === last8.length - 1,
+      };
+    });
+  }, [journalEntries, closedTrades]);
+
+  // ── Emotion Stats ──
+  const emotionStats = useMemo((): EmotionStat[] => {
+    if (journalEntries.length === 0) return [];
+
+    const categories: Array<{
+      moods: string[];
+      name: string;
+      color: string;
+      bgColor: string;
+      icon: React.ElementType;
+    }> = [
+      { moods: ['great', 'good'], name: 'Confident', color: 'text-emerald-400', bgColor: 'bg-emerald-500', icon: SmilePlus },
+      { moods: ['neutral'], name: 'Cautious', color: 'text-amber-400', bgColor: 'bg-amber-500', icon: AlertTriangle },
+      { moods: ['bad'], name: 'Anxious', color: 'text-orange-400', bgColor: 'bg-orange-500', icon: Zap },
+      { moods: ['terrible'], name: 'Tilted', color: 'text-red-400', bgColor: 'bg-red-500', icon: Frown },
+    ];
+
+    return categories
+      .map((cat) => {
+        const entries = journalEntries.filter(e => cat.moods.includes(e.mood));
+        if (entries.length === 0) return null;
+        const wins = entries.filter(e => (e.pnl ?? 0) >= 0).length;
+        return {
+          name: cat.name,
+          count: entries.length,
+          winRate: Math.round((wins / entries.length) * 100),
+          color: cat.color,
+          bgColor: cat.bgColor,
+          icon: cat.icon,
+        };
+      })
+      .filter((s): s is EmotionStat => s !== null);
+  }, [journalEntries]);
+
+  // ── Streak Data ──
+  const streakData = useMemo((): StreakData => {
+    return computeStreaks(closedTrades);
+  }, [closedTrades]);
+
   return (
     <motion.div
       className="glass-card-premium rounded-xl p-5 space-y-6"
@@ -601,12 +832,12 @@ export default function TradingPsychologyPanel() {
             <Target className="w-3.5 h-3.5 text-emerald-400" />
             <h3 className="text-xs font-semibold">Discipline Score</h3>
           </div>
-          <DisciplineGauge data={mockData.disciplineData} />
+          <DisciplineGauge data={disciplineData} />
         </div>
 
         {/* Mood Timeline */}
         <div className="glass-card rounded-lg p-4 border border-border/50">
-          <MoodTimeline sessions={mockData.sessions} />
+          <MoodTimeline sessions={sessions} />
         </div>
       </motion.div>
 
@@ -614,12 +845,12 @@ export default function TradingPsychologyPanel() {
       <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Emotion Impact */}
         <div className="glass-card rounded-lg p-4 border border-border/50">
-          <EmotionImpactChart stats={mockData.emotionStats} />
+          <EmotionImpactChart stats={emotionStats} />
         </div>
 
         {/* Streaks */}
         <div className="glass-card rounded-lg p-4 border border-border/50">
-          <StreakDisplay data={mockData.streakData} />
+          <StreakDisplay data={streakData} />
         </div>
       </motion.div>
     </motion.div>
