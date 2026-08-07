@@ -328,7 +328,7 @@ export default function NewsView() {
                                   NEW
                                 </Badge>
                               )}
-                              <ImpactDots impact={news.impact} />
+                              <ImpactDots impact={news.impact ?? 'low'} />
                             </div>
                           </div>
                         </div>

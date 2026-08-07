@@ -74,7 +74,7 @@ const OVERLAPS: OverlapInfo[] = [
 ];
 
 // best pairs per session
-const SESSION_PAIRS: Record<SessionId, { symbol: string; reason: string }[]> = {
+const SESSION_PAIRS: Record<SessionId, { symbol: Symbol; reason: string }[]> = {
   sydney: [
     { symbol: 'XAUUSD', reason: 'Sydney session - Asian gold trading window' },
     { symbol: 'USDJPY', reason: 'Early JPY liquidity during Sydney hours' },

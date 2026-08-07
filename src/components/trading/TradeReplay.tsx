@@ -313,9 +313,9 @@ export default function TradeReplay() {
   }, [stopTimer]);
 
   // ── Chart tooltip ──
-  const tooltipContent = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: PriceHistory }> }) => {
-    if (!active || !payload || !payload.length) return null;
-    const d = payload[0]?.payload;
+  const tooltipContent = ({ active, payload }: { active?: boolean; payload?: Array<{ payload?: PriceHistory }> }) => {
+    if (!active || !payload || !payload.length || !payload[0].payload) return null;
+    const d = payload[0].payload;
     if (!d) return null;
     const isGreen = d.close >= d.open;
     const color = isGreen ? '#10b981' : '#ef4444';

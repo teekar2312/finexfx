@@ -262,7 +262,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   priceAlerts: [],
   addPriceAlert: (alert) => {
     playSound('alert');
-    set({ priceAlerts: [...get().priceAlerts, { ...alert, id: `alert-${Date.now()}` }] });
+    set({ priceAlerts: [...get().priceAlerts, { ...alert, id: `alert-${Date.now()}`, isActive: alert.isActive ?? true }] });
   },
   removePriceAlert: (id) => set({ priceAlerts: get().priceAlerts.filter(a => a.id !== id) }),
   togglePriceAlert: (id) => set({
@@ -351,7 +351,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
 
   // Error Logs
   errorLogs: [],
-  addErrorLog: (log) => set({ errorLogs: [log, ...get().errorLogs].slice(0, 100) }),
+  addErrorLog: (log) => set({ errorLogs: [{ ...log, resolved: log.resolved ?? false }, ...get().errorLogs].slice(0, 100) }),
   resolveErrorLog: (id) => set({ errorLogs: get().errorLogs.map(l => l.id === id ? { ...l, resolved: true } : l) }),
   clearResolvedLogs: () => set({ errorLogs: get().errorLogs.filter(l => !l.resolved) }),
 

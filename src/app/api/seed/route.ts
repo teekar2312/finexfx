@@ -7,8 +7,8 @@ interface SeedResponse {
   success: boolean;
   message: string;
   data: {
-    account: { id: number; balance: number; equity: number; accountType: string } | null;
-    riskSettings: { id: number; riskPerTrade: number; stopLossPips: number; takeProfitPips: number } | null;
+    account: { id: string; balance: number; equity: number; accountType: string } | null;
+    riskSettings: { id: string; riskPerTrade: number; stopLossPips: number; takeProfitPips: number } | null;
     newsItems: number;
     economicEvents: number;
     indicatorConfigs: number;

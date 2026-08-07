@@ -162,7 +162,7 @@ function generateSignal(sym: string, state: SymbolState): TradingSignal {
 export function usePriceSimulator() {
   const stateRef = useRef<Record<string, SymbolState>>(JSON.parse(JSON.stringify(initialState)));
   const candleBufferRef = useRef<Record<string, PriceHistory[]>>({});
-  const signalTimerRef = useRef<ReturnType<typeof setInterval>>();
+  const signalTimerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   useEffect(() => {
     const store = useTradingStore.getState();
