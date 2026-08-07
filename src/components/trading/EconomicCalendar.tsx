@@ -188,7 +188,7 @@ function ValueBar({
 
   return (
     <div className="flex items-center gap-1.5 w-full">
-      <div className="relative w-full h-3 rounded-full bg-white/5 overflow-hidden">
+      <div className="relative w-full h-3 rounded-full bg-muted/50 overflow-hidden">
         {/* Previous bar */}
         <div
           className="absolute top-0 left-1/2 h-full w-px bg-muted-foreground/30"
@@ -275,7 +275,7 @@ function EventRow({ event, now }: { event: EconomicEvent; now: Date }) {
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.25 }}
-      className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-white/5 ${isUpcoming ? 'ring-1 ring-red-500/20' : ''}`}
+      className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-muted/50 ${isUpcoming ? 'ring-1 ring-red-500/20' : ''}`}
     >
       {/* Pulse dot for upcoming high-impact */}
       {isUpcoming && event.impact === 'High' && (
@@ -427,7 +427,7 @@ export default function EconomicCalendar() {
   };
 
   return (
-    <div className="glass-card-premium rounded-xl card-hover-lift border-white/[0.06] overflow-hidden">
+    <div className="glass-card-premium rounded-xl card-hover-lift border-border/50 overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 mb-3 pb-3 px-4 pt-4">
         <div className="flex items-center justify-between">
@@ -472,7 +472,7 @@ export default function EconomicCalendar() {
               variant={filter === f ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setFilter(f)}
-              className={`h-7 px-2.5 text-[11px] font-medium rounded-md transition-all ${filter === f ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 hover:text-emerald-300 shadow-none' : 'text-muted-foreground hover:text-foreground hover:bg-white/5'}`}
+              className={`h-7 px-2.5 text-[11px] font-medium rounded-md transition-all ${filter === f ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 hover:text-emerald-300 shadow-none' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
             >
               {filterIcon(f)}
               {f}
@@ -502,7 +502,7 @@ export default function EconomicCalendar() {
                   <span className="text-[10px] text-muted-foreground/50">
                     {group.events.length} events
                   </span>
-                  <div className="flex-1 h-px bg-white/5" />
+                  <div className="flex-1 h-px bg-muted/50" />
                 </div>
 
                 {/* Event rows */}
@@ -524,7 +524,7 @@ export default function EconomicCalendar() {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 mt-3 px-3 pt-3 border-t border-white/5">
+        <div className="flex items-center gap-4 mt-3 px-3 pt-3 border-t border-border/50">
           <span className="text-[10px] text-muted-foreground">Legend:</span>
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />

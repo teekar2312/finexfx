@@ -30,7 +30,7 @@ function getSignalIcon(signal: string) {
   switch (signal) {
     case 'bullish': return <TrendingUp className="h-4 w-4 text-emerald-500" />;
     case 'bearish': return <TrendingDown className="h-4 w-4 text-red-500" />;
-    default: return <Minus className="h-4 w-4 text-slate-500" />;
+    default: return <Minus className="h-4 w-4 text-muted-foreground" />;
   }
 }
 
@@ -38,7 +38,7 @@ function getSignalColor(signal: string) {
   switch (signal) {
     case 'bullish': return 'text-emerald-500';
     case 'bearish': return 'text-red-500';
-    default: return 'text-slate-500';
+    default: return 'text-muted-foreground';
   }
 }
 
@@ -61,7 +61,7 @@ function getSignalBorder(signal: string) {
 function getTrendArrow(signal: string) {
   if (signal === 'bullish') return <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />;
   if (signal === 'bearish') return <TrendingDown className="h-3.5 w-3.5 text-red-500" />;
-  return <Minus className="h-3.5 w-3.5 text-slate-500" />;
+  return <Minus className="h-3.5 w-3.5 text-muted-foreground" />;
 }
 
 const categoryConfig: Record<string, { label: string; color: string; icon: React.ReactNode; accent: string; borderAccent: string }> = {
@@ -268,7 +268,7 @@ export default function IndicatorsView() {
           placeholder="Filter indicators by name..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="input-glass-premium w-full h-8 pl-9 pr-3 rounded-md bg-white/[0.03] border border-white/[0.08] text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-emerald-500/40 transition-all"
+          className="input-glass-premium w-full h-8 pl-9 pr-3 rounded-md bg-muted/30 border border-border/50 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-emerald-500/40 transition-all"
         />
       </div>
 
@@ -297,12 +297,12 @@ export default function IndicatorsView() {
                     <div className="text-lg font-bold text-red-500 tabular-nums">{summary.bearish}</div>
                   </div>
                   <div className="flex-1">
-                    <div className="text-[10px] text-slate-500 mb-0.5">Neutral</div>
-                    <div className="text-lg font-bold text-slate-500 tabular-nums">{summary.neutral}</div>
+                    <div className="text-[10px] text-muted-foreground mb-0.5">Neutral</div>
+                    <div className="text-lg font-bold text-muted-foreground tabular-nums">{summary.neutral}</div>
                   </div>
                 </div>
                 {/* Distribution bar */}
-                <div className="flex h-1.5 rounded-full overflow-hidden bg-slate-800">
+                <div className="flex h-1.5 rounded-full overflow-hidden bg-muted">
                   {summary.total > 0 && (
                     <>
                       <div className="bg-emerald-500 transition-all duration-500" style={{ width: `${(summary.bullish / summary.total) * 100}%` }} />
@@ -336,9 +336,9 @@ export default function IndicatorsView() {
               {/* Summary counts */}
               <div className="flex items-center gap-1.5 text-[10px]">
                 <span className="text-emerald-500 font-medium">{summary.bullish} Bull</span>
-                <span className="text-slate-600">|</span>
-                <span className="text-slate-500 font-medium">{summary.neutral} Neutral</span>
-                <span className="text-slate-600">|</span>
+                <span className="text-muted-foreground">|</span>
+                <span className="text-muted-foreground font-medium">{summary.neutral} Neutral</span>
+                <span className="text-muted-foreground">|</span>
                 <span className="text-red-500 font-medium">{summary.bearish} Bear</span>
               </div>
               <div className="flex-1 h-px bg-border" />
@@ -390,7 +390,7 @@ export default function IndicatorsView() {
                         <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold ${
                           display.signal === 'bullish' ? 'badge-glow-emerald bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' :
                           display.signal === 'bearish' ? 'badge-glow-red bg-red-500/15 text-red-400 border border-red-500/30' :
-                          'bg-slate-500/15 text-slate-400 border border-slate-500/30'
+                          'bg-slate-500/15 text-muted-foreground border border-slate-500/30'
                         }`}>
                           {getSignalIcon(display.signal)}
                           {display.signal.toUpperCase()}
@@ -430,7 +430,7 @@ export default function IndicatorsView() {
                   className={`text-[10px] ml-1 ${
                     selectedIndicator.signal === 'bullish' ? 'badge-glow-emerald bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
                     selectedIndicator.signal === 'bearish' ? 'badge-glow-red bg-red-500/20 text-red-400 border border-red-500/30' :
-                    'bg-slate-500/20 text-slate-400 border border-slate-500/30'
+                    'bg-slate-500/20 text-muted-foreground border border-slate-500/30'
                   }`}
                 >
                   {selectedIndicator.signal.toUpperCase()}

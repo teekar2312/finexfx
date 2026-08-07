@@ -1074,7 +1074,7 @@ export default function TradingRulesEngine() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => addTemplate(tmpl)}
-                className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] p-2.5 text-left transition-colors"
+                className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 p-2.5 text-left transition-colors"
               >
                 {tmpl.actionType === 'close_all_positions' ? (
                   <Shield className="w-3.5 h-3.5 text-red-400 shrink-0" />
@@ -1136,7 +1136,7 @@ export default function TradingRulesEngine() {
                   </Badge>
                   <button
                     onClick={() => toggleRule(rule.id)}
-                    className="p-1 rounded hover:bg-white/10 transition-colors"
+                    className="p-1 rounded hover:bg-muted/50 transition-colors"
                     aria-label={rule.enabled ? 'Disable rule' : 'Enable rule'}
                   >
                     {rule.enabled ? (

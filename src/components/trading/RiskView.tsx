@@ -162,7 +162,7 @@ export default function RiskView() {
             {/* Risk Bar */}
             <div className="flex-1">
               {/* Premium gradient risk bar */}
-              <div className="risk-bar-premium h-2.5 rounded-full overflow-hidden bg-white/5">
+              <div className="risk-bar-premium h-2.5 rounded-full overflow-hidden bg-muted/50">
                 <motion.div
                   className={`risk-bar-fill-premium h-full rounded-full ${isDailyLimitReached ? 'from-red-600 to-red-400' : isDailyLimitWarning ? 'from-amber-600 to-amber-400' : 'from-emerald-600 to-emerald-400'} bg-gradient-to-r`}
                   initial={{ width: 0 }}
@@ -187,7 +187,7 @@ export default function RiskView() {
                     ${Math.max(0, dailyPnl).toFixed(2)} / ${dailyTargetAmount.toFixed(2)}
                   </span>
                 </div>
-                <div className="risk-bar-premium h-1.5 rounded-full overflow-hidden bg-white/5">
+                <div className="risk-bar-premium h-1.5 rounded-full overflow-hidden bg-muted/50">
                   <motion.div
                     className={`risk-bar-fill-premium h-full rounded-full ${dailyPnl >= dailyTargetAmount ? 'from-emerald-600 to-emerald-400' : dailyPnl >= 0 ? 'from-amber-600 to-amber-400' : 'from-red-600 to-red-400'} bg-gradient-to-r`}
                     initial={{ width: 0 }}
@@ -452,12 +452,12 @@ export default function RiskView() {
               <span className="text-[10px] text-muted-foreground">Risk : Reward Ratio</span>
               <span className="text-[11px] font-bold tabular-nums">1 : {riskSettings.riskRewardRatio}</span>
             </div>
-            <div className="h-6 rounded-md overflow-hidden flex bg-white/5">
+            <div className="h-6 rounded-md overflow-hidden flex bg-muted/50">
               <div className="bg-red-500/60 flex items-center justify-center transition-all" style={{ width: `${(1 / (1 + riskSettings.riskRewardRatio)) * 100}%` }}>
-                <span className="text-[9px] font-bold text-white/90">RISK</span>
+                <span className="text-[9px] font-bold text-foreground/90">RISK</span>
               </div>
               <div className="bg-emerald-500/60 flex items-center justify-center transition-all" style={{ width: `${(riskSettings.riskRewardRatio / (1 + riskSettings.riskRewardRatio)) * 100}%` }}>
-                <span className="text-[9px] font-bold text-white/90">REWARD</span>
+                <span className="text-[9px] font-bold text-foreground/90">REWARD</span>
               </div>
             </div>
           </div>
@@ -470,7 +470,7 @@ export default function RiskView() {
                 {marginUsage.toFixed(1)}%
               </span>
             </div>
-            <div className="risk-bar-premium h-1.5 rounded-full overflow-hidden bg-white/5">
+            <div className="risk-bar-premium h-1.5 rounded-full overflow-hidden bg-muted/50">
               <motion.div
                 className={`risk-bar-fill-premium h-full rounded-full ${marginUsage > 50 ? 'from-red-600 to-red-400' : marginUsage > 20 ? 'from-amber-600 to-amber-400' : 'from-emerald-600 to-emerald-400'} bg-gradient-to-r`}
                 initial={{ width: 0 }}

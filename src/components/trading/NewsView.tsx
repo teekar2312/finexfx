@@ -64,7 +64,7 @@ function ImpactDots({ impact }: { impact: 'high' | 'medium' | 'low' }) {
   return (
     <div className="flex items-center gap-0.5">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < count ? color : 'bg-slate-700'}`} />
+        <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < count ? color : 'bg-muted'}`} />
       ))}
     </div>
   );
@@ -88,7 +88,7 @@ function ActualVsForecastArrow({ actual, forecast }: { actual: string; forecast:
   const comparison = getActualVsForecast(actual, forecast);
   if (comparison === 'better') return <ArrowUpRight className="h-3 w-3 text-emerald-500" />;
   if (comparison === 'worse') return <ArrowDownRight className="h-3 w-3 text-red-500" />;
-  return <Minus className="h-3 w-3 text-slate-500" />;
+  return <Minus className="h-3 w-3 text-muted-foreground" />;
 }
 
 function timeAgo(dateStr: string): string {
@@ -110,7 +110,7 @@ function getCategoryIcon(category: string) {
     case 'Inflation': return <Percent className="h-3 w-3 text-red-400" />;
     case 'GDP': return <TrendingUp className="h-3 w-3 text-emerald-400" />;
     case 'Economic': return <Globe className="h-3 w-3 text-blue-400" />;
-    default: return <Newspaper className="h-3 w-3 text-slate-400" />;
+    default: return <Newspaper className="h-3 w-3 text-muted-foreground" />;
   }
 }
 
@@ -123,7 +123,7 @@ function getCategoryColor(category: string): string {
     case 'Inflation': return 'border-red-500/30 text-red-400 bg-red-500/10';
     case 'GDP': return 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10';
     case 'Economic': return 'border-blue-500/30 text-blue-400 bg-blue-500/10';
-    default: return 'border-slate-500/30 text-slate-400 bg-slate-500/10';
+    default: return 'border-slate-500/30 text-muted-foreground bg-slate-500/10';
   }
 }
 
@@ -145,7 +145,7 @@ function SourceCircle({ source }: { source: string }) {
   const bgColor = colors[source] || 'bg-slate-500';
   return (
     <div className={`w-6 h-6 rounded-full ${bgColor} flex items-center justify-center flex-shrink-0 ring-2 ring-white/10`}>
-      <span className="text-[9px] font-bold text-white">{source.charAt(0)}</span>
+      <span className="text-[9px] font-bold text-foreground">{source.charAt(0)}</span>
     </div>
   );
 }
@@ -302,7 +302,7 @@ export default function NewsView() {
               <div className="space-y-3 stagger-children">
                 {filteredNews.map((news, i) => {
                   const isNew = news.publishedAt ? (Date.now() - new Date(news.publishedAt).getTime()) < 1800000 : false;
-                  const summary = (news as any).summary || '';
+                  const summary = news.summary || '';
                   const isFirst = i === 0;
                   return (
                     <motion.div
@@ -318,7 +318,7 @@ export default function NewsView() {
                     >
                       <div className="flex items-start gap-2 mb-1.5">
                         {/* Source logo circle */}
-                        <SourceCircle source={(news as any).source || 'News'} />
+                        <SourceCircle source={news.source || 'News'} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <h4 className={`font-semibold leading-tight ${news.impact === 'high' ? 'text-sm' : 'text-xs'}`}>{news.title}</h4>
@@ -339,10 +339,10 @@ export default function NewsView() {
                       <div className="flex items-center justify-between pl-7">
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-[9px] px-1.5 py-0">{news.currency}</Badge>
-                          {(news as any).category && (
-                            <Badge variant="outline" className={`rounded-full px-2 py-0.5 text-[9px] font-medium tracking-wide uppercase flex items-center gap-1 ${getCategoryColor((news as any).category)}`}>
-                              {getCategoryIcon((news as any).category)}
-                              {(news as any).category}
+                          {news.category && (
+                            <Badge variant="outline" className={`rounded-full px-2 py-0.5 text-[9px] font-medium tracking-wide uppercase flex items-center gap-1 ${getCategoryColor(news.category)}`}>
+                              {getCategoryIcon(news.category)}
+                              {news.category}
                             </Badge>
                           )}
                           {/* Reading time */}
@@ -351,7 +351,7 @@ export default function NewsView() {
                           )}
                         </div>
                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                          <Badge variant="outline" className={`${(news as any).source === 'Reuters' ? 'badge-glow-emerald' : (news as any).source === 'Bloomberg' ? 'badge-glow-amber' : ''} text-[9px] px-1.5 py-0`}>{(news as any).source || 'News'}</Badge>
+                          <Badge variant="outline" className={`${news.source === 'Reuters' ? 'badge-glow-emerald' : news.source === 'Bloomberg' ? 'badge-glow-amber' : ''} text-[9px] px-1.5 py-0`}>{news.source || 'News'}</Badge>
                           <span>•</span>
                           <div className="flex items-center gap-1">
                             <Clock className="h-2.5 w-2.5" />

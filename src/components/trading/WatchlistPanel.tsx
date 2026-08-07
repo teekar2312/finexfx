@@ -134,7 +134,7 @@ export default function WatchlistPanel() {
   return (
     <div className="glass-card rounded-xl overflow-hidden">
       {/* ── Header ─────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
         <div className="flex items-center gap-1.5">
           <List className="h-3.5 w-3.5 text-muted-foreground" />
           <h3 className="text-xs font-semibold text-foreground">Watchlist</h3>
@@ -176,7 +176,7 @@ export default function WatchlistPanel() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -4, scale: 0.95 }}
                   transition={{ duration: 0.12 }}
-                  className="absolute right-0 top-full mt-1 z-50 glass-card rounded-lg border border-white/10 shadow-xl py-1 min-w-[100px]"
+                  className="absolute right-0 top-full mt-1 z-50 glass-card rounded-lg border border-border shadow-xl py-1 min-w-[100px]"
                 >
                   {SORT_OPTIONS.map((opt) => (
                     <button
@@ -188,7 +188,7 @@ export default function WatchlistPanel() {
                       className={`w-full text-left px-2.5 py-1.5 text-[10px] transition-colors ${
                         sortBy === opt.key
                           ? 'text-emerald-400 bg-emerald-400/10'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                       }`}
                     >
                       {opt.label}
@@ -234,7 +234,7 @@ export default function WatchlistPanel() {
                 className={`w-full text-left px-3 py-2 transition-all card-hover scale-click group ${
                   isSelected
                     ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500'
-                    : 'border-l-2 border-l-transparent hover:bg-white/[0.03]'
+                    : 'border-l-2 border-l-transparent hover:bg-muted/30'
                 }`}
               >
                 {/* Mobile: single column layout */}

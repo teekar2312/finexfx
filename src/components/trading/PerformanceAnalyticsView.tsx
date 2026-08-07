@@ -254,7 +254,7 @@ export default function PerformanceAnalyticsView() {
 
   // Heatmap color
   const heatmapColor = (pnl: number) => {
-    if (pnl === 0) return 'bg-slate-800/30';
+    if (pnl === 0) return 'bg-muted/30';
     const intensity = Math.min(Math.abs(pnl) / 150, 1);
     if (pnl > 0) return `bg-emerald-500/${Math.round(20 + intensity * 60).toString()}`;
     return `bg-red-500/${Math.round(20 + intensity * 60).toString()}`;
@@ -536,7 +536,7 @@ export default function PerformanceAnalyticsView() {
                       {sym.winRate.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-muted/60 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${sym.winRate >= 55 ? 'bg-emerald-500' : sym.winRate >= 45 ? 'bg-amber-500' : 'bg-red-500'}`}
                       style={{ width: `${sym.winRate}%` }}
@@ -608,7 +608,7 @@ export default function PerformanceAnalyticsView() {
               <span>Loss</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-slate-800/30" />
+              <div className="w-3 h-3 rounded bg-muted/30" />
               <span>Weekend</span>
             </div>
           </div>

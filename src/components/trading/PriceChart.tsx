@@ -185,37 +185,37 @@ export default function PriceChart({ data, symbol, bid, ask, height = 350 }: Pri
 
     return (
       <div className="glass-card-premium tooltip-animated-border rounded-lg p-3 text-[11px] shadow-lg min-w-[165px]">
-        <div className="text-[10px] text-slate-400 mb-2 font-medium">{timeStr}</div>
+        <div className="text-[10px] text-muted-foreground mb-2 font-medium">{timeStr}</div>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-slate-400">O</span>
+            <span className="text-muted-foreground">O</span>
             <span className="font-bold tabular-nums" style={{ color }}>{d.open.toFixed(info.digits)}</span>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <span className="text-slate-400">H</span>
+            <span className="text-muted-foreground">H</span>
             <span className="font-bold tabular-nums" style={{ color }}>{d.high.toFixed(info.digits)}</span>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <span className="text-slate-400">L</span>
+            <span className="text-muted-foreground">L</span>
             <span className="font-bold tabular-nums" style={{ color }}>{d.low.toFixed(info.digits)}</span>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <span className="text-slate-400">C</span>
+            <span className="text-muted-foreground">C</span>
             <span className="font-bold tabular-nums" style={{ color }}>{d.close.toFixed(info.digits)}</span>
           </div>
         </div>
-        <div className="flex items-center justify-between gap-2 mt-2 pt-1.5 border-t border-white/10">
-          <span className="text-slate-400">Vol</span>
-          <span className="font-bold tabular-nums text-slate-300">{d.volume.toLocaleString()}</span>
+        <div className="flex items-center justify-between gap-2 mt-2 pt-1.5 border-t border-border">
+          <span className="text-muted-foreground">Vol</span>
+          <span className="font-bold tabular-nums text-foreground">{d.volume.toLocaleString()}</span>
         </div>
         {spreadPips !== null && (
           <div className="flex items-center justify-between gap-2 mt-0.5">
-            <span className="text-slate-400">Spread</span>
+            <span className="text-muted-foreground">Spread</span>
             <span className="font-bold tabular-nums text-amber-400">{spreadPips} pips</span>
           </div>
         )}
         <div className="flex items-center justify-between gap-2 mt-0.5">
-          <span className="text-slate-400">Chg</span>
+          <span className="text-muted-foreground">Chg</span>
           <span className="font-bold tabular-nums" style={{ color: changeColor }}>
             {changeSign}{changeFromPrev.toFixed(info.digits)}
           </span>

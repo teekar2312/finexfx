@@ -337,7 +337,7 @@ export default function SignalDetailModal({ signal, open, onOpenChange }: Signal
                             ? 'border-emerald-500/50 text-emerald-500 badge-pulse'
                             : isSell
                               ? 'border-red-500/50 text-red-500 badge-pulse'
-                              : 'border-slate-500/50 text-slate-400'
+                              : 'border-slate-500/50 text-muted-foreground'
                         }`}
                       >
                         {SYMBOL_INFO[signal.symbol].name}
@@ -348,7 +348,7 @@ export default function SignalDetailModal({ signal, open, onOpenChange }: Signal
                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                             : isSell
                               ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                              : 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
+                              : 'bg-slate-500/20 text-muted-foreground border border-slate-500/30'
                         }`}
                         variant="secondary"
                       >
@@ -447,7 +447,7 @@ export default function SignalDetailModal({ signal, open, onOpenChange }: Signal
                         ? 'text-emerald-400'
                         : strat.signal === 'bearish'
                           ? 'text-red-400'
-                          : 'text-slate-400';
+                          : 'text-muted-foreground';
                     const SignalIcon =
                       strat.signal === 'bullish'
                         ? TrendingUp
@@ -488,7 +488,7 @@ export default function SignalDetailModal({ signal, open, onOpenChange }: Signal
                         </div>
                         {/* Agree/Disagree indicator */}
                         {strat.agrees ? (
-                          <Check className={`h-3.5 w-3.5 flex-shrink-0 ${strat.signal === 'neutral' ? 'text-slate-400' : 'text-emerald-400'}`} />
+                          <Check className={`h-3.5 w-3.5 flex-shrink-0 ${strat.signal === 'neutral' ? 'text-muted-foreground' : 'text-emerald-400'}`} />
                         ) : (
                           <X className="h-3.5 w-3.5 flex-shrink-0 text-red-400" />
                         )}
@@ -585,7 +585,7 @@ export default function SignalDetailModal({ signal, open, onOpenChange }: Signal
                               ? 'border-emerald-500/30 text-emerald-400'
                               : ind.signal === 'bearish'
                                 ? 'border-red-500/30 text-red-400'
-                                : 'border-slate-500/30 text-slate-400'
+                                : 'border-slate-500/30 text-muted-foreground'
                           }`}
                         >
                           {ind.signal === 'bullish'
@@ -703,8 +703,8 @@ export default function SignalDetailModal({ signal, open, onOpenChange }: Signal
                     onClick={handleExecuteTrade}
                     className={`w-full scale-click font-semibold ${
                       isBuy
-                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                        : 'bg-red-600 hover:bg-red-700 text-white'
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-foreground'
+                        : 'bg-red-600 hover:bg-red-700 text-foreground'
                     }`}
                   >
                     <Target className="h-4 w-4" />

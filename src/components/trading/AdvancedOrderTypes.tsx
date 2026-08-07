@@ -76,7 +76,7 @@ function TabButton({
       className={`scale-click flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-medium transition-all ${
         active
           ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30'
-          : 'text-slate-400 hover:bg-white/5 hover:text-slate-300'
+          : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
       }`}
     >
       <Icon className="h-3 w-3" />
@@ -103,17 +103,17 @@ function CompactInput({
 }) {
   return (
     <label className="flex flex-col gap-0.5">
-      <span className="text-[10px] text-slate-500">{label}</span>
+      <span className="text-[10px] text-muted-foreground">{label}</span>
       <div className="relative">
         <input
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="h-7 w-full rounded-md border border-white/10 bg-white/5 px-2 pr-8 text-xs text-slate-200 tabular-nums outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20"
+          className="h-7 w-full rounded-md border border-border bg-muted/50 px-2 pr-8 text-xs text-foreground tabular-nums outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20"
         />
         {suffix && (
-          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500">
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
             {suffix}
           </span>
         )}
@@ -595,13 +595,13 @@ export default function AdvancedOrderTypes() {
         <h3 className="section-title-accent text-xs font-bold uppercase tracking-wider">
           Advanced Orders
         </h3>
-        <Badge variant="outline" className="border-white/10 text-[10px] text-slate-400">
+        <Badge variant="outline" className="border-border text-[10px] text-muted-foreground">
           {selectedSymbol}
         </Badge>
       </div>
 
       {/* Tab Toggle */}
-      <div className="flex gap-1 rounded-lg bg-white/5 p-1">
+      <div className="flex gap-1 rounded-lg bg-muted/50 p-1">
         <TabButton id="oco" label="OCO" icon={GitBranch} active={activeTab === 'oco'} onClick={() => setActiveTab('oco')} />
         <TabButton id="breakeven" label="Break-Even" icon={Shield} active={activeTab === 'breakeven'} onClick={() => setActiveTab('breakeven')} />
         <TabButton id="trailing" label="Trailing Limit" icon={TrendingUp} active={activeTab === 'trailing'} onClick={() => setActiveTab('trailing')} />
@@ -620,9 +620,9 @@ export default function AdvancedOrderTypes() {
             className="space-y-3"
           >
             {/* Current price reference */}
-            <div className="flex items-center justify-between rounded-md bg-white/5 px-3 py-1.5">
-              <span className="text-[10px] text-slate-500">Current Price</span>
-              <span className="tabular-nums text-xs font-semibold text-slate-200">
+            <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-1.5">
+              <span className="text-[10px] text-muted-foreground">Current Price</span>
+              <span className="tabular-nums text-xs font-semibold text-foreground">
                 {currentPrice.toFixed(info.digits)}
               </span>
             </div>
@@ -711,7 +711,7 @@ export default function AdvancedOrderTypes() {
             <Button
               onClick={handlePlaceOCO}
               disabled={!isConnected || !oco.buyStopEntry || !oco.sellStopEntry}
-              className="scale-click w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-[11px] font-semibold text-white hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40"
+              className="scale-click w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-[11px] font-semibold text-foreground hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40"
               size="sm"
             >
               <Zap className="mr-1 h-3 w-3" />
@@ -719,7 +719,7 @@ export default function AdvancedOrderTypes() {
             </Button>
 
             {/* Info note */}
-            <p className="text-center text-[10px] text-slate-500">
+            <p className="text-center text-[10px] text-muted-foreground">
               When one order fills, the other is automatically cancelled
             </p>
           </motion.div>
@@ -739,26 +739,26 @@ export default function AdvancedOrderTypes() {
             <div className="glass-card flex items-center justify-between rounded-lg p-3">
               <div className="flex items-center gap-2">
                 <Shield className="h-4 w-4 text-amber-400" />
-                <span className="text-[11px] font-medium text-slate-300">BE Activation</span>
+                <span className="text-[11px] font-medium text-foreground">BE Activation</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-slate-500">Trigger at</span>
+                <span className="text-[10px] text-muted-foreground">Trigger at</span>
                 <input
                   type="number"
                   value={beTriggerPips}
                   onChange={(e) => setBeTriggerPips(e.target.value)}
-                  className="h-7 w-14 rounded-md border border-white/10 bg-white/5 px-2 text-xs text-amber-400 tabular-nums outline-none focus:border-amber-500/40"
+                  className="h-7 w-14 rounded-md border border-border bg-muted/50 px-2 text-xs text-amber-400 tabular-nums outline-none focus:border-amber-500/40"
                   min="1"
                 />
-                <span className="text-[10px] text-slate-500">pips profit</span>
+                <span className="text-[10px] text-muted-foreground">pips profit</span>
               </div>
             </div>
 
             {/* Open trades list */}
             {openNonPendingTrades.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 rounded-lg bg-white/5 py-6">
-                <AlertCircle className="h-5 w-5 text-slate-500" />
-                <span className="text-[11px] text-slate-500">No open trades to manage</span>
+              <div className="flex flex-col items-center justify-center gap-2 rounded-lg bg-muted/50 py-6">
+                <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                <span className="text-[11px] text-muted-foreground">No open trades to manage</span>
               </div>
             ) : (
               <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -790,8 +790,8 @@ export default function AdvancedOrderTypes() {
                           >
                             {trade.direction}
                           </Badge>
-                          <span className="text-[11px] font-medium text-slate-300">{trade.symbol}</span>
-                          <span className="metric-compact tabular-nums text-[10px] text-slate-500">
+                          <span className="text-[11px] font-medium text-foreground">{trade.symbol}</span>
+                          <span className="metric-compact tabular-nums text-[10px] text-muted-foreground">
                             {trade.lotSize} lots
                           </span>
                         </div>
@@ -800,7 +800,7 @@ export default function AdvancedOrderTypes() {
                           className={`scale-click flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-all ${
                             isBEActive
                               ? 'bg-amber-500/20 text-amber-400'
-                              : 'bg-white/5 text-slate-500 hover:bg-white/10 hover:text-slate-400'
+                              : 'bg-muted/50 text-muted-foreground hover:bg-muted/50 hover:text-muted-foreground'
                           }`}
                         >
                           {isBEActive ? (
@@ -814,10 +814,10 @@ export default function AdvancedOrderTypes() {
 
                       {/* Pips info */}
                       <div className="mt-1.5 flex items-center gap-3">
-                        <span className="tabular-nums text-[10px] text-slate-500">
+                        <span className="tabular-nums text-[10px] text-muted-foreground">
                           Entry: {trade.entryPrice.toFixed(info.digits)}
                         </span>
-                        <span className="tabular-nums text-[10px] text-slate-500">
+                        <span className="tabular-nums text-[10px] text-muted-foreground">
                           P&amp;L:{' '}
                           <span className={inProfit ? 'text-emerald-400' : 'text-red-400'}>
                             {profitPips >= 0 ? '+' : ''}
@@ -846,9 +846,9 @@ export default function AdvancedOrderTypes() {
             )}
 
             {/* Legend */}
-            <div className="flex items-center justify-center gap-4 text-[10px] text-slate-500">
+            <div className="flex items-center justify-center gap-4 text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1">
-                <Minus className="h-2 w-2 text-slate-400" /> Entry
+                <Minus className="h-2 w-2 text-muted-foreground" /> Entry
               </span>
               <span className="flex items-center gap-1">
                 <Minus className="h-2 w-2 text-sky-400" /> Current
@@ -877,7 +877,7 @@ export default function AdvancedOrderTypes() {
                 className={`scale-click flex-1 rounded-md py-1.5 text-[11px] font-semibold transition-all ${
                   trailing.direction === 'BUY'
                     ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30'
-                    : 'bg-white/5 text-slate-500 hover:bg-white/10'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted/50'
                 }`}
               >
                 <ArrowUpRight className="mr-1 inline h-3 w-3" />
@@ -888,7 +888,7 @@ export default function AdvancedOrderTypes() {
                 className={`scale-click flex-1 rounded-md py-1.5 text-[11px] font-semibold transition-all ${
                   trailing.direction === 'SELL'
                     ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/30'
-                    : 'bg-white/5 text-slate-500 hover:bg-white/10'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted/50'
                 }`}
               >
                 <ArrowDownRight className="mr-1 inline h-3 w-3" />
@@ -917,8 +917,8 @@ export default function AdvancedOrderTypes() {
                 suffix="lots"
               />
               <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] text-slate-500">Est. Limit</span>
-                <div className="flex h-7 items-center rounded-md border border-white/10 bg-white/5 px-2 tabular-nums text-xs text-slate-300">
+                <span className="text-[10px] text-muted-foreground">Est. Limit</span>
+                <div className="flex h-7 items-center rounded-md border border-border bg-muted/50 px-2 tabular-nums text-xs text-foreground">
                   {(() => {
                     if (!currentPrice || !trailDistNum || !limitOffNum) return '—';
                     const pipSize = info.pipSize;
@@ -950,9 +950,9 @@ export default function AdvancedOrderTypes() {
                   digits={info.digits}
                 />
               </div>
-              <div className="mt-1.5 flex items-center justify-center gap-4 text-[10px] text-slate-500">
+              <div className="mt-1.5 flex items-center justify-center gap-4 text-[10px] text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <Minus className="h-2 w-2 text-slate-400" /> Current
+                  <Minus className="h-2 w-2 text-muted-foreground" /> Current
                 </span>
                 <span className="flex items-center gap-1">
                   <Minus className="h-2 w-2 text-violet-400" /> Trail
@@ -964,9 +964,9 @@ export default function AdvancedOrderTypes() {
             </div>
 
             {/* How it works */}
-            <div className="rounded-lg bg-white/5 p-2.5">
-              <p className="text-[10px] leading-relaxed text-slate-400">
-                <span className="font-medium text-slate-300">How it works:</span> A limit order trails the
+            <div className="rounded-lg bg-muted/50 p-2.5">
+              <p className="text-[10px] leading-relaxed text-muted-foreground">
+                <span className="font-medium text-foreground">How it works:</span> A limit order trails the
                 market price by{' '}
                 <span className="text-violet-400">{trailing.trailDistance || '—'} pips</span>. The limit
                 entry is placed{' '}
@@ -979,7 +979,7 @@ export default function AdvancedOrderTypes() {
             <Button
               onClick={handlePlaceTrailingLimit}
               disabled={!isConnected || !trailing.trailDistance || !trailing.limitOffset}
-              className={`scale-click w-full text-[11px] font-semibold text-white disabled:opacity-40 ${
+              className={`scale-click w-full text-[11px] font-semibold text-foreground disabled:opacity-40 ${
                 trailing.direction === 'BUY'
                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500'
                   : 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500'

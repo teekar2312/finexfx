@@ -100,9 +100,9 @@ export function useLivePriceFeed() {
   }, [priceFeedMode, connect, disconnect]);
 
   // Auto-reconnect on error after 5s
+  const connectionStatus = useTradingStore((s) => s.connectionStatus);
   useEffect(() => {
-    const status = useTradingStore.getState().connectionStatus;
-    if (priceFeedMode === 'live' && status === 'error') {
+    if (priceFeedMode === 'live' && connectionStatus === 'error') {
       reconnectTimer.current = setTimeout(() => {
         connect();
       }, 5000);
@@ -112,7 +112,7 @@ export function useLivePriceFeed() {
         clearTimeout(reconnectTimer.current);
       }
     };
-  }, [priceFeedMode, connect, wsPort]);
+  }, [priceFeedMode, connectionStatus, connect]);
 
   return { connect, disconnect };
 }

@@ -260,7 +260,7 @@ function DisciplineGauge({ data }: { data: DisciplineData }) {
             fill="none"
             stroke="currentColor"
             strokeWidth="8"
-            className="text-white/[0.06]"
+            className="text-foreground/[0.06]"
           />
           {/* Animated fill */}
           <motion.circle
@@ -321,7 +321,7 @@ function DisciplineGauge({ data }: { data: DisciplineData }) {
                 sub.score >= 60 ? 'text-amber-400' : 'text-red-400'
               }`}>{sub.score}</span>
             </div>
-            <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
+            <div className="h-1 bg-muted/50 rounded-full overflow-hidden">
               <motion.div
                 className={`h-full rounded-full ${
                   sub.score >= 80 ? 'bg-emerald-500' :
@@ -382,7 +382,7 @@ function MoodTimeline({ sessions }: { sessions: SessionMood[] }) {
             >
               {/* Connecting line */}
               {i < sessions.length - 1 && (
-                <div className="absolute top-3 left-[calc(50%+10px)] w-[calc(100%-20px)] h-[2px] bg-white/[0.08]" />
+                <div className="absolute top-3 left-[calc(50%+10px)] w-[calc(100%-20px)] h-[2px] bg-muted/50" />
               )}
 
               {/* Circle */}
@@ -429,7 +429,7 @@ function MoodTimeline({ sessions }: { sessions: SessionMood[] }) {
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                       session.mood === 'Great' ? 'bg-emerald-500/20 text-emerald-400' :
                       session.mood === 'Good' ? 'bg-lime-500/20 text-lime-400' :
-                      session.mood === 'Neutral' ? 'bg-gray-500/20 text-gray-400' :
+                      session.mood === 'Neutral' ? 'bg-gray-500/20 text-muted-foreground' :
                       session.mood === 'Frustrated' ? 'bg-amber-500/20 text-amber-400' :
                       'bg-red-500/20 text-red-400'
                     }`}>{session.mood}</span>
@@ -513,13 +513,13 @@ function EmotionImpactChart({ stats }: { stats: EmotionStat[] }) {
               <div className="flex items-center gap-1.5">
                 <stat.icon className={`w-3 h-3 ${stat.color}`} />
                 <span className="text-[11px] font-medium">{stat.name}</span>
-                <span className="text-[9px] font-mono bg-white/[0.06] text-muted-foreground px-1.5 py-0.5 rounded">
+                <span className="text-[9px] font-mono bg-muted/50 text-muted-foreground px-1.5 py-0.5 rounded">
                   {stat.count}
                 </span>
               </div>
               <span className="text-[11px] font-mono font-bold">{stat.winRate}% WR</span>
             </div>
-            <div className="h-2 bg-white/[0.04] rounded-full overflow-hidden">
+            <div className="h-2 bg-muted/40 rounded-full overflow-hidden">
               <motion.div
                 className={`h-full rounded-full ${stat.bgColor}`}
                 initial={{ width: 0 }}
@@ -819,7 +819,7 @@ export default function TradingPsychologyPanel() {
       <motion.div variants={itemVariants} className="flex items-center gap-2">
         <Brain className="w-4 h-4 text-violet-400" />
         <h2 className="text-sm font-semibold">Trading Psychology</h2>
-        <span className="text-[9px] text-muted-foreground bg-white/[0.05] px-2 py-0.5 rounded-full ml-auto uppercase tracking-wider">
+        <span className="text-[9px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full ml-auto uppercase tracking-wider">
           Mental Edge
         </span>
       </motion.div>

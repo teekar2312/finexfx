@@ -90,7 +90,7 @@ function RiskPresetChips({
             ${
               selected === pct
                 ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/50'
-                : 'bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground'
+                : 'bg-muted/50 text-muted-foreground hover:bg-muted/50 hover:text-foreground'
             }
           `}
         >
@@ -506,7 +506,7 @@ function PipValueTab() {
         />
       </motion.div>
 
-      <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3 mt-2">
+      <div className="rounded-lg bg-muted/30 border border-border/50 p-3 mt-2">
         <p className="text-[10px] text-muted-foreground leading-relaxed">
           <Info className="inline h-3 w-3 mr-1" />
           Pip value calculation uses {SYMBOL_INFO[pair].name} pip size of{' '}
@@ -622,7 +622,7 @@ function RiskRewardTab() {
             initial={{ width: 0 }}
             animate={{ width: `${slPct}%` }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="relative flex items-center justify-center bg-gradient-to-r from-red-500/30 to-red-500/15 border-r border-white/10"
+            className="relative flex items-center justify-center bg-gradient-to-r from-red-500/30 to-red-500/15 border-r border-border"
           >
             <span className="text-[10px] font-mono text-red-300 font-semibold drop-shadow-sm">
               SL: {slPips} pips
@@ -637,7 +637,7 @@ function RiskRewardTab() {
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center"
           >
             <div className="w-3 h-3 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)]" />
-            <span className="text-[9px] text-white font-semibold mt-0.5 bg-black/50 px-1 rounded">
+            <span className="text-[9px] text-foreground font-semibold mt-0.5 bg-background/70 px-1 rounded">
               ENTRY
             </span>
           </motion.div>
@@ -648,7 +648,7 @@ function RiskRewardTab() {
             initial={{ width: 0 }}
             animate={{ width: `${tpPct}%` }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="relative flex items-center justify-center bg-gradient-to-r from-emerald-500/15 to-emerald-500/30 border-l border-white/10"
+            className="relative flex items-center justify-center bg-gradient-to-r from-emerald-500/15 to-emerald-500/30 border-l border-border"
           >
             <span className="text-[10px] font-mono text-emerald-300 font-semibold drop-shadow-sm">
               TP: {tpPips} pips
@@ -692,7 +692,7 @@ function RiskRewardTab() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3"
+          className="rounded-lg bg-muted/30 border border-border/50 p-3"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -846,10 +846,10 @@ function SwapTab() {
           </span>
         </div>
 
-        <div className="rounded-lg border border-white/[0.06] overflow-hidden">
+        <div className="rounded-lg border border-border/50 overflow-hidden">
           <table className="w-full text-xs">
             <thead>
-              <tr className="bg-white/[0.04]">
+              <tr className="bg-muted/40">
                 <th className="text-left py-2 px-3 text-muted-foreground font-medium">
                   Pair
                 </th>
@@ -868,8 +868,8 @@ function SwapTab() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: SYMBOLS.indexOf(s) * 0.05 }}
-                  className={`border-t border-white/[0.04] ${
-                    s === pair ? 'bg-white/[0.05]' : 'hover:bg-white/[0.02]'
+                  className={`border-t border-border/50 ${
+                    s === pair ? 'bg-muted/50' : 'hover:bg-muted/30'
                   } transition-colors`}
                 >
                   <td className="py-2 px-3 font-mono text-foreground font-medium">
@@ -920,7 +920,7 @@ function SwapTab() {
         </div>
 
         {/* Long position */}
-        <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3 mb-2">
+        <div className="rounded-lg bg-muted/30 border border-border/50 p-3 mb-2">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-emerald-400 flex items-center gap-1">
               <TrendingUp className="h-3 w-3" />
@@ -945,7 +945,7 @@ function SwapTab() {
         </div>
 
         {/* Short position */}
-        <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
+        <div className="rounded-lg bg-muted/30 border border-border/50 p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-red-400 flex items-center gap-1">
               <TrendingDown className="h-3 w-3" />
@@ -970,7 +970,7 @@ function SwapTab() {
         </div>
       </motion.div>
 
-      <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
+      <div className="rounded-lg bg-muted/30 border border-border/50 p-3">
         <p className="text-[10px] text-muted-foreground leading-relaxed">
           <Info className="inline h-3 w-3 mr-1" />
           Swap rates are indicative and reflect typical FINEX Indonesia broker
@@ -1013,7 +1013,7 @@ export default function PositionSizeCalculator() {
   ];
 
   return (
-    <Card className="glass-card-premium border-white/[0.06] gap-0 overflow-hidden">
+    <Card className="glass-card-premium border-border/50 gap-0 overflow-hidden">
       {/* Header */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center gap-2 mb-3">
@@ -1037,12 +1037,12 @@ export default function PositionSizeCalculator() {
             setActiveTab(v as 'position' | 'pip' | 'rr' | 'swap')
           }
         >
-          <TabsList className="w-full h-9 bg-white/[0.04] rounded-lg p-1">
+          <TabsList className="w-full h-9 bg-muted/40 rounded-lg p-1">
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="flex-1 gap-1 text-xs data-[state=active]:bg-white/[0.08] data-[state=active]:text-foreground rounded-md px-2 h-7"
+                className="flex-1 gap-1 text-xs data-[state=active]:bg-muted/50 data-[state=active]:text-foreground rounded-md px-2 h-7"
               >
                 <tab.icon className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{tab.label}</span>

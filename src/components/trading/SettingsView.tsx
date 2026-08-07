@@ -124,7 +124,7 @@ export default function SettingsView() {
     { key: 'all', label: 'All', count: logCounts.total, color: 'text-foreground' },
     { key: 'error', label: 'Errors', count: logCounts.errors, color: 'text-red-500' },
     { key: 'warning', label: 'Warnings', count: logCounts.warnings, color: 'text-amber-500' },
-    { key: 'info', label: 'Info', count: logCounts.info, color: 'text-slate-400' },
+    { key: 'info', label: 'Info', count: logCounts.info, color: 'text-muted-foreground' },
   ];
 
   return (
@@ -161,7 +161,7 @@ export default function SettingsView() {
               <div className="flex items-center gap-4">
                 {/* Logo Placeholder */}
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xl font-black text-white">FX</span>
+                  <span className="text-xl font-black text-foreground">FX</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
@@ -264,7 +264,7 @@ export default function SettingsView() {
                   <Radio className="h-4 w-4 text-primary" />
                   <div className="section-title-accent text-sm font-semibold">Trading Mode</div>
                 </div>
-                <Badge className={`text-[10px] ${priceFeedMode === 'live' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 badge-glow-emerald' : 'bg-slate-500/10 text-slate-400 border-slate-500/30'}`}>
+                <Badge className={`text-[10px] ${priceFeedMode === 'live' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 badge-glow-emerald' : 'bg-slate-500/10 text-muted-foreground border-slate-500/30'}`}>
                   {priceFeedMode === 'live' ? '● LIVE FEED' : '● SIMULATED'}
                 </Badge>
               </div>
@@ -656,7 +656,7 @@ export default function SettingsView() {
                     value={newAlertPrice}
                     onChange={(e) => setNewAlertPrice(e.target.value)}
                     step="0.00001"
-                    className="h-8 text-xs tabular-nums mt-0.5 input-glass-premium bg-white/[0.03] border-white/[0.08] focus:border-emerald-500/40"
+                    className="h-8 text-xs tabular-nums mt-0.5 input-glass-premium bg-muted/30 border-border/50 focus:border-emerald-500/40"
                   />
                 </div>
                 <Button onClick={addNewAlert} size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground h-8">
@@ -834,7 +834,7 @@ export default function SettingsView() {
                                     className={`text-[9px] px-1.5 py-0 ${
                                       log.level === 'error' ? 'border-red-500/50 text-red-500' :
                                       log.level === 'warning' ? 'border-amber-500/50 text-amber-500' :
-                                      'border-slate-500/50 text-slate-500'
+                                      'border-slate-500/50 text-muted-foreground'
                                     }`}
                                   >
                                     {log.level.toUpperCase()}

@@ -124,7 +124,7 @@ function getCellColor(value: number): string {
   if (value >= 0.15) return 'bg-emerald-600/70';
   if (value >= 0.05) return 'bg-emerald-500/50';
   if (value >= 0.02) return 'bg-emerald-500/25';
-  if (value >= -0.02) return 'bg-gray-700/40';
+  if (value >= -0.02) return 'bg-muted/40';
   if (value >= -0.05) return 'bg-red-500/25';
   if (value >= -0.15) return 'bg-red-500/50';
   if (value >= -0.3) return 'bg-red-600/70';
@@ -132,7 +132,7 @@ function getCellColor(value: number): string {
 }
 
 function getTextColor(value: number): string {
-  if (Math.abs(value) < 0.02) return 'text-gray-300';
+  if (Math.abs(value) < 0.02) return 'text-muted-foreground';
   return value > 0 ? 'text-emerald-300' : 'text-red-300';
 }
 
@@ -231,14 +231,14 @@ function HeatmapCellComponent({ cell, index }: { cell: HeatmapCell; index: numbe
         className={`
           ${getCellColor(cell.changePercent)}
           rounded-md px-2 py-1.5 min-h-[48px] flex flex-col items-center justify-center
-          border border-white/5 cursor-pointer transition-all duration-150
-          ${hovered ? 'scale-[1.03] border-white/20 z-10 shadow-lg' : 'scale-100'}
+          border border-border/50 cursor-pointer transition-all duration-150
+          ${hovered ? 'scale-[1.03] border-border z-10 shadow-lg' : 'scale-100'}
         `}
       >
         <span className={`text-[11px] font-mono font-semibold ${getTextColor(cell.changePercent)}`}>
           {formatPercent(cell.changePercent)}
         </span>
-        <span className="text-[9px] font-mono text-white/40 mt-0.5">
+        <span className="text-[9px] font-mono text-muted-foreground/60 mt-0.5">
           {formatPips(cell.changePips)}
         </span>
       </div>
@@ -253,19 +253,19 @@ function HeatmapCellComponent({ cell, index }: { cell: HeatmapCell; index: numbe
             transition={{ duration: 0.15 }}
             className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2
               glass-card-premium rounded-lg px-3 py-2 min-w-[160px]
-              border border-white/10 shadow-xl"
+              border border-border shadow-xl"
           >
-            <div className="text-[11px] font-semibold text-white mb-0.5">
+            <div className="text-[11px] font-semibold text-foreground mb-0.5">
               {cell.pair} · {cell.timeframe}
             </div>
             <div className={`text-[13px] font-mono font-bold ${getTextColor(cell.changePercent)}`}>
               {formatPercent(cell.changePercent)}
             </div>
-            <div className="text-[10px] font-mono text-white/50">
+            <div className="text-[10px] font-mono text-muted-foreground">
               {formatPips(cell.changePips)}
             </div>
             <TooltipSparkline values={cell.sparkline} />
-            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px w-2 h-2 rotate-45 glass-card-premium border-r border-b border-white/10" />
+            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px w-2 h-2 rotate-45 glass-card-premium border-r border-b border-border" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -281,8 +281,8 @@ function TimeframeAggregationBar({ averages }: { averages: TimeframeAvg[] }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5 mb-2">
-        <BarChart3 className="w-3 h-3 text-white/50" />
-        <span className="text-[10px] text-white/50 uppercase tracking-wider font-medium">
+        <BarChart3 className="w-3 h-3 text-muted-foreground" />
+        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
           Timeframe Avg Performance
         </span>
       </div>
@@ -291,10 +291,10 @@ function TimeframeAggregationBar({ averages }: { averages: TimeframeAvg[] }) {
         const isPos = item.avg >= 0;
         return (
           <div key={item.timeframe} className="flex items-center gap-2">
-            <span className="text-[10px] font-mono text-white/40 w-6 text-right">{item.timeframe}</span>
-            <div className="flex-1 h-3 rounded-sm bg-gray-800/60 overflow-hidden relative">
+            <span className="text-[10px] font-mono text-muted-foreground/60 w-6 text-right">{item.timeframe}</span>
+            <div className="flex-1 h-3 rounded-sm bg-muted/60 overflow-hidden relative">
               {/* Center line */}
-              <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/10" />
+              <div className="absolute left-1/2 top-0 bottom-0 w-px bg-muted/50" />
               {/* Bar */}
               <motion.div
                 initial={{ scaleX: 0 }}
@@ -327,7 +327,7 @@ function PairRankingList({ rankings }: { rankings: PairRanking[] }) {
     <div className="space-y-2">
       <div className="flex items-center gap-1.5 mb-1">
         <Trophy className="w-3 h-3 text-amber-400/70" />
-        <span className="text-[10px] text-white/50 uppercase tracking-wider font-medium">
+        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
           Pair Performance Ranking
         </span>
       </div>
@@ -341,21 +341,21 @@ function PairRankingList({ rankings }: { rankings: PairRanking[] }) {
             flex items-center gap-2 px-2.5 py-2 rounded-md border
             ${i === 0
               ? 'border-amber-500/30 bg-amber-500/10'
-              : 'border-white/5 bg-white/[0.02]'
+              : 'border-border/50 bg-muted/30'
             }
           `}
         >
           {/* Rank badge */}
           <div className={`
             w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0
-            ${i === 0 ? 'bg-amber-500/30 text-amber-300' : 'bg-white/10 text-white/40'}
+            ${i === 0 ? 'bg-amber-500/30 text-amber-300' : 'bg-muted/50 text-muted-foreground/60'}
           `}>
             {i === 0 ? <Trophy className="w-3 h-3" /> : r.rank}
           </div>
 
           {/* Pair name & score */}
           <div className="flex-1 min-w-0">
-            <div className="text-[11px] font-semibold text-white/90 truncate">{r.displayName}</div>
+            <div className="text-[11px] font-semibold text-foreground/90 truncate">{r.displayName}</div>
             <div className={`text-[10px] font-mono ${getTextColor(r.score)}`}>
               {formatPercent(r.score)}
             </div>
@@ -457,11 +457,11 @@ export default function MarketHeatmap() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Grid3X3 className="w-4 h-4 text-emerald-400/70" />
-          <h3 className="text-sm font-semibold text-white/90">Market Heatmap</h3>
+          <h3 className="text-sm font-semibold text-foreground/90">Market Heatmap</h3>
         </div>
         <div className="flex items-center gap-1.5">
-          <Clock className="w-3 h-3 text-white/30" />
-          <span className="text-[10px] text-white/30 font-mono">LIVE</span>
+          <Clock className="w-3 h-3 text-muted-foreground/50" />
+          <span className="text-[10px] text-muted-foreground/50 font-mono">LIVE</span>
         </div>
       </div>
 
@@ -493,7 +493,7 @@ export default function MarketHeatmap() {
               {marketBias.type}
             </span>
           </div>
-          <p className="text-[10px] text-white/40 mt-1">
+          <p className="text-[10px] text-muted-foreground/60 mt-1">
             {marketBias.posCount} of {total} cells positive · {marketBias.negCount} negative
           </p>
         </div>
@@ -512,8 +512,8 @@ export default function MarketHeatmap() {
               const digits = SYMBOL_INFO[p.symbol].digits;
               return (
                 <div key={p.pair} className="text-center">
-                  <div className="text-[10px] font-semibold text-white/70">{p.displayName}</div>
-                  <div className="text-[9px] font-mono text-white/30">{price > 0 ? price.toFixed(digits) : '---'}</div>
+                  <div className="text-[10px] font-semibold text-foreground/70">{p.displayName}</div>
+                  <div className="text-[9px] font-mono text-muted-foreground/50">{price > 0 ? price.toFixed(digits) : '---'}</div>
                 </div>
               );
             })}
@@ -524,7 +524,7 @@ export default function MarketHeatmap() {
             <div key={tf} className="grid grid-cols-[40px_repeat(4,1fr)] gap-1.5 mb-1.5">
               {/* Timeframe label */}
               <div className="flex items-center">
-                <span className="text-[10px] font-mono text-white/40 font-medium">{tf}</span>
+                <span className="text-[10px] font-mono text-muted-foreground/60 font-medium">{tf}</span>
               </div>
               {/* Cells */}
               {PAIR_CONFIG.map((p, pIdx) => {
@@ -537,7 +537,7 @@ export default function MarketHeatmap() {
           ))}
 
           {/* Timeframe Aggregation Bar */}
-          <div className="mt-3 pt-3 border-t border-white/5">
+          <div className="mt-3 pt-3 border-t border-border/50">
             <TimeframeAggregationBar averages={timeframeAverages} />
           </div>
         </div>
@@ -549,8 +549,8 @@ export default function MarketHeatmap() {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-3 pt-2 border-t border-white/5">
-        <span className="text-[9px] text-white/30">Strong Sell</span>
+      <div className="flex items-center justify-center gap-3 pt-2 border-t border-border/50">
+        <span className="text-[9px] text-muted-foreground/50">Strong Sell</span>
         <div className="flex gap-0.5">
           <div className="w-4 h-2 rounded-sm bg-red-700/80" />
           <div className="w-4 h-2 rounded-sm bg-red-500/50" />
@@ -560,7 +560,7 @@ export default function MarketHeatmap() {
           <div className="w-4 h-2 rounded-sm bg-emerald-500/50" />
           <div className="w-4 h-2 rounded-sm bg-emerald-700/80" />
         </div>
-        <span className="text-[9px] text-white/30">Strong Buy</span>
+        <span className="text-[9px] text-muted-foreground/50">Strong Buy</span>
       </div>
     </div>
   );

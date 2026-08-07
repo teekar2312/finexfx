@@ -127,7 +127,7 @@ function DailyRangeBar({ high, low, current, digits }: { high: number; low: numb
 
   return (
     <div className="flex flex-col items-center gap-px" style={{ width: 3, height: 14 }}>
-      <div className="relative w-full flex-1 rounded-full bg-white/[0.06]">
+      <div className="relative w-full flex-1 rounded-full bg-border/60">
         <div
           className="absolute left-1/2 -translate-x-1/2 w-[3px] rounded-full"
           style={{
@@ -192,8 +192,8 @@ export default function Footer() {
                 </>
               ) : (
                 <>
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-600" />
-                  <span className="text-slate-600 font-medium">Closed</span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
+                  <span className="text-muted-foreground font-medium">Closed</span>
                 </>
               )}
             </div>
@@ -202,7 +202,7 @@ export default function Footer() {
         </Tooltip>
 
         {/* Glass separator */}
-        <div className="w-px h-5 bg-gradient-to-b from-transparent via-white/10 to-transparent shrink-0" />
+        <div className="w-px h-5 bg-gradient-to-b from-transparent via-border to-transparent shrink-0" />
 
         {/* ── Market Ticker ── */}
         <div className="flex-1 overflow-hidden scroll-horizontal">
@@ -233,7 +233,7 @@ export default function Footer() {
         </div>
 
         {/* Glass separator */}
-        <div className="w-px h-5 bg-gradient-to-b from-transparent via-white/10 to-transparent shrink-0" />
+        <div className="w-px h-5 bg-gradient-to-b from-transparent via-border to-transparent shrink-0" />
 
         {/* ── Mini Equity Sparkline ── */}
         <Tooltip>
@@ -246,7 +246,7 @@ export default function Footer() {
         </Tooltip>
 
         {/* Glass separator */}
-        <div className="w-px h-5 bg-gradient-to-b from-transparent via-white/10 to-transparent shrink-0" />
+        <div className="w-px h-5 bg-gradient-to-b from-transparent via-border to-transparent shrink-0" />
 
         {/* ── Spread for Selected Symbol ── */}
         {spreadPips !== null && (
@@ -263,7 +263,7 @@ export default function Footer() {
         )}
 
         {/* Glass separator */}
-        <div className="w-px h-5 bg-gradient-to-b from-transparent via-white/10 to-transparent shrink-0" />
+        <div className="w-px h-5 bg-gradient-to-b from-transparent via-border to-transparent shrink-0" />
 
         {/* ── Status Indicators ── */}
         <div className="flex items-center gap-2.5 shrink-0">
@@ -295,7 +295,7 @@ export default function Footer() {
               <div className="flex items-center gap-1.5 text-muted-foreground cursor-default">
                 <span className="font-medium">{openTrades.length}</span>
                 <span className="text-[9px]">pos</span>
-                <div className="w-px h-3 bg-white/10" />
+                <div className="w-px h-3 bg-border" />
                 <span className={`font-semibold tabular-nums ${dailyPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {dailyPnl >= 0 ? '+' : ''}{dailyPnl.toFixed(2)}
                 </span>
@@ -306,7 +306,7 @@ export default function Footer() {
         </div>
 
         {/* Glass separator */}
-        <div className="w-px h-5 bg-gradient-to-b from-transparent via-white/10 to-transparent shrink-0" />
+        <div className="w-px h-5 bg-gradient-to-b from-transparent via-border to-transparent shrink-0" />
 
         {/* ── Right: Total P&L + UTC Time + Broker ── */}
         <div className="flex items-center gap-2.5 text-muted-foreground shrink-0">
@@ -322,7 +322,7 @@ export default function Footer() {
             <TooltipContent side="top"><p className="text-[10px]">Total P&L (all closed trades)</p></TooltipContent>
           </Tooltip>
           <span className="tabular-nums font-medium">UTC {utcTime}</span>
-          <span className="text-white/20">•</span>
+          <span className="text-border">•</span>
           <span className="text-gradient-cool font-semibold text-[10px]">{BROKER_CONFIG.name}</span>
         </div>
       </footer>

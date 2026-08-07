@@ -282,7 +282,7 @@ export default function CorrelationMatrix() {
                 className={`h-7 px-2.5 text-xs font-medium rounded-md transition-all ${
                   timeframe === tf
                     ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 shadow-sm shadow-emerald-500/10'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 }`}
               >
                 {tf}
@@ -346,7 +346,7 @@ export default function CorrelationMatrix() {
                                   : cell.value >= 0.2
                                     ? 'text-teal-200'
                                     : cell.value > -0.2
-                                      ? 'text-slate-300'
+                                      ? 'text-foreground'
                                       : cell.value > -0.5
                                         ? 'text-orange-200'
                                         : 'text-red-200'
@@ -364,7 +364,7 @@ export default function CorrelationMatrix() {
                       <TooltipContent
                         side="top"
                         align="center"
-                        className="glass-card rounded-lg border border-white/10 px-3 py-2.5 max-w-[260px] shadow-xl"
+                        className="glass-card rounded-lg border border-border px-3 py-2.5 max-w-[260px] shadow-xl"
                       >
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
@@ -386,7 +386,7 @@ export default function CorrelationMatrix() {
                             <span className="text-[10px] text-muted-foreground">Strength:</span>
                             <span className="text-[11px] text-foreground">{getStrengthLabel(cell.value)}</span>
                           </div>
-                          <div className="pt-1.5 border-t border-white/10">
+                          <div className="pt-1.5 border-t border-border">
                             <p className="text-[10px] text-muted-foreground leading-relaxed">
                               {getTradingImplication(cell.value)}
                             </p>

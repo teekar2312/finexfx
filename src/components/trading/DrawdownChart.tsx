@@ -270,8 +270,8 @@ export default function DrawdownChart() {
         transition={{ duration: 0.4 }}
         className="glass-card-premium rounded-2xl p-12 flex flex-col items-center justify-center gap-4 min-h-[400px]"
       >
-        <div className="p-4 rounded-full bg-slate-800/60">
-          <TrendingDown className="h-8 w-8 text-slate-500" />
+        <div className="p-4 rounded-full bg-muted/60">
+          <TrendingDown className="h-8 w-8 text-muted-foreground" />
         </div>
         <p className="text-sm text-muted-foreground text-center max-w-[300px]">
           No closed trades yet. Complete trades to see your equity curve.
@@ -340,7 +340,7 @@ export default function DrawdownChart() {
           icon={<Clock className="h-4 w-4" />}
           label="Longest DD Streak"
           value={`${metrics.longestDrawdownPeriod} trades`}
-          color="bg-slate-500/15 text-slate-400"
+          color="bg-slate-500/15 text-muted-foreground"
         />
       </motion.div>
 

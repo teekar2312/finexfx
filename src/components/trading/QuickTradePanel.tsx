@@ -128,19 +128,19 @@ export default function QuickTradePanel() {
         <AnimatePresence>
           {isOpen && (
             <motion.div
-              className="glass-card w-[320px] max-h-[450px] flex flex-col rounded-xl border border-white/10 shadow-2xl overflow-hidden mb-3"
+              className="glass-card w-[320px] max-h-[450px] flex flex-col rounded-xl border border-border shadow-2xl overflow-hidden mb-3"
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
-                <span className="text-[11px] font-semibold text-zinc-300 tracking-wide uppercase">Quick Trade</span>
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                <span className="text-[11px] font-semibold text-foreground tracking-wide uppercase">Quick Trade</span>
                 <button
                   onClick={() => setIsOpen(false)}
                   aria-label="Close quick trade panel"
-                  className="p-0.5 rounded-md hover:bg-white/10 transition-colors text-zinc-500 hover:text-zinc-300"
+                  className="p-0.5 rounded-md hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -156,7 +156,7 @@ export default function QuickTradePanel() {
                       className={`px-1 py-1.5 rounded-md text-[10px] font-semibold tabular-nums transition-all ${
                         selectedSymbol === sym
                           ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/40'
-                          : 'bg-white/5 text-zinc-500 hover:bg-white/10 hover:text-zinc-300'
+                          : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
                       }`}
                     >
                       {SYMBOL_INFO[sym].name.replace('/', '')}
@@ -167,42 +167,42 @@ export default function QuickTradePanel() {
                 {/* Bid/Ask / Spread */}
                 {price ? (
                   <div className="grid grid-cols-3 gap-1">
-                    <div className="bg-white/5 rounded-md px-2 py-1.5 text-center">
-                      <div className="text-[9px] text-zinc-500 mb-0.5">BID</div>
+                    <div className="bg-muted/50 rounded-md px-2 py-1.5 text-center">
+                      <div className="text-[9px] text-muted-foreground mb-0.5">BID</div>
                       <div
                         className={`text-xs font-bold tabular-nums ${
-                          flash === 'up' ? 'text-emerald-400' : flash === 'down' ? 'text-red-400' : 'text-white'
+                          flash === 'up' ? 'text-emerald-400' : flash === 'down' ? 'text-red-400' : 'text-foreground'
                         }`}
                       >
                         {price.bid.toFixed(symInfo.digits)}
                       </div>
                     </div>
-                    <div className="bg-white/5 rounded-md px-2 py-1.5 text-center">
-                      <div className="text-[9px] text-zinc-500 mb-0.5">ASK</div>
+                    <div className="bg-muted/50 rounded-md px-2 py-1.5 text-center">
+                      <div className="text-[9px] text-muted-foreground mb-0.5">ASK</div>
                       <div
                         className={`text-xs font-bold tabular-nums ${
-                          flash === 'up' ? 'text-emerald-400' : flash === 'down' ? 'text-red-400' : 'text-white'
+                          flash === 'up' ? 'text-emerald-400' : flash === 'down' ? 'text-red-400' : 'text-foreground'
                         }`}
                       >
                         {price.ask.toFixed(symInfo.digits)}
                       </div>
                     </div>
-                    <div className="bg-white/5 rounded-md px-2 py-1.5 text-center">
-                      <div className="text-[9px] text-zinc-500 mb-0.5">SPREAD</div>
+                    <div className="bg-muted/50 rounded-md px-2 py-1.5 text-center">
+                      <div className="text-[9px] text-muted-foreground mb-0.5">SPREAD</div>
                       <div className="text-xs font-bold tabular-nums text-amber-400">
                         {spreadPips.toFixed(1)}p
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-white/5 rounded-md px-2 py-2 text-center">
-                    <div className="text-[10px] text-zinc-500">Waiting for prices...</div>
+                  <div className="bg-muted/50 rounded-md px-2 py-2 text-center">
+                    <div className="text-[10px] text-muted-foreground">Waiting for prices...</div>
                   </div>
                 )}
 
                 {/* Lot Size */}
                 <div>
-                  <label className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1 block">Lot Size</label>
+                  <label className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1 block">Lot Size</label>
                   <Input
                     type="number"
                     value={lotSize}
@@ -210,32 +210,32 @@ export default function QuickTradePanel() {
                     step="0.01"
                     min={BROKER_CONFIG.minLotSize}
                     max={BROKER_CONFIG.maxLotSize}
-                    className="h-7 text-xs tabular-nums bg-white/5 border-white/10 text-white placeholder:text-zinc-600 px-2"
+                    className="h-7 text-xs tabular-nums bg-muted/50 border-border text-foreground placeholder:text-muted-foreground px-2"
                   />
                 </div>
 
                 {/* SL / TP */}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1 block">SL (pips)</label>
+                    <label className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1 block">SL (pips)</label>
                     <Input
                       type="number"
                       value={stopLoss}
                       onChange={(e) => setStopLoss(e.target.value)}
                       step="1"
                       min="0"
-                      className="h-7 text-xs tabular-nums bg-white/5 border-white/10 text-red-400 placeholder:text-zinc-600 px-2"
+                      className="h-7 text-xs tabular-nums bg-muted/50 border-border text-red-400 placeholder:text-muted-foreground px-2"
                     />
                   </div>
                   <div>
-                    <label className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1 block">TP (pips)</label>
+                    <label className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1 block">TP (pips)</label>
                     <Input
                       type="number"
                       value={takeProfit}
                       onChange={(e) => setTakeProfit(e.target.value)}
                       step="1"
                       min="0"
-                      className="h-7 text-xs tabular-nums bg-white/5 border-white/10 text-emerald-400 placeholder:text-zinc-600 px-2"
+                      className="h-7 text-xs tabular-nums bg-muted/50 border-border text-emerald-400 placeholder:text-muted-foreground px-2"
                     />
                   </div>
                 </div>
@@ -267,7 +267,7 @@ export default function QuickTradePanel() {
                 {/* Open Positions Mini-List */}
                 {openTrades.length > 0 && (
                   <div>
-                    <div className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1.5">
+                    <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1.5">
                       Open Positions ({openTrades.length})
                     </div>
                     <div className="space-y-1 max-h-[96px] overflow-y-auto custom-scrollbar">
@@ -276,7 +276,7 @@ export default function QuickTradePanel() {
                         return (
                           <div
                             key={trade.id}
-                            className="flex items-center justify-between bg-white/5 rounded-md px-2 py-1.5 group"
+                            className="flex items-center justify-between bg-muted/50 rounded-md px-2 py-1.5 group"
                           >
                             <div className="flex items-center gap-1.5 min-w-0">
                               <span
@@ -288,10 +288,10 @@ export default function QuickTradePanel() {
                               >
                                 {trade.direction}
                               </span>
-                              <span className="text-[10px] text-zinc-400 tabular-nums truncate">
+                              <span className="text-[10px] text-muted-foreground tabular-nums truncate">
                                 {tradeInfo.name.replace('/', '')}
                               </span>
-                              <span className="text-[9px] text-zinc-600 tabular-nums">
+                              <span className="text-[9px] text-muted-foreground tabular-nums">
                                 {trade.lotSize}
                               </span>
                             </div>
@@ -306,7 +306,7 @@ export default function QuickTradePanel() {
                               <button
                                 onClick={() => closeTrade(trade.id)}
                                 aria-label="Close trade"
-                                className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-white/10 transition-all text-zinc-500 hover:text-zinc-300"
+                                className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-muted/50 transition-all text-muted-foreground hover:text-foreground"
                               >
                                 <X className="w-3 h-3" />
                               </button>
@@ -317,7 +317,7 @@ export default function QuickTradePanel() {
                       {openTrades.length > 3 && (
                         <button
                           onClick={() => { setActiveTab('trading'); setIsOpen(false); }}
-                          className="w-full text-center text-[9px] text-zinc-500 hover:text-zinc-300 py-1 transition-colors"
+                          className="w-full text-center text-[9px] text-muted-foreground hover:text-foreground py-1 transition-colors"
                         >
                           +{openTrades.length - 3} more...
                         </button>
@@ -328,10 +328,10 @@ export default function QuickTradePanel() {
               </div>
 
               {/* Go to Trading link */}
-              <div className="border-t border-white/10 px-3 py-2">
+              <div className="border-t border-border px-3 py-2">
                 <button
                   onClick={() => { setActiveTab('trading'); setIsOpen(false); }}
-                  className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-emerald-400 transition-colors w-full justify-center group"
+                  className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-emerald-400 transition-colors w-full justify-center group"
                 >
                   <span>Go to Trading</span>
                   <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />

@@ -86,7 +86,7 @@ function SentimentGauge({ value }: { value: number }) {
 
   // Determine label
   const label = clampedValue < 35 ? 'Bearish' : clampedValue > 65 ? 'Bullish' : 'Neutral';
-  const labelColor = clampedValue < 35 ? 'text-red-400' : clampedValue > 65 ? 'text-emerald-400' : 'text-slate-400';
+  const labelColor = clampedValue < 35 ? 'text-red-400' : clampedValue > 65 ? 'text-emerald-400' : 'text-muted-foreground';
 
   return (
     <div className="flex flex-col items-center">
@@ -158,12 +158,12 @@ function FearGreedDisplay({ value }: { value: number }) {
   let label: string;
   if (clamped < 25) { color = 'text-red-500'; label = 'Extreme Fear'; }
   else if (clamped < 45) { color = 'text-amber-500'; label = 'Fear'; }
-  else if (clamped < 55) { color = 'text-slate-400'; label = 'Neutral'; }
+  else if (clamped < 55) { color = 'text-muted-foreground'; label = 'Neutral'; }
   else if (clamped < 75) { color = 'text-emerald-500'; label = 'Greed'; }
   else { color = 'text-emerald-400'; label = 'Extreme Greed'; }
 
   return (
-    <div className="text-center p-2.5 rounded-lg bg-slate-800/40 border border-border/40">
+    <div className="text-center p-2.5 rounded-lg bg-muted/40 border border-border/40">
       <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Fear & Greed Index</div>
       <motion.div
         className={`text-2xl font-bold tabular-nums ${color}`}
@@ -176,7 +176,7 @@ function FearGreedDisplay({ value }: { value: number }) {
       </motion.div>
       <div className={`text-[10px] font-medium ${color} mt-0.5`}>{label}</div>
       {/* Mini bar */}
-      <div className="mt-2 h-1 rounded-full overflow-hidden bg-slate-700/50 flex">
+      <div className="mt-2 h-1 rounded-full overflow-hidden bg-muted/50 flex">
         <div className="bg-red-500/70" style={{ width: '25%' }} />
         <div className="bg-amber-500/70" style={{ width: '20%' }} />
         <div className="bg-slate-500/70" style={{ width: '10%' }} />
@@ -237,7 +237,7 @@ export default function MarketSentiment() {
                   <span className="text-[10px] text-muted-foreground w-16 flex-shrink-0 tabular-nums">
                     {SYMBOL_INFO[sym].name}
                   </span>
-                  <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                     <motion.div
                       className={`h-full rounded-full ${color}`}
                       initial={false}
@@ -249,9 +249,9 @@ export default function MarketSentiment() {
                   <div className="flex items-center gap-0.5 w-14 justify-end">
                     {bullish && <TrendingUp className="h-2.5 w-2.5 text-emerald-500" />}
                     {bearish && <TrendingDown className="h-2.5 w-2.5 text-red-500" />}
-                    {!bullish && !bearish && <Minus className="h-2.5 w-2.5 text-slate-500" />}
+                    {!bullish && !bearish && <Minus className="h-2.5 w-2.5 text-muted-foreground" />}
                     <span className={`text-[10px] tabular-nums font-medium ${
-                      bullish ? 'text-emerald-400' : bearish ? 'text-red-400' : 'text-slate-400'
+                      bullish ? 'text-emerald-400' : bearish ? 'text-red-400' : 'text-muted-foreground'
                     }`}>
                       {val.toFixed(0)}%
                     </span>
@@ -271,7 +271,7 @@ export default function MarketSentiment() {
                 <span className="text-muted-foreground">Retail</span>
                 <span className="tabular-nums text-foreground/80">{data.retailSentiment.toFixed(1)}%</span>
               </div>
-              <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                 <motion.div
                   className="h-full rounded-full bg-amber-500/70"
                   initial={false}
@@ -285,7 +285,7 @@ export default function MarketSentiment() {
                 <span className="text-muted-foreground">Institutional</span>
                 <span className="tabular-nums text-foreground/80">{data.institutionalSentiment.toFixed(1)}%</span>
               </div>
-              <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                 <motion.div
                   className="h-full rounded-full bg-cyan-500/70"
                   initial={false}

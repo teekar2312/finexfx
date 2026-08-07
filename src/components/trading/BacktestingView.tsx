@@ -30,12 +30,12 @@ const itemVariants = {
 } as const;
 
 // Tooltip component declared outside render to avoid react-hooks/static-components lint error
-function BacktestEquityTooltip({ active, payload, label }: any) {
+function BacktestEquityTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ payload?: { trade: number; equity: number } }>; label?: string }) {
   if (!active || !payload?.length) return null;
   const data = payload[0]?.payload;
   if (!data) return null;
   return (
-    <div className="bg-slate-800/95 border border-white/10 rounded-lg px-3 py-2 text-[11px] shadow-xl">
+    <div className="bg-muted/95 border border-border rounded-lg px-3 py-2 text-[11px] shadow-xl">
       <div className="text-muted-foreground mb-1">Trade #{label}</div>
       <div className="flex items-center gap-2 mb-0.5">
         <span className="text-muted-foreground">Equity:</span>
@@ -370,7 +370,7 @@ export default function BacktestingView() {
                   <div className={`text-xl font-bold tabular-nums ${latestResult.profitFactor >= 1.5 ? 'text-emerald-500' : latestResult.profitFactor >= 1.0 ? 'text-amber-500' : 'text-red-500'}`}>
                     {latestResult.profitFactor.toFixed(2)}
                   </div>
-                  <div className="w-full h-1 rounded-full bg-white/5 mt-2">
+                  <div className="w-full h-1 rounded-full bg-muted/50 mt-2">
                     <div className={`h-full rounded-full transition-all ${latestResult.profitFactor >= 1.5 ? 'bg-emerald-500' : latestResult.profitFactor >= 1.0 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(latestResult.profitFactor / 3 * 100, 100)}%` }} />
                   </div>
                 </div>
@@ -388,7 +388,7 @@ export default function BacktestingView() {
                   <div className={`text-xl font-bold tabular-nums ${latestResult.maxDrawdown <= 10 ? 'text-emerald-500' : latestResult.maxDrawdown <= 20 ? 'text-amber-500' : 'text-red-500'}`}>
                     {latestResult.maxDrawdown}%
                   </div>
-                  <div className="w-full h-1 rounded-full bg-white/5 mt-2">
+                  <div className="w-full h-1 rounded-full bg-muted/50 mt-2">
                     <div className={`h-full rounded-full ${latestResult.maxDrawdown <= 10 ? 'bg-emerald-500' : latestResult.maxDrawdown <= 20 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(latestResult.maxDrawdown, 100)}%` }} />
                   </div>
                 </div>
@@ -406,7 +406,7 @@ export default function BacktestingView() {
                   <div className={`text-xl font-bold tabular-nums ${latestResult.sharpeRatio >= 1.5 ? 'text-emerald-500' : latestResult.sharpeRatio >= 1.0 ? 'text-amber-500' : 'text-red-500'}`}>
                     {latestResult.sharpeRatio.toFixed(2)}
                   </div>
-                  <div className="w-full h-1 rounded-full bg-white/5 mt-2">
+                  <div className="w-full h-1 rounded-full bg-muted/50 mt-2">
                     <div className={`h-full rounded-full ${latestResult.sharpeRatio >= 1.5 ? 'bg-emerald-500' : latestResult.sharpeRatio >= 1.0 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(latestResult.sharpeRatio / 3 * 100, 100)}%` }} />
                   </div>
                 </div>
@@ -534,7 +534,7 @@ export default function BacktestingView() {
                   ].map((item) => (
                     <div key={item.label} className="flex items-center justify-between py-1">
                       <span className="text-[11px] text-muted-foreground">{item.label}</span>
-                      <span className={`text-[11px] font-medium tabular-nums ${'color' in item && (item as any).color ? (item as any).color : 'text-foreground'}`}>{item.value}</span>
+                      <span className={`text-[11px] font-medium tabular-nums ${'color' in item && item.color ? item.color : 'text-foreground'}`}>{item.value}</span>
                     </div>
                   ))}
                 </div>

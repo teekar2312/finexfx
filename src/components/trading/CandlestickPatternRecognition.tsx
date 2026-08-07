@@ -543,7 +543,7 @@ export default function CandlestickPatternRecognition() {
         </div>
         <div className="flex items-center gap-2">
           <Select value={selectedSymbol} onValueChange={(v) => setSelectedSymbol(v as Symbol)}>
-            <SelectTrigger size="sm" className="h-7 text-[10px] font-medium border-white/10 bg-white/[0.04] w-[100px]">
+            <SelectTrigger size="sm" className="h-7 text-[10px] font-medium border-border bg-muted/40 w-[100px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -565,7 +565,7 @@ export default function CandlestickPatternRecognition() {
         /* Empty state */
         <div className="flex flex-col items-center justify-center py-16 px-4">
           <div className="w-12 h-12 rounded-full bg-slate-500/10 flex items-center justify-center mb-3">
-            <CandlestickChart className="h-6 w-6 text-slate-500" />
+            <CandlestickChart className="h-6 w-6 text-muted-foreground" />
           </div>
           <p className="text-sm text-muted-foreground font-medium">Waiting for candle data</p>
           <p className="text-[11px] text-muted-foreground/60 mt-1">
@@ -577,7 +577,7 @@ export default function CandlestickPatternRecognition() {
           {/* Statistics Bar */}
           <div className="mx-4 mb-3 grid grid-cols-2 md:grid-cols-4 gap-2">
             <div className="glass-card rounded-lg px-3 py-2 flex items-center gap-2">
-              <BarChart3 className="h-3.5 w-3.5 text-slate-400" />
+              <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
               <div className="flex flex-col">
                 <span className="text-[9px] text-muted-foreground leading-none">
                   Total Patterns
@@ -623,7 +623,7 @@ export default function CandlestickPatternRecognition() {
           </div>
 
           {/* Candlestick Chart */}
-          <div className="mx-4 mb-3 rounded-lg overflow-hidden border border-white/[0.04]">
+          <div className="mx-4 mb-3 rounded-lg overflow-hidden border border-border/50">
             <div className="w-full" style={{ height: 280 }}>
               <CandlestickChartSVG
                 candles={candles}
@@ -641,11 +641,11 @@ export default function CandlestickPatternRecognition() {
           {/* Pattern List */}
           <div className="px-4 pb-4">
             <div className="flex items-center gap-2 mb-2">
-              <Target className="h-3.5 w-3.5 text-slate-400" />
+              <Target className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-[11px] font-medium text-muted-foreground">
                 Detected Patterns
               </span>
-              <div className="flex-1 h-px bg-white/[0.06]" />
+              <div className="flex-1 h-px bg-muted/50" />
             </div>
 
             <div className="max-h-72 overflow-y-auto scrollbar-thin space-y-1.5 pr-1">
@@ -712,7 +712,7 @@ export default function CandlestickPatternRecognition() {
                                         ? 'text-emerald-400 fill-emerald-400/80'
                                         : pattern.reliability === 'Medium'
                                           ? 'text-amber-400 fill-amber-400/80'
-                                          : 'text-slate-500 fill-slate-500/60'
+                                          : 'text-muted-foreground fill-slate-500/60'
                                       : 'text-slate-700 fill-transparent'
                                   }`}
                                 />

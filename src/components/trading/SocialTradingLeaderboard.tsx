@@ -373,7 +373,7 @@ function PodiumCard({
         </div>
         <Avatar className="w-10 h-10">
           <AvatarFallback
-            className="text-white font-semibold text-sm"
+            className="text-foreground font-semibold text-sm"
             style={{ backgroundColor: trader.avatarColor }}
           >
             {trader.initials}
@@ -783,7 +783,7 @@ export default function SocialTradingLeaderboard() {
                   <div className="flex items-center gap-2 min-w-0">
                     <Avatar className="w-7 h-7 flex-shrink-0">
                       <AvatarFallback
-                        className="text-[10px] text-white font-semibold"
+                        className="text-[10px] text-foreground font-semibold"
                         style={{ backgroundColor: trader.avatarColor }}
                       >
                         {trader.initials}

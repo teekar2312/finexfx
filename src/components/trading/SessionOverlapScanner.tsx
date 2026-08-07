@@ -68,7 +68,7 @@ const OVERLAPS: OverlapInfo[] = [
     start: 0, end: 7,
     color1: '#06b6d4', color2: '#8b5cf6',
     volatility: 'Low',
-    volatilityColor: 'text-slate-400',
+    volatilityColor: 'text-muted-foreground',
     description: 'Asian session - lower volatility, range-bound conditions',
   },
 ];
@@ -334,7 +334,7 @@ export default function SessionOverlapScanner() {
           <span>18:00</span>
           <span>24:00</span>
         </div>
-        <div className="relative h-8 rounded-md overflow-hidden bg-black/30">
+        <div className="relative h-8 rounded-md overflow-hidden bg-muted/30">
           {/* Session blocks */}
           {timelineBlocks.map(block => {
             const pos = blockToPositionWrap(block.start, block.end);
@@ -515,7 +515,7 @@ export default function SessionOverlapScanner() {
             const dist = timeUntilSessionStart(utcH, o.start);
             if (dist > 12) return null; // don't show if too far
             return (
-              <div key={`up-${o.id}`} className="flex items-center justify-between text-[9px] py-1 border-t border-white/5">
+              <div key={`up-${o.id}`} className="flex items-center justify-between text-[9px] py-1 border-t border-border/50">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-sm opacity-60" style={{ background: `linear-gradient(135deg, ${o.color1}, ${o.color2})` }} />
                   <span className="text-muted-foreground">{o.label}</span>
@@ -547,13 +547,13 @@ export default function SessionOverlapScanner() {
                   currentVolatility === 'Extreme' ? 'text-red-400' :
                   currentVolatility === 'High' ? 'text-orange-400' :
                   currentVolatility === 'Medium' ? 'text-amber-400' :
-                  'text-slate-400'
+                  'text-muted-foreground'
                 }`}
               >
                 {currentVolatility}
               </motion.span>
             </div>
-            <div className="h-2 rounded-full bg-black/40 overflow-hidden">
+            <div className="h-2 rounded-full bg-muted/40 overflow-hidden">
               <motion.div
                 className={`h-full rounded-full ${volColor}`}
                 initial={{ width: 0 }}
@@ -573,7 +573,7 @@ export default function SessionOverlapScanner() {
               {recommendedStrategies.map(sName => {
                 const strat = STRATEGIES[sName];
                 return (
-                  <div key={sName} className="flex items-start gap-1.5 p-1.5 rounded bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+                  <div key={sName} className="flex items-start gap-1.5 p-1.5 rounded bg-muted/30 hover:bg-muted/40 transition-colors">
                     <TrendingUp className="w-2.5 h-2.5 text-emerald-400 mt-0.5 shrink-0" />
                     <div className="min-w-0">
                       <span className="text-[9px] font-medium block">{strat.label}</span>
@@ -590,7 +590,7 @@ export default function SessionOverlapScanner() {
             <span className="text-[9px] text-muted-foreground">Best Pairs Now</span>
             <div className="space-y-1">
               {recommendedPairs.slice(0, 3).map((p, i) => (
-                <div key={i} className="flex items-center justify-between p-1.5 rounded bg-white/[0.02]">
+                <div key={i} className="flex items-center justify-between p-1.5 rounded bg-muted/30">
                   <div className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     <span className="text-[9px] font-medium font-mono">{p.symbol}</span>
@@ -696,7 +696,7 @@ export default function SessionOverlapScanner() {
                 <div
                   key={sym}
                   className={`flex items-center justify-between p-1.5 rounded text-[9px] ${
-                    isActive ? 'bg-white/[0.04]' : 'bg-white/[0.01]'
+                    isActive ? 'bg-muted/40' : 'bg-muted/10'
                   }`}
                 >
                   <div className="flex items-center gap-1.5">

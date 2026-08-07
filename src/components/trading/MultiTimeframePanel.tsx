@@ -68,7 +68,7 @@ function trendToIcon(trend: TrendDirection) {
   switch (trend) {
     case 'bullish':  return <ArrowUpCircle className="h-3.5 w-3.5 text-emerald-400" />;
     case 'bearish':  return <ArrowDownCircle className="h-3.5 w-3.5 text-red-400" />;
-    case 'neutral':  return <MinusCircle className="h-3.5 w-3.5 text-slate-400" />;
+    case 'neutral':  return <MinusCircle className="h-3.5 w-3.5 text-muted-foreground" />;
   }
 }
 
@@ -76,7 +76,7 @@ function trendColor(trend: TrendDirection): string {
   switch (trend) {
     case 'bullish':  return 'text-emerald-400';
     case 'bearish':  return 'text-red-400';
-    case 'neutral':  return 'text-slate-400';
+    case 'neutral':  return 'text-muted-foreground';
   }
 }
 
@@ -253,7 +253,7 @@ function TimeframeCell({ data, symbol }: { data: TimeframeData; symbol: Symbol }
             {data.strength.toFixed(0)}%
           </span>
         </div>
-        <div className="h-1 bg-slate-800/60 rounded-full overflow-hidden">
+        <div className="h-1 bg-muted/60 rounded-full overflow-hidden">
           <motion.div
             className={`h-full rounded-full ${strengthBarColor(data.trend, data.strength)}`}
             initial={false}
@@ -267,7 +267,7 @@ function TimeframeCell({ data, symbol }: { data: TimeframeData; symbol: Symbol }
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-[9px] text-muted-foreground">RSI</span>
         <span className={`text-[10px] tabular-nums font-medium ${
-          data.rsi > 65 ? 'text-emerald-400' : data.rsi < 35 ? 'text-red-400' : 'text-slate-400'
+          data.rsi > 65 ? 'text-emerald-400' : data.rsi < 35 ? 'text-red-400' : 'text-muted-foreground'
         }`}>
           {data.rsi.toFixed(1)}
         </span>
@@ -302,7 +302,7 @@ function TimeframeCell({ data, symbol }: { data: TimeframeData; symbol: Symbol }
             ? 'bg-emerald-500/15 text-emerald-400'
             : data.macdSignal === 'bearish'
             ? 'bg-red-500/15 text-red-400'
-            : 'bg-slate-500/15 text-slate-400'
+            : 'bg-slate-500/15 text-muted-foreground'
         }`}>
           MACD {data.macdSignal}
         </span>
@@ -311,7 +311,7 @@ function TimeframeCell({ data, symbol }: { data: TimeframeData; symbol: Symbol }
             ? 'bg-emerald-500/15 text-emerald-400'
             : data.emaBias === 'bearish'
             ? 'bg-red-500/15 text-red-400'
-            : 'bg-slate-500/15 text-slate-400'
+            : 'bg-slate-500/15 text-muted-foreground'
         }`}>
           EMA {data.emaBias}
         </span>
@@ -331,11 +331,11 @@ function ConsensusRow({ mtfData }: { mtfData: SymbolMTF }) {
       ? <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
       : consensus === 'bearish'
       ? <TrendingDown className="h-3.5 w-3.5 text-red-400" />
-      : <Minus className="h-3.5 w-3.5 text-slate-400" />;
+      : <Minus className="h-3.5 w-3.5 text-muted-foreground" />;
 
   return (
     <motion.div
-      className="mt-2.5 p-2 rounded-lg bg-slate-800/40 border border-border/30"
+      className="mt-2.5 p-2 rounded-lg bg-muted/40 border border-border/30"
       initial={false}
       animate={{ opacity: 1 }}
     >
@@ -355,7 +355,7 @@ function ConsensusRow({ mtfData }: { mtfData: SymbolMTF }) {
       </div>
 
       {/* Consensus bar */}
-      <div className="h-1 bg-slate-800/60 rounded-full overflow-hidden mb-1.5">
+      <div className="h-1 bg-muted/60 rounded-full overflow-hidden mb-1.5">
         <motion.div
           className={`h-full rounded-full ${
             consensus === 'bullish' ? 'bg-emerald-500' : consensus === 'bearish' ? 'bg-red-500' : 'bg-slate-500'
@@ -422,7 +422,7 @@ function AlignmentVisualization({ mtfData }: { mtfData: SymbolMTF }) {
         {mtfData.isAligned ? (
           <Zap className="h-2.5 w-2.5 text-emerald-400" />
         ) : (
-          <BarChart3 className="h-2.5 w-2.5 text-slate-500" />
+          <BarChart3 className="h-2.5 w-2.5 text-muted-foreground" />
         )}
       </span>
     </div>
@@ -509,7 +509,7 @@ export default function MultiTimeframePanel() {
             {TIMEFRAMES.map((tf) => (
               <span
                 key={tf.key}
-                className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800/60 text-muted-foreground font-medium tabular-nums"
+                className="text-[9px] px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground font-medium tabular-nums"
               >
                 {tf.label}
               </span>

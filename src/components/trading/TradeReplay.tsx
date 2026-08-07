@@ -321,12 +321,12 @@ export default function TradeReplay() {
     const color = isGreen ? '#10b981' : '#ef4444';
     return (
       <div className="glass-card-premium rounded-lg p-3 text-[11px] shadow-lg min-w-[140px]">
-        <div className="text-[10px] text-slate-400 mb-1.5 font-medium">{formatTime(d.time)}</div>
+        <div className="text-[10px] text-muted-foreground mb-1.5 font-medium">{formatTime(d.time)}</div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-          <div className="flex items-center gap-1.5"><span className="text-slate-400">O</span><span className="font-mono font-bold" style={{ color }}>{d.open.toFixed(info.digits)}</span></div>
-          <div className="flex items-center gap-1.5"><span className="text-slate-400">H</span><span className="font-mono font-bold" style={{ color }}>{d.high.toFixed(info.digits)}</span></div>
-          <div className="flex items-center gap-1.5"><span className="text-slate-400">L</span><span className="font-mono font-bold" style={{ color }}>{d.low.toFixed(info.digits)}</span></div>
-          <div className="flex items-center gap-1.5"><span className="text-slate-400">C</span><span className="font-mono font-bold" style={{ color }}>{d.close.toFixed(info.digits)}</span></div>
+          <div className="flex items-center gap-1.5"><span className="text-muted-foreground">O</span><span className="font-mono font-bold" style={{ color }}>{d.open.toFixed(info.digits)}</span></div>
+          <div className="flex items-center gap-1.5"><span className="text-muted-foreground">H</span><span className="font-mono font-bold" style={{ color }}>{d.high.toFixed(info.digits)}</span></div>
+          <div className="flex items-center gap-1.5"><span className="text-muted-foreground">L</span><span className="font-mono font-bold" style={{ color }}>{d.low.toFixed(info.digits)}</span></div>
+          <div className="flex items-center gap-1.5"><span className="text-muted-foreground">C</span><span className="font-mono font-bold" style={{ color }}>{d.close.toFixed(info.digits)}</span></div>
         </div>
       </div>
     );
@@ -344,12 +344,12 @@ export default function TradeReplay() {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-          className="text-slate-500"
+          className="text-muted-foreground"
         >
           <BarChart3 className="h-10 w-10" />
         </motion.div>
-        <p className="text-sm text-slate-400">Wait for price data to accumulate</p>
-        <p className="text-xs text-slate-500">Select a pair and ensure live prices are streaming</p>
+        <p className="text-sm text-muted-foreground">Wait for price data to accumulate</p>
+        <p className="text-xs text-muted-foreground">Select a pair and ensure live prices are streaming</p>
       </div>
     );
   }
@@ -361,14 +361,14 @@ export default function TradeReplay() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-emerald-400" />
-            <h2 className="text-sm font-semibold text-white">Trade Replay</h2>
+            <h2 className="text-sm font-semibold text-foreground">Trade Replay</h2>
           </div>
-          <Badge variant="outline" className="text-[10px] border-slate-600 text-slate-400">
+          <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">
             {info.name}
           </Badge>
         </div>
         <Select value={selectedSymbol} onValueChange={handleSymbolChange}>
-          <SelectTrigger size="sm" className="w-[140px] h-8 text-xs bg-slate-800/50 border-slate-700">
+          <SelectTrigger size="sm" className="w-[140px] h-8 text-xs bg-muted/50 border-border">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -381,7 +381,7 @@ export default function TradeReplay() {
         </Select>
       </div>
 
-      <Separator className="bg-slate-700/50" />
+      <Separator className="bg-border" />
 
       {/* ── Controls Bar ── */}
       <motion.div
@@ -394,7 +394,7 @@ export default function TradeReplay() {
           size="sm"
           onClick={handleStepBackward}
           disabled={currentIndex <= 0}
-          className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-slate-700/50"
+          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted/50"
           title="Step Back"
         >
           <SkipBack className="h-4 w-4" />
@@ -426,16 +426,16 @@ export default function TradeReplay() {
           size="sm"
           onClick={handleStepForward}
           disabled={currentIndex >= history.length - 1}
-          className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-slate-700/50"
+          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted/50"
           title="Step Forward"
         >
           <SkipForward className="h-4 w-4" />
         </Button>
 
         <div className="flex items-center gap-1.5 ml-1">
-          <Gauge className="h-3.5 w-3.5 text-slate-500" />
+          <Gauge className="h-3.5 w-3.5 text-muted-foreground" />
           <Select value={String(speed)} onValueChange={handleSpeedChange}>
-            <SelectTrigger size="sm" className="w-[70px] h-7 text-[11px] bg-slate-800/50 border-slate-700">
+            <SelectTrigger size="sm" className="w-[70px] h-7 text-[11px] bg-muted/50 border-border">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -449,7 +449,7 @@ export default function TradeReplay() {
         </div>
 
         <div className="flex items-center gap-2 flex-1 min-w-[120px] ml-2">
-          <span className="text-[10px] font-mono text-slate-500 w-6 text-right">{currentIndex + 1}</span>
+          <span className="text-[10px] font-mono text-muted-foreground w-6 text-right">{currentIndex + 1}</span>
           <Slider
             value={[currentIndex]}
             min={0}
@@ -458,14 +458,14 @@ export default function TradeReplay() {
             onValueChange={handleSliderChange}
             className="flex-1"
           />
-          <span className="text-[10px] font-mono text-slate-500 w-8">{history.length}</span>
+          <span className="text-[10px] font-mono text-muted-foreground w-8">{history.length}</span>
         </div>
 
         <Button
           variant="ghost"
           size="sm"
           onClick={handleReset}
-          className="h-8 w-8 p-0 text-slate-400 hover:text-amber-400 hover:bg-amber-900/20"
+          className="h-8 w-8 p-0 text-muted-foreground hover:text-amber-400 hover:bg-amber-900/20"
           title="Reset"
         >
           <RotateCcw className="h-4 w-4" />
@@ -473,7 +473,7 @@ export default function TradeReplay() {
       </motion.div>
 
       {/* ── Price Chart ── */}
-      <div className="relative w-full h-[280px] rounded-lg overflow-hidden bg-slate-900/40">
+      <div className="relative w-full h-[280px] rounded-lg overflow-hidden bg-muted/30">
         {/* Current price display */}
         {currentTick && (
           <div className="absolute top-2 left-3 z-10 flex items-center gap-2">
@@ -595,13 +595,13 @@ export default function TradeReplay() {
                 className="flex items-center gap-3"
               >
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-slate-500">P&L</span>
+                  <span className="text-[10px] text-muted-foreground">P&L</span>
                   <span className={`text-sm font-mono font-bold ${(activeTradePnl?.pnl ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                     {(activeTradePnl?.pnl ?? 0) >= 0 ? '+' : ''}{(activeTradePnl?.pnl ?? 0).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-slate-500">Pips</span>
+                  <span className="text-[10px] text-muted-foreground">Pips</span>
                   <span className={`text-sm font-mono font-bold ${(activeTradePnl?.pips ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                     {(activeTradePnl?.pips ?? 0) >= 0 ? '+' : ''}{(activeTradePnl?.pips ?? 0).toFixed(1)}
                   </span>
@@ -623,14 +623,14 @@ export default function TradeReplay() {
 
         {/* Replay progress info */}
         <div className="flex items-center gap-2 ml-auto">
-          <Clock className="h-3 w-3 text-slate-500" />
-          <span className="text-[10px] font-mono text-slate-400">
+          <Clock className="h-3 w-3 text-muted-foreground" />
+          <span className="text-[10px] font-mono text-muted-foreground">
             {formatTime(history[0]?.time ?? 0)} → {formatTime(currentTick?.time ?? 0)}
           </span>
         </div>
       </div>
 
-      <Separator className="bg-slate-700/50" />
+      <Separator className="bg-border" />
 
       {/* ── Bottom: Statistics + Trade History ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -638,36 +638,36 @@ export default function TradeReplay() {
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <Trophy className="h-3.5 w-3.5 text-amber-400" />
-            <h3 className="text-xs font-semibold text-slate-300">Session Statistics</h3>
+            <h3 className="text-xs font-semibold text-foreground">Session Statistics</h3>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <div className="bg-slate-800/40 rounded-lg p-2.5 flex flex-col gap-0.5">
-              <span className="text-[10px] text-slate-500">Trades</span>
-              <span className="text-sm font-mono font-bold text-white">{stats.totalTrades}</span>
+            <div className="bg-muted/40 rounded-lg p-2.5 flex flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground">Trades</span>
+              <span className="text-sm font-mono font-bold text-foreground">{stats.totalTrades}</span>
             </div>
-            <div className="bg-slate-800/40 rounded-lg p-2.5 flex flex-col gap-0.5">
-              <span className="text-[10px] text-slate-500">Win Rate</span>
+            <div className="bg-muted/40 rounded-lg p-2.5 flex flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground">Win Rate</span>
               <span className={`text-sm font-mono font-bold ${stats.winRate >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {stats.winRate.toFixed(0)}%
               </span>
             </div>
-            <div className="bg-slate-800/40 rounded-lg p-2.5 flex flex-col gap-0.5">
-              <span className="text-[10px] text-slate-500">Total P&L</span>
+            <div className="bg-muted/40 rounded-lg p-2.5 flex flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground">Total P&L</span>
               <span className={`text-sm font-mono font-bold ${stats.totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {stats.totalPnl >= 0 ? '+' : ''}{stats.totalPnl.toFixed(2)}
               </span>
             </div>
-            <div className="bg-slate-800/40 rounded-lg p-2.5 flex flex-col gap-0.5">
-              <span className="text-[10px] text-slate-500">Best Trade</span>
+            <div className="bg-muted/40 rounded-lg p-2.5 flex flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground">Best Trade</span>
               <span className="text-sm font-mono font-bold text-emerald-400">+{stats.bestTrade.toFixed(2)}</span>
             </div>
-            <div className="bg-slate-800/40 rounded-lg p-2.5 flex flex-col gap-0.5">
-              <span className="text-[10px] text-slate-500">Worst Trade</span>
+            <div className="bg-muted/40 rounded-lg p-2.5 flex flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground">Worst Trade</span>
               <span className="text-sm font-mono font-bold text-red-400">{stats.worstTrade.toFixed(2)}</span>
             </div>
-            <div className="bg-slate-800/40 rounded-lg p-2.5 flex flex-col gap-0.5">
-              <span className="text-[10px] text-slate-500">Avg Hold</span>
-              <span className="text-sm font-mono font-bold text-slate-300">{formatDuration(stats.avgHoldTime)}</span>
+            <div className="bg-muted/40 rounded-lg p-2.5 flex flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground">Avg Hold</span>
+              <span className="text-sm font-mono font-bold text-foreground">{formatDuration(stats.avgHoldTime)}</span>
             </div>
           </div>
         </div>
@@ -676,20 +676,20 @@ export default function TradeReplay() {
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <BarChart3 className="h-3.5 w-3.5 text-slate-400" />
-              <h3 className="text-xs font-semibold text-slate-300">Practice Trades</h3>
+              <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+              <h3 className="text-xs font-semibold text-foreground">Practice Trades</h3>
             </div>
-            <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-400">
+            <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">
               {replayTrades.length}
             </Badge>
           </div>
-          <div className="max-h-[120px] overflow-y-auto custom-scrollbar rounded-lg bg-slate-800/30">
+          <div className="max-h-[120px] overflow-y-auto custom-scrollbar rounded-lg bg-muted/30">
             {replayTrades.length === 0 ? (
-              <div className="flex items-center justify-center h-[80px] text-slate-500 text-xs">
+              <div className="flex items-center justify-center h-[80px] text-muted-foreground text-xs">
                 No practice trades yet. Click Buy or Sell during replay.
               </div>
             ) : (
-              <div className="divide-y divide-slate-700/50">
+              <div className="divide-y divide-border">
                 {replayTrades.map((trade) => {
                   const isWin = (trade.pnl ?? 0) > 0;
                   const entryTime = history[trade.entryIndex]?.time ?? 0;
@@ -707,7 +707,7 @@ export default function TradeReplay() {
                       >
                         {trade.direction}
                       </Badge>
-                      <span className="font-mono text-slate-400">
+                      <span className="font-mono text-muted-foreground">
                         {trade.entryPrice.toFixed(info.digits)} → {trade.exitPrice?.toFixed(info.digits) ?? '...'}
                       </span>
                       <span className={`font-mono font-bold ml-auto ${isWin ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -716,7 +716,7 @@ export default function TradeReplay() {
                       <span className={`font-mono text-[10px] ${isWin ? 'text-emerald-500/70' : 'text-red-500/70'}`}>
                         {trade.pips !== null ? `${trade.pips >= 0 ? '+' : ''}${trade.pips.toFixed(1)}p` : ''}
                       </span>
-                      <span className="text-[10px] text-slate-600 ml-1">
+                      <span className="text-[10px] text-muted-foreground ml-1">
                         {formatDuration(holdMs)}
                       </span>
                     </motion.div>

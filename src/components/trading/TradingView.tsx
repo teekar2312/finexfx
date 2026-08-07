@@ -640,7 +640,7 @@ export default function TradingView() {
                       <span className="text-muted-foreground">Daily Range</span>
                       <span className="text-emerald-400 font-medium">H: {price.high.toFixed(SYMBOL_INFO[selectedSymbol].digits)}</span>
                     </div>
-                    <div className="relative h-2.5 w-full rounded-full bg-slate-800 overflow-hidden">
+                    <div className="relative h-2.5 w-full rounded-full bg-muted overflow-hidden">
                       <div
                         className="absolute top-0 h-full w-1 bg-foreground rounded-sm shadow-[0_0_6px_rgba(255,255,255,0.5)]"
                         style={{
@@ -738,7 +738,7 @@ export default function TradingView() {
                   const tpPips = parseFloat(takeProfit) || 0;
                   const rr = slPips > 0 && tpPips > 0 ? (tpPips / slPips).toFixed(1) : null;
                   return rr ? (
-                    <div className="flex items-center justify-center gap-2 py-1.5 px-2 rounded-lg bg-slate-800/30 border border-border/30">
+                    <div className="flex items-center justify-center gap-2 py-1.5 px-2 rounded-lg bg-muted/30 border border-border/30">
                       <Target className="h-3 w-3 text-muted-foreground" />
                       <span className="text-[10px] text-muted-foreground">Risk:Reward</span>
                       <span className={`text-xs font-bold tabular-nums ${parseFloat(rr) >= 2 ? 'text-emerald-500' : parseFloat(rr) >= 1 ? 'text-amber-500' : 'text-red-500'}`}>
@@ -749,7 +749,7 @@ export default function TradingView() {
                 })()}
 
                 {/* Calculated Margin / Risk / Profit */}
-                <div className="space-y-1.5 p-2.5 rounded-lg bg-slate-800/30 border border-border/50">
+                <div className="space-y-1.5 p-2.5 rounded-lg bg-muted/30 border border-border/50">
                   <div className="flex justify-between text-[11px]">
                     <span className="text-muted-foreground flex items-center gap-1">
                       <Shield className="h-3 w-3" /> Calculated Margin
@@ -822,7 +822,7 @@ export default function TradingView() {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-800/20 border border-border/30">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-muted/20 border border-border/30">
                   <div className="flex items-center gap-2">
                     <Label className="text-[11px] text-muted-foreground font-medium">One-Click Trading</Label>
                     {oneClickMode && (

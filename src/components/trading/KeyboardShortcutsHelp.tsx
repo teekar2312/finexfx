@@ -52,7 +52,7 @@ export default function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShort
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-background/60 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -60,7 +60,7 @@ export default function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShort
           onClick={onClose}
         >
           <motion.div
-            className="glass-card w-full max-w-[500px] mx-4 rounded-xl border border-white/10 shadow-2xl overflow-hidden"
+            className="glass-card w-full max-w-[500px] mx-4 rounded-xl border border-border shadow-2xl overflow-hidden"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -68,7 +68,7 @@ export default function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShort
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Keyboard className="w-4 h-4 text-primary" />
@@ -77,7 +77,7 @@ export default function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShort
               </div>
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-md hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
+                className="p-1.5 rounded-md hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
                 aria-label="Close keyboard shortcuts"
               >
                 <X className="w-4 h-4" />
@@ -134,7 +134,7 @@ export default function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShort
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-3 border-t border-white/10">
+            <div className="px-5 py-3 border-t border-border">
               <p className="text-[10px] text-muted-foreground/60 text-center">
                 Shortcuts are disabled when typing in input fields
               </p>

@@ -265,7 +265,7 @@ function TradeHistoryTable() {
       className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
         current === value
           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-          : 'bg-white/5 text-muted-foreground border border-white/5 hover:bg-white/10 hover:text-foreground'
+          : 'bg-muted/50 text-muted-foreground border border-border/50 hover:bg-muted/50 hover:text-foreground'
       }`}
     >
       {label}
@@ -308,11 +308,11 @@ function TradeHistoryTable() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search pair or ID..."
-            className="h-8 w-40 pl-8 text-xs bg-white/5 border-white/10 focus:border-emerald-500/50 rounded-md"
+            className="h-8 w-40 pl-8 text-xs bg-muted/50 border-border focus:border-emerald-500/50 rounded-md"
           />
         </div>
 
-        <div className="h-5 w-px bg-white/10" />
+        <div className="h-5 w-px bg-muted/50" />
 
         {/* Pair filter */}
         <div className="flex items-center gap-1">
@@ -322,7 +322,7 @@ function TradeHistoryTable() {
           ))}
         </div>
 
-        <div className="h-5 w-px bg-white/10" />
+        <div className="h-5 w-px bg-muted/50" />
 
         {/* Type filter */}
         <div className="flex items-center gap-1">
@@ -331,7 +331,7 @@ function TradeHistoryTable() {
           <FilterBtn label="SELL" value={'SELL' as TypeFilter} current={typeFilter} onChange={(v) => { setTypeFilter(v); setPage(1); }} />
         </div>
 
-        <div className="h-5 w-px bg-white/10" />
+        <div className="h-5 w-px bg-muted/50" />
 
         {/* Result filter */}
         <div className="flex items-center gap-1">
@@ -341,7 +341,7 @@ function TradeHistoryTable() {
           <FilterBtn label="Breakeven" value={'Breakeven' as ResultFilter} current={resultFilter} onChange={(v) => { setResultFilter(v); setPage(1); }} />
         </div>
 
-        <div className="h-5 w-px bg-white/10" />
+        <div className="h-5 w-px bg-muted/50" />
 
         {/* Date range */}
         <div className="flex items-center gap-1">
@@ -357,7 +357,7 @@ function TradeHistoryTable() {
         <div className="overflow-x-auto scroll-horizontal">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-white/10">
+              <tr className="border-b border-border">
                 <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wider text-muted-foreground font-medium whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort('id')}>
                   <span className="inline-flex items-center">ID <SortIcon col="id" /></span>
                 </th>
@@ -395,7 +395,7 @@ function TradeHistoryTable() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.25, delay: idx * 0.03 }}
-                    className={`border-b border-white/5 hover:bg-white/[0.03] transition-colors ${
+                    className={`border-b border-border/50 hover:bg-muted/30 transition-colors ${
                       trade.profit > 0
                         ? 'border-l-2 border-l-emerald-500/60'
                         : trade.profit < 0
@@ -430,7 +430,7 @@ function TradeHistoryTable() {
                       </span>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
-                      <span className="inline-block px-1.5 py-0.5 rounded bg-white/5 text-[10px] text-muted-foreground">{trade.strategy}</span>
+                      <span className="inline-block px-1.5 py-0.5 rounded bg-muted/50 text-[10px] text-muted-foreground">{trade.strategy}</span>
                     </td>
                   </motion.tr>
                 ))}
@@ -447,7 +447,7 @@ function TradeHistoryTable() {
 
         {/* ========== Pagination ========== */}
         {filtered.length > perPage && (
-          <div className="flex items-center justify-between px-4 py-2.5 border-t border-white/10">
+          <div className="flex items-center justify-between px-4 py-2.5 border-t border-border">
             <span className="text-xs text-muted-foreground">
               Showing {(safePage - 1) * perPage + 1}–{Math.min(safePage * perPage, filtered.length)} of {filtered.length}
             </span>
@@ -470,7 +470,7 @@ function TradeHistoryTable() {
                     className={`w-7 h-7 rounded text-xs font-medium transition-colors ${
                       p === safePage
                         ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
+                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                     }`}
                   >
                     {p}

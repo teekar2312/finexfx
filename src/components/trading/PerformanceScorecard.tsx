@@ -450,19 +450,19 @@ export default function PerformanceScorecard() {
             <Award className="w-4 h-4 text-emerald-400" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">
+            <h3 className="text-sm font-semibold text-foreground">
               Performance Scorecard
             </h3>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-muted-foreground">
               Weekly &amp; monthly trading metrics
             </p>
           </div>
         </div>
         <div className="flex flex-col items-center justify-center py-12 space-y-3">
-          <div className="p-3 rounded-full bg-white/[0.04]">
-            <Award className="w-8 h-8 text-slate-600" />
+          <div className="p-3 rounded-full bg-muted/40">
+            <Award className="w-8 h-8 text-muted-foreground" />
           </div>
-          <p className="text-sm text-slate-500 text-center max-w-[260px]">
+          <p className="text-sm text-muted-foreground text-center max-w-[260px]">
             No trading history yet. Complete trades to see your performance
             scorecard.
           </p>
@@ -480,17 +480,17 @@ export default function PerformanceScorecard() {
             <Award className="w-4 h-4 text-emerald-400" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">
+            <h3 className="text-sm font-semibold text-foreground">
               Performance Scorecard
             </h3>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-muted-foreground">
               Weekly &amp; monthly trading metrics
             </p>
           </div>
         </div>
 
         {/* Timeframe toggle pills */}
-        <div className="flex items-center rounded-lg bg-white/[0.04] border border-white/[0.06] p-0.5">
+        <div className="flex items-center rounded-lg bg-muted/40 border border-border/50 p-0.5">
           {(['weekly', 'monthly'] as const).map((tf) => (
             <button
               key={tf}
@@ -498,7 +498,7 @@ export default function PerformanceScorecard() {
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
                 timeframe === tf
                   ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-300'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {tf === 'weekly' ? 'Weekly' : 'Monthly'}
@@ -529,7 +529,7 @@ export default function PerformanceScorecard() {
                   className={`relative p-3 rounded-lg text-left transition-all duration-200 ${
                     safeSelectedWeek === week.weekIndex
                       ? 'bg-emerald-500/10 border border-emerald-500/25 shadow-sm'
-                      : 'stat-card-premium hover:bg-white/[0.03] border border-transparent'
+                      : 'stat-card-premium hover:bg-muted/30 border border-transparent'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
@@ -537,7 +537,7 @@ export default function PerformanceScorecard() {
                       className={`text-[11px] font-medium ${
                         safeSelectedWeek === week.weekIndex
                           ? 'text-emerald-400'
-                          : 'text-slate-400'
+                          : 'text-muted-foreground'
                       }`}
                     >
                       {week.label}
@@ -555,7 +555,7 @@ export default function PerformanceScorecard() {
                   >
                     {formatPnl(week.totalPnl)}
                   </p>
-                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">
+                  <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
                     {week.winRate}% win &middot;{' '}
                     {week.sharpeScore > 0 ? '↑' : '↓'}{' '}
                     {Math.abs(week.sharpeScore).toFixed(2)}
@@ -567,8 +567,8 @@ export default function PerformanceScorecard() {
             {/* Selected week detail: day cards */}
             <div>
               <div className="flex items-center gap-1.5 mb-2">
-                <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                <span className="text-xs font-medium text-slate-400">
+                <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">
                   {currentWeek.label} — Daily Breakdown
                 </span>
               </div>
@@ -588,10 +588,10 @@ export default function PerformanceScorecard() {
                     {/* Day header */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-semibold text-white">
+                        <span className="text-xs font-semibold text-foreground">
                           {day.dayLabel}
                         </span>
-                        <span className="text-[10px] text-slate-500 font-mono">
+                        <span className="text-[10px] text-muted-foreground font-mono">
                           {day.date}
                         </span>
                       </div>
@@ -600,7 +600,7 @@ export default function PerformanceScorecard() {
 
                     {/* P&L */}
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-slate-500">
+                      <span className="text-[10px] text-muted-foreground">
                         {day.trades} trades
                       </span>
                       <span
@@ -654,7 +654,7 @@ export default function PerformanceScorecard() {
                   icon: <Star className="w-3.5 h-3.5 text-amber-400" />,
                   label: 'Best Day',
                   value: currentWeek.bestDay,
-                  color: 'text-white',
+                  color: 'text-foreground',
                 },
                 {
                   icon: <Target className="w-3.5 h-3.5 text-purple-400" />,
@@ -673,11 +673,11 @@ export default function PerformanceScorecard() {
                   variants={itemVariants}
                   className="stat-card-premium rounded-lg p-3 flex items-center gap-2.5"
                 >
-                  <div className="p-1.5 rounded-md bg-white/[0.04]">
+                  <div className="p-1.5 rounded-md bg-muted/40">
                     {stat.icon}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] text-slate-500 truncate">
+                    <p className="text-[10px] text-muted-foreground truncate">
                       {stat.label}
                     </p>
                     <p
@@ -708,7 +708,7 @@ export default function PerformanceScorecard() {
             >
               <div className="flex items-center gap-2 mb-1">
                 <Calendar className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-medium text-slate-400">
+                <span className="text-xs font-medium text-muted-foreground">
                   {monthly.monthLabel || 'Monthly'} — Monthly Overview
                 </span>
               </div>
@@ -716,7 +716,7 @@ export default function PerformanceScorecard() {
               <div className="grid grid-cols-3 gap-4">
                 {/* Big P&L */}
                 <div className="text-center">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
                     Total P&amp;L
                   </p>
                   <p
@@ -734,7 +734,7 @@ export default function PerformanceScorecard() {
                     ) : (
                       <Activity className="w-3 h-3 text-amber-400" />
                     )}
-                    <span className="text-[10px] text-slate-500">
+                    <span className="text-[10px] text-muted-foreground">
                       net profit
                     </span>
                   </div>
@@ -742,15 +742,15 @@ export default function PerformanceScorecard() {
 
                 {/* Total trades */}
                 <div className="text-center">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
                     Total Trades
                   </p>
-                  <p className="font-mono text-2xl md:text-3xl font-bold text-white">
+                  <p className="font-mono text-2xl md:text-3xl font-bold text-foreground">
                     {monthly.totalTrades}
                   </p>
                   <div className="flex items-center justify-center gap-1 mt-1">
-                    <BarChart3 className="w-3 h-3 text-slate-500" />
-                    <span className="text-[10px] text-slate-500">
+                    <BarChart3 className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground">
                       across {monthly.totalSessions} sessions
                     </span>
                   </div>
@@ -758,7 +758,7 @@ export default function PerformanceScorecard() {
 
                 {/* Win rate */}
                 <div className="text-center">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
                     Win Rate
                   </p>
                   <p
@@ -773,8 +773,8 @@ export default function PerformanceScorecard() {
                     {monthly.winRate}%
                   </p>
                   <div className="flex items-center justify-center gap-1 mt-1">
-                    <Target className="w-3 h-3 text-slate-500" />
-                    <span className="text-[10px] text-slate-500">overall</span>
+                    <Target className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground">overall</span>
                   </div>
                 </div>
               </div>
@@ -783,8 +783,8 @@ export default function PerformanceScorecard() {
             {/* Weekly breakdown grid */}
             <div>
               <div className="flex items-center gap-1.5 mb-2">
-                <Clock className="w-3.5 h-3.5 text-slate-500" />
-                <span className="text-xs font-medium text-slate-400">
+                <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">
                   Weekly Breakdown
                 </span>
               </div>
@@ -802,7 +802,7 @@ export default function PerformanceScorecard() {
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-slate-300">
+                        <span className="text-[11px] font-medium text-foreground">
                           {week.label}
                         </span>
                         {isBest && (
@@ -822,10 +822,10 @@ export default function PerformanceScorecard() {
                         {formatPnl(week.totalPnl)}
                       </p>
                       <div className="flex items-center justify-between text-[10px]">
-                        <span className="text-slate-500">
+                        <span className="text-muted-foreground">
                           {week.winRate}% win
                         </span>
-                        <span className="text-slate-500 font-mono">
+                        <span className="text-muted-foreground font-mono">
                           {week.days.reduce((s, d) => s + d.trades, 0)}{' '}
                           trades
                         </span>
@@ -847,7 +847,7 @@ export default function PerformanceScorecard() {
                   <div className="p-1.5 rounded-md bg-emerald-500/10">
                     <Activity className="w-3.5 h-3.5 text-emerald-400" />
                   </div>
-                  <span className="text-xs font-medium text-slate-400">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Consistency Score
                   </span>
                 </div>
@@ -886,17 +886,17 @@ export default function PerformanceScorecard() {
                       />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="font-mono text-sm font-bold text-white">
+                      <span className="font-mono text-sm font-bold text-foreground">
                         {monthly.consistencyScore}%
                       </span>
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-[11px] text-muted-foreground">
                       {weeks.filter((w) => w.totalPnl > 0).length} of{' '}
                       {weeks.length} weeks profitable
                     </p>
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-[10px] text-muted-foreground">
                       {monthly.consistencyScore >= 75
                         ? 'Excellent consistency — reliable performer'
                         : monthly.consistencyScore >= 50
@@ -912,7 +912,7 @@ export default function PerformanceScorecard() {
                 variants={itemVariants}
                 className="stat-card-premium rounded-lg p-4 flex flex-col items-center justify-center space-y-2"
               >
-                <span className="text-xs font-medium text-slate-400">
+                <span className="text-xs font-medium text-muted-foreground">
                   Performance Grade
                 </span>
                 <div
@@ -947,7 +947,7 @@ export default function PerformanceScorecard() {
                   </span>
                 </div>
                 <div className="text-center space-y-0.5">
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-muted-foreground">
                     {monthly.grade.startsWith('A')
                       ? 'Outstanding performance'
                       : monthly.grade.startsWith('B')
@@ -958,7 +958,7 @@ export default function PerformanceScorecard() {
                             ? 'Below expectations'
                             : 'Needs immediate review'}
                   </p>
-                  <p className="text-[10px] text-slate-500 font-mono">
+                  <p className="text-[10px] text-muted-foreground font-mono">
                     P&amp;L: {formatPnl(monthly.totalPnl)} &middot;{' '}
                     {monthly.consistencyScore}% consistency
                   </p>

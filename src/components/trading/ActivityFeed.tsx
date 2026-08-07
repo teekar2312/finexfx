@@ -474,7 +474,7 @@ export default function ActivityFeed() {
                   </div>
 
                   {/* Icon badge */}
-                  <div className={`flex-shrink-0 mt-0.5 flex items-center justify-center w-6 h-6 rounded-md ${isLatest ? 'bg-white/5' : 'bg-transparent'} transition-colors group-hover:bg-white/5`}>
+                  <div className={`flex-shrink-0 mt-0.5 flex items-center justify-center w-6 h-6 rounded-md ${isLatest ? 'bg-muted/50' : 'bg-transparent'} transition-colors group-hover:bg-muted/50`}>
                     <Icon className={`w-3 h-3 ${iconColor}`} />
                   </div>
 

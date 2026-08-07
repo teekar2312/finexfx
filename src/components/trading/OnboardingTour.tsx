@@ -203,7 +203,7 @@ export default function OnboardingTour() {
         {visible && (
           <motion.div
             key="onboarding-overlay"
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/70 backdrop-blur-sm"
             variants={overlayVariants}
             initial="hidden"
             animate="visible"
@@ -233,7 +233,7 @@ export default function OnboardingTour() {
               <button
                 type="button"
                 onClick={handleClose}
-                className="absolute top-3 right-3 rounded-md p-1 text-slate-400 transition-colors hover:bg-white/10 hover:text-slate-200"
+                className="absolute top-3 right-3 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
                 aria-label="Close tour"
               >
                 <X className="size-4" />
@@ -257,12 +257,12 @@ export default function OnboardingTour() {
                   </div>
 
                   {/* Title */}
-                  <h2 className="mb-2 text-lg font-semibold text-white">
+                  <h2 className="mb-2 text-lg font-semibold text-foreground">
                     {step.title}
                   </h2>
 
                   {/* Description */}
-                  <p className="mb-6 max-w-sm text-sm leading-relaxed text-slate-400">
+                  <p className="mb-6 max-w-sm text-sm leading-relaxed text-muted-foreground">
                     {step.description}
                   </p>
                 </motion.div>
@@ -276,14 +276,14 @@ export default function OnboardingTour() {
                     className={
                       idx === currentStep
                         ? 'size-2 rounded-full bg-emerald-500'
-                        : 'size-2 rounded-full bg-slate-600'
+                        : 'size-2 rounded-full bg-muted'
                     }
                   />
                 ))}
               </div>
 
               {/* Step counter */}
-              <p className="mb-5 text-center text-xs text-slate-500">
+              <p className="mb-5 text-center text-xs text-muted-foreground">
                 Step {currentStep + 1} of {TOTAL_STEPS}
               </p>
 
@@ -293,7 +293,7 @@ export default function OnboardingTour() {
                   variant="ghost"
                   size="sm"
                   onClick={handleClose}
-                  className="text-slate-400 hover:text-slate-200"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   Skip
                 </Button>
@@ -304,7 +304,7 @@ export default function OnboardingTour() {
                       variant="outline"
                       size="sm"
                       onClick={handleBack}
-                      className="border-slate-700 text-slate-300 hover:bg-white/5 hover:text-white"
+                      className="border-slate-700 text-foreground hover:bg-muted/50 hover:text-foreground"
                     >
                       Back
                     </Button>
@@ -323,7 +323,7 @@ export default function OnboardingTour() {
               {/* Show Tour Again note on last step */}
               {isLast && (
                 <div className="mt-4 border-t border-slate-700/50 pt-3">
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     You can restart this tour from Settings anytime.
                   </p>
                 </div>

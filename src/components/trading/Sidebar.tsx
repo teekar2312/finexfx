@@ -53,10 +53,10 @@ const navItems: NavItem[] = [
 ];
 
 const SESSION_DEFS = [
-  { label: 'SYD', start: 22, end: 7, color: 'bg-cyan-400', inactiveColor: 'bg-slate-700' },
-  { label: 'TKY', start: 0, end: 9, color: 'bg-violet-400', inactiveColor: 'bg-slate-700' },
-  { label: 'LDN', start: TRADING_SESSIONS.LONDON.start, end: TRADING_SESSIONS.LONDON.end, color: 'bg-emerald-400', inactiveColor: 'bg-slate-700' },
-  { label: 'NYC', start: TRADING_SESSIONS.NEW_YORK.start, end: TRADING_SESSIONS.NEW_YORK.end, color: 'bg-amber-400', inactiveColor: 'bg-slate-700' },
+  { label: 'SYD', start: 22, end: 7, color: 'bg-cyan-400', inactiveColor: 'bg-muted' },
+  { label: 'TKY', start: 0, end: 9, color: 'bg-violet-400', inactiveColor: 'bg-muted' },
+  { label: 'LDN', start: TRADING_SESSIONS.LONDON.start, end: TRADING_SESSIONS.LONDON.end, color: 'bg-emerald-400', inactiveColor: 'bg-muted' },
+  { label: 'NYC', start: TRADING_SESSIONS.NEW_YORK.start, end: TRADING_SESSIONS.NEW_YORK.end, color: 'bg-amber-400', inactiveColor: 'bg-muted' },
 ] as const;
 
 function isSessionActive(start: number, end: number, utcHour: number): boolean {

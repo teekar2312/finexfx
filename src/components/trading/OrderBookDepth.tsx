@@ -146,7 +146,7 @@ export default function OrderBookDepth({ symbol, bid, ask }: OrderBookDepthProps
             <span className="text-muted-foreground">Pressure</span>
             <span className="neon-text-red font-medium">Sell {sellPressure.toFixed(1)}%</span>
           </div>
-          <div className="flex h-1.5 rounded-full overflow-hidden bg-slate-800">
+          <div className="flex h-1.5 rounded-full overflow-hidden bg-muted">
             <motion.div
               className="bg-emerald-500/60"
               initial={false}
@@ -233,7 +233,7 @@ export default function OrderBookDepth({ symbol, bid, ask }: OrderBookDepthProps
         </div>
 
         {/* Spread Indicator */}
-        <div className="flex items-center justify-center my-2 py-1.5 rounded-md bg-slate-800/50 border border-border/50">
+        <div className="flex items-center justify-center my-2 py-1.5 rounded-md bg-muted/50 border border-border/50">
           <div className="text-center">
             <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Spread</div>
             <div className="text-sm font-bold tabular-nums text-amber-400">

@@ -34,7 +34,7 @@ function getConditionIcon(condition: MarketCondition) {
     case 'trending': return <TrendingUp className="h-4 w-4 text-emerald-500" />;
     case 'range_bound': return <Activity className="h-4 w-4 text-amber-500" />;
     case 'high_volatility': return <Volume2 className="h-4 w-4 text-red-500" />;
-    case 'low_volatility': return <BarChart3 className="h-4 w-4 text-slate-500" />;
+    case 'low_volatility': return <BarChart3 className="h-4 w-4 text-muted-foreground" />;
   }
 }
 
@@ -319,7 +319,7 @@ export default function DashboardView() {
       sparkData: freeMarginSparkData,
       accentClass: 'stat-accent-neutral',
       iconGradient: 'from-slate-500/20 to-slate-400/20',
-      iconTextColor: 'text-slate-400',
+      iconTextColor: 'text-muted-foreground',
     },
     {
       label: 'Daily P&L',
@@ -379,7 +379,7 @@ export default function DashboardView() {
   ];
 
   function getCellBg(pnlPercent: number, pnl: number) {
-    if (pnl === 0) return 'bg-slate-800/40';
+    if (pnl === 0) return 'bg-muted/40';
     if (pnl > 0 && pnlPercent > 2) return 'bg-emerald-500/35';
     if (pnl > 0) return 'bg-emerald-500/15';
     if (pnl < 0 && pnlPercent < -2) return 'bg-red-500/35';
@@ -687,13 +687,13 @@ export default function DashboardView() {
                                   <Badge className="text-[8px] px-1 py-0 bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30 h-4">ACTIVE</Badge>
                                 </div>
                               ) : (
-                                <span className={`text-[10px] tabular-nums ${statusText === 'Closed' ? 'text-slate-600' : 'text-muted-foreground'}`}>
+                                <span className={`text-[10px] tabular-nums ${statusText === 'Closed' ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
                                   {statusText}
                                 </span>
                               )}
                             </div>
                           </div>
-                          <div className="h-1.5 w-full rounded-full bg-slate-800/80 overflow-hidden">
+                          <div className="h-1.5 w-full rounded-full bg-muted/80 overflow-hidden">
                             <div
                               className={`h-full rounded-full animate-progress ${isActive ? 'progress-gradient-emerald' : 'progress-gradient-slate'}`}
                               style={{ width: isActive ? `${progress}%` : '0%' }}
@@ -751,7 +751,7 @@ export default function DashboardView() {
                             <span className="text-xs font-medium">{signal.symbol}</span>
                             <Badge
                               variant="outline"
-                              className="text-[8px] px-1 py-0 border-slate-600/50 text-slate-400 bg-slate-800/40 h-4"
+                              className="text-[8px] px-1 py-0 border-slate-600/50 text-muted-foreground bg-muted/40 h-4"
                             >
                               {signal.strategy}
                             </Badge>
@@ -764,7 +764,7 @@ export default function DashboardView() {
                             signal.marketCondition === 'trending' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                             : signal.marketCondition === 'high_volatility' ? 'bg-red-500/15 text-red-400 border-red-500/30'
                             : signal.marketCondition === 'range_bound' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                            : 'bg-slate-500/15 text-slate-400 border-slate-500/30'
+                            : 'bg-slate-500/15 text-muted-foreground border-slate-500/30'
                           }`}
                           variant="outline"
                         >
@@ -777,7 +777,7 @@ export default function DashboardView() {
                               ? 'border-emerald-500/50 text-emerald-500'
                               : signal.direction === 'SELL'
                               ? 'border-red-500/50 text-red-500'
-                              : 'border-slate-500/50 text-slate-500'
+                              : 'border-slate-500/50 text-muted-foreground'
                           }`}
                         >
                           {signal.direction}
@@ -787,7 +787,7 @@ export default function DashboardView() {
                     <div className="flex items-center justify-between mt-1.5">
                       <span className="text-[10px] text-muted-foreground time-fade">{timeAgo(signal.createdAt)}</span>
                       <div className="flex items-center gap-2">
-                        <div className="w-16 h-1.5 rounded-full bg-slate-800/80 overflow-hidden">
+                        <div className="w-16 h-1.5 rounded-full bg-muted/80 overflow-hidden">
                           <div
                             className={`h-full rounded-full animate-progress ${signal.confidence >= 70 ? 'confidence-bar-emerald' : signal.confidence >= 50 ? 'confidence-bar-amber' : 'confidence-bar-red'}`}
                             style={{ width: `${signal.confidence}%` }}
@@ -829,7 +829,7 @@ export default function DashboardView() {
                         {price && (
                           <div className="text-[10px] text-muted-foreground tabular-nums">
                             {price.bid.toFixed(SYMBOL_INFO[sym].digits)}
-                            <span className="ml-1 text-slate-600">spread: {price.spread.toFixed(1)}</span>
+                            <span className="ml-1 text-muted-foreground">spread: {price.spread.toFixed(1)}</span>
                             <span className={`ml-1.5 ${price.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                               {price.change >= 0 ? '+' : ''}{price.changePercent.toFixed(2)}%
                             </span>
@@ -843,7 +843,7 @@ export default function DashboardView() {
                           condition === 'trending' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                           : condition === 'high_volatility' ? 'bg-red-500/15 text-red-400 border-red-500/30'
                           : condition === 'range_bound' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                          : 'bg-slate-500/15 text-slate-400 border-slate-500/30'
+                          : 'bg-slate-500/15 text-muted-foreground border-slate-500/30'
                         }`}
                         variant="outline"
                       >
@@ -894,7 +894,7 @@ export default function DashboardView() {
         <div className="px-4 pb-3">
           {/* Monthly Summary Row */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-            <div className="rounded-lg bg-slate-800/30 border border-border/50 p-2.5">
+            <div className="rounded-lg bg-muted/30 border border-border/50 p-2.5">
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider">This Month P&L</div>
               <div className={`text-sm font-bold tabular-nums mt-0.5 count-up ${monthlySummary.totalPnl >= 0 ? 'text-emerald-500 neon-text-emerald' : 'text-red-500 neon-text-red'}`}>
                 {monthlySummary.totalPnl >= 0 ? '+' : ''}${monthlySummary.totalPnl.toFixed(2)}
@@ -903,7 +903,7 @@ export default function DashboardView() {
                 {((monthlySummary.totalPnl / balance) * 100).toFixed(2)}%
               </div>
             </div>
-            <div className="rounded-lg bg-slate-800/30 border border-border/50 p-2.5">
+            <div className="rounded-lg bg-muted/30 border border-border/50 p-2.5">
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                 <TrendingUp className="h-3 w-3 text-emerald-500" /> Best Day
               </div>
@@ -914,7 +914,7 @@ export default function DashboardView() {
                 {monthlySummary.bestDay.dayName} {monthlySummary.bestDay.day}
               </div>
             </div>
-            <div className="rounded-lg bg-slate-800/30 border border-border/50 p-2.5">
+            <div className="rounded-lg bg-muted/30 border border-border/50 p-2.5">
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                 <TrendingDown className="h-3 w-3 text-red-500" /> Worst Day
               </div>
@@ -925,7 +925,7 @@ export default function DashboardView() {
                 {monthlySummary.worstDay.dayName} {monthlySummary.worstDay.day}
               </div>
             </div>
-            <div className="rounded-lg bg-slate-800/30 border border-border/50 p-2.5">
+            <div className="rounded-lg bg-muted/30 border border-border/50 p-2.5">
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                 <Target className="h-3 w-3 text-primary" /> Win Days
               </div>
@@ -959,7 +959,7 @@ export default function DashboardView() {
                         className={`rounded-md p-1.5 text-center transition-colors relative ${getCellBg(day.pnlPercent, day.pnl)} ${day.isToday ? 'ring-1 ring-primary ring-offset-1 ring-offset-background' : ''}`}
                       >
                         <div className="text-[10px] text-muted-foreground font-medium">{day.day}</div>
-                        <div className={`text-[10px] font-bold tabular-nums mt-0.5 ${day.pnl === 0 ? 'text-slate-500' : day.pnl > 0 ? 'text-emerald-400 neon-text-emerald' : 'text-red-400 neon-text-red'}`}>
+                        <div className={`text-[10px] font-bold tabular-nums mt-0.5 ${day.pnl === 0 ? 'text-muted-foreground' : day.pnl > 0 ? 'text-emerald-400 neon-text-emerald' : 'text-red-400 neon-text-red'}`}>
                           {day.pnl === 0 ? '•' : `${day.pnl >= 0 ? '+' : ''}$${day.pnl.toFixed(0)}`}
                         </div>
                       </div>

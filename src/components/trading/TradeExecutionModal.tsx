@@ -174,7 +174,7 @@ function MetricCard({ icon: Icon, label, value, valueColor, delay }: { icon: Rea
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.3 }}
     >
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/5">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted/50">
         <Icon className="size-3.5 text-muted-foreground" />
       </div>
       <div className="min-w-0 flex-1">
@@ -206,8 +206,8 @@ export function TradeExecutionModal({ open, onOpenChange, context, onConfirm }: 
   const dirTextClass = isBuy ? 'text-emerald-400' : 'text-red-400';
   const dirBadgeBg = isBuy ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30';
   const confirmBtnClass = isBuy
-    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-    : 'bg-red-600 hover:bg-red-500 text-white';
+    ? 'bg-emerald-600 hover:bg-emerald-500 text-foreground'
+    : 'bg-red-600 hover:bg-red-500 text-foreground';
 
   const DirectionIcon = isBuy ? ArrowUpRight : ArrowDownRight;
 
@@ -215,7 +215,7 @@ export function TradeExecutionModal({ open, onOpenChange, context, onConfirm }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <AnimatePresence>
         {open && (
-          <DialogContent className="sm:max-w-md gap-0 overflow-hidden border-white/10 bg-gray-950 p-0" showCloseButton={false} asChild>
+          <DialogContent className="sm:max-w-md gap-0 overflow-hidden border-border bg-card p-0" showCloseButton={false} asChild>
             <motion.div
               initial={{ opacity: 0, y: 40, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -226,7 +226,7 @@ export function TradeExecutionModal({ open, onOpenChange, context, onConfirm }: 
               <div className={`absolute inset-0 ${isBuy ? 'bg-emerald-500' : 'bg-red-500'} opacity-0`} style={{ animation: 'tradePulse 2.5s ease-in-out infinite' }} />
 
               {/* (a) Header Section */}
-              <div className={`relative border-b border-white/5 ${dirBgClass}`}>
+              <div className={`relative border-b border-border/50 ${dirBgClass}`}>
                 <div className="flex items-center justify-between p-4 pb-3">
                   <div className="flex items-center gap-3">
                     <motion.div
@@ -251,7 +251,7 @@ export function TradeExecutionModal({ open, onOpenChange, context, onConfirm }: 
                     <span className={`text-[10px] font-mono tabular-nums text-muted-foreground border rounded-md px-1.5 py-0.5 ${dirBorderClass}`}>
                       Spread {ctx.spread}
                     </span>
-                    <button onClick={() => onOpenChange(false)} className="rounded-md p-1 hover:bg-white/5 transition-colors">
+                    <button onClick={() => onOpenChange(false)} className="rounded-md p-1 hover:bg-muted/50 transition-colors">
                       <X className="size-4 text-muted-foreground" />
                     </button>
                   </div>
@@ -285,13 +285,13 @@ export function TradeExecutionModal({ open, onOpenChange, context, onConfirm }: 
               </div>
 
               {/* (d) Footer */}
-              <div className="border-t border-white/5 px-4 py-3">
+              <div className="border-t border-border/50 px-4 py-3">
                 <DialogFooter className="flex-row gap-2 sm:justify-end">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => onOpenChange(false)}
-                    className="border-white/10 text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                    className="border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                   >
                     <X className="size-3.5" />
                     Cancel
