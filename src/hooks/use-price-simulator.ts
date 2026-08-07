@@ -168,7 +168,6 @@ export function usePriceSimulator() {
     const store = useTradingStore.getState();
 
     // If live price feed is active, skip the simulator
-    const unsubMode = useTradingStore.subscribe((s) => s.priceFeedMode);
     const currentMode = useTradingStore.getState().priceFeedMode;
     if (currentMode === 'live') {
       return;

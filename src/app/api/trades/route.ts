@@ -3,6 +3,31 @@ import { db } from '@/lib/db';
 import type { Symbol, TradeDirection, TradeStatus } from '@/lib/types';
 import { SYMBOLS, SYMBOL_INFO } from '@/lib/types';
 
+/** Calculate P&L in USD for a trade closed at a given price */
+function calculatePnl(trade: {
+  symbol: string;
+  direction: string;
+  lotSize: number;
+  entryPrice: number;
+  commission: number;
+  swap: number;
+}, closePrice: number): { pips: number; profit: number } {
+  const info = SYMBOL_INFO[trade.symbol as Symbol];
+  const pipSize = info.pipSize;
+  const pipMultiplier = info.category === 'forex' ? 100000 : 100;
+
+  const pips = trade.direction === 'BUY'
+    ? (closePrice - trade.entryPrice) / pipSize
+    : (trade.entryPrice - closePrice) / pipSize;
+
+  const profit = pips * trade.lotSize * pipMultiplier * pipSize - trade.commission + trade.swap;
+
+  return {
+    pips: Math.round(pips * 10) / 10,
+    profit: Math.round(profit * 100) / 100,
+  };
+}
+
 function calculateLotSize(
   balance: number,
   riskPerTrade: number,
@@ -221,13 +246,22 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Close the trade with current profit/loss
+    // Calculate actual P&L at close time using the stored currentPrice
+    const closePrice = trade.currentPrice ?? trade.entryPrice;
+    const { pips: closedPips, profit: closedProfit } = calculatePnl(
+      { symbol: trade.symbol, direction: trade.direction, lotSize: trade.lotSize, entryPrice: trade.entryPrice, commission: trade.commission, swap: trade.swap },
+      closePrice,
+    );
+
+    // Close the trade with calculated P&L
     const closedTrade = await db.trade.update({
       where: { id },
       data: {
         status: 'closed',
         closedAt: new Date(),
-        currentPrice: trade.currentPrice ?? trade.entryPrice,
+        currentPrice: closePrice,
+        pips: closedPips,
+        profit: closedProfit,
       },
     });
 
@@ -240,10 +274,10 @@ export async function DELETE(request: NextRequest) {
       await db.tradingAccount.update({
         where: { id: account.id },
         data: {
-          balance: account.balance + closedTrade.profit,
-          equity: account.equity + closedTrade.profit,
-          totalPnl: account.totalPnl + closedTrade.profit,
-          dailyPnl: account.dailyPnl + closedTrade.profit,
+          balance: account.balance + closedProfit,
+          equity: account.equity + closedProfit,
+          totalPnl: account.totalPnl + closedProfit,
+          dailyPnl: account.dailyPnl + closedProfit,
         },
       });
     }
@@ -254,7 +288,8 @@ export async function DELETE(request: NextRequest) {
         id: closedTrade.id,
         symbol: closedTrade.symbol,
         direction: closedTrade.direction,
-        profit: closedTrade.profit,
+        pips: closedPips,
+        profit: closedProfit,
         status: 'closed',
         closedAt: closedTrade.closedAt?.toISOString(),
       },

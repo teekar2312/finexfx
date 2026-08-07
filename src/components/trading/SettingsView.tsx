@@ -313,7 +313,7 @@ export default function SettingsView() {
                         <input
                           type="number"
                           value={brokerConfig.wsPort}
-                          onChange={(e) => setBrokerConfig({ wsPort: parseInt(e.target.value) || 3001 })}
+                          onChange={(e) => setBrokerConfig({ wsPort: parseInt(e.target.value) || 3003 })}
                           className="w-full h-8 px-2 text-xs rounded-md bg-background border border-input focus:outline-none focus:ring-1 focus:ring-ring"
                         />
                       </div>

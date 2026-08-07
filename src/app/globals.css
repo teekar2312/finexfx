@@ -332,6 +332,11 @@
 
 .card-hover:hover {
   transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  border-color: var(--border);
+}
+
+.dark .card-hover:hover {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
   border-color: rgba(255, 255, 255, 0.12);
 }
@@ -427,6 +432,12 @@
 }
 
 .glass-card-interactive:hover {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+.dark .glass-card-interactive:hover {
   background: rgba(17, 24, 39, 0.8);
   border-color: rgba(255, 255, 255, 0.12);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);

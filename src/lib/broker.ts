@@ -2,12 +2,12 @@
  * Broker Abstraction Layer
  * 
  * Provides a unified interface for both simulated (demo) and live trading.
- * The live implementation connects to a real broker WebSocket API.
+ * The live implementation connects to the Socket.IO price feed service (port 3003).
  * The demo implementation uses the existing Zustand store + price simulator.
  */
 
-import type { Symbol, TradeDirection, Trade } from '@/lib/types';
-import { SYMBOL_INFO } from '@/lib/types';
+import type { Symbol, TradeDirection } from '@/lib/types';
+import { SYMBOLS } from '@/lib/types';
 
 // ─── Shared Types ───────────────────────────────────────────────
 
@@ -86,7 +86,7 @@ export interface BrokerConfig {
   apiKey?: string;
   apiSecret?: string;
   accountId?: string;
-  // WebSocket price feed
+  // Socket.IO price feed
   priceFeedUrl?: string;
   // Connection state
   isConnected: boolean;
@@ -244,16 +244,15 @@ export class DemoBroker implements IBroker {
   }
 }
 
-// ─── Live Broker (uses WebSocket price feed + REST API) ──────────
+// ─── Live Broker (uses Socket.IO price feed + REST API) ────────
 
 export class LiveBroker implements IBroker {
   readonly name = 'FINEX Live';
   readonly mode = 'live' as const;
   private _status: ConnectionStatus = 'disconnected';
   private config: Required<Pick<BrokerConfig, 'brokerUrl' | 'priceFeedUrl'>>;
-  private ws: WebSocket | null = null;
-  private reconnectTimer: ReturnType<typeof setInterval> | null = null;
-  private pingTimer: ReturnType<typeof setInterval> | null = null;
+  private socket: any = null; // Socket.IO socket (dynamically imported to avoid SSR issues)
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   onPriceUpdate?: (symbol: Symbol, bid: number, ask: number) => void;
   onConnectionChange?: (status: ConnectionStatus) => void;
@@ -273,46 +272,46 @@ export class LiveBroker implements IBroker {
     this.onConnectionChange?.(this._status);
 
     try {
-      // Connect to the price feed WebSocket
-      const wsUrl = this.config.priceFeedUrl || '/?XTransformPort=3001';
-      this.ws = new WebSocket(wsUrl);
+      // Dynamic import to avoid SSR issues with socket.io-client
+      const { io } = await import('socket.io-client');
+      const wsUrl = this.config.priceFeedUrl || '/?XTransformPort=3003';
+      this.socket = io(wsUrl, {
+        transports: ['websocket', 'polling'],
+        reconnection: false,
+        timeout: 5000,
+      });
 
-      this.ws.onopen = () => {
+      this.socket.on('connect', () => {
         this._status = 'connected';
         this.onConnectionChange?.(this._status);
-        // Subscribe to all symbols
-        this.ws?.send(JSON.stringify({ event: 'subscribe', symbols: ['EURUSD', 'USDJPY', 'GBPUSD', 'XAUUSD'] }));
-        // Start ping to keep connection alive
-        this.pingTimer = setInterval(() => {
-          this.ws?.send(JSON.stringify({ event: 'ping' }));
-        }, 30000);
-      };
-
-      this.ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.event === 'price' && data.symbol && data.bid != null && data.ask != null) {
-            this.onPriceUpdate?.(data.symbol as Symbol, data.bid, data.ask);
-          }
-          if (data.event === 'order_update') {
-            this.onOrderUpdate?.(data.position);
-          }
-        } catch {
-          // ignore parse errors
+        // Server expects individual string per symbol
+        for (const sym of SYMBOLS) {
+          this.socket?.emit('subscribe', sym);
         }
-      };
+      });
 
-      this.ws.onclose = () => {
+      // Server emits 'prices' (plural) — array of all symbol ticks
+      this.socket.on('prices', (ticks: Array<{ symbol: string; bid: number; ask: number }>) => {
+        for (const tick of ticks) {
+          this.onPriceUpdate?.(tick.symbol as Symbol, tick.bid, tick.ask);
+        }
+      });
+
+      this.socket.on('disconnect', () => {
         this._status = 'disconnected';
         this.onConnectionChange?.(this._status);
         // Auto-reconnect after 5s
         this.reconnectTimer = setTimeout(() => this.connect(), 5000);
-      };
+      });
 
-      this.ws.onerror = () => {
+      this.socket.on('connect_error', () => {
         this._status = 'error';
         this.onConnectionChange?.(this._status);
-      };
+      });
+
+      this.socket.on('error', (data: { code: string; message: string }) => {
+        console.error('[LiveBroker Error]', data.code, data.message);
+      });
     } catch {
       this._status = 'error';
       this.onConnectionChange?.(this._status);
@@ -320,12 +319,11 @@ export class LiveBroker implements IBroker {
   }
 
   disconnect(): void {
-    if (this.pingTimer) clearInterval(this.pingTimer);
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    if (this.ws) {
-      this.ws.onclose = null; // prevent auto-reconnect
-      this.ws.close();
-      this.ws = null;
+    if (this.socket) {
+      this.socket.on('disconnect', null); // prevent auto-reconnect
+      this.socket.disconnect();
+      this.socket = null;
     }
     this._status = 'disconnected';
     this.onConnectionChange?.(this._status);

@@ -3,10 +3,10 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useTradingStore } from '@/store/trading-store';
 import { io, Socket } from 'socket.io-client';
-import type { Symbol } from '@/lib/types';
+import { SYMBOLS, type Symbol, type PriceTick } from '@/lib/types';
 
 /**
- * Hook to connect to the live price-feed WebSocket mini-service.
+ * Hook to connect to the live price-feed Socket.IO mini-service (port 3003).
  * Only activates when priceFeedMode === 'live' in the store.
  * When 'simulated', the existing use-price-simulator hook handles prices.
  */
@@ -16,7 +16,10 @@ export function useLivePriceFeed() {
   const setPrices = useTradingStore((s) => s.setPrices);
   const setConnected = useTradingStore((s) => s.setConnected);
   const setConnectionStatus = useTradingStore((s) => s.setConnectionStatus);
+  const setMarketConditions = useTradingStore((s) => s.setMarketConditions);
   const updatePriceHistory = useTradingStore((s) => s.updatePriceHistory);
+  const setIndicatorValues = useTradingStore((s) => s.setIndicatorValues);
+  const addSignal = useTradingStore((s) => s.addSignal);
   const socketRef = useRef<Socket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -34,27 +37,69 @@ export function useLivePriceFeed() {
     socket.on('connect', () => {
       setConnectionStatus('connected');
       setConnected(true);
-      // Subscribe to all symbols
-      socket.emit('subscribe', { symbols: ['EURUSD', 'USDJPY', 'GBPUSD', 'XAUUSD'] });
+      // Server expects individual string per symbol, not an object
+      for (const sym of SYMBOLS) {
+        socket.emit('subscribe', sym);
+      }
     });
 
-    socket.on('price', (data: { symbol: string; bid: number; ask: number; spread: number; timestamp: number; high: number; low: number; change: number; changePercent: number }) => {
-      const sym = data.symbol as Symbol;
-      setPrices([{
-        symbol: sym,
-        bid: data.bid,
-        ask: data.ask,
-        spread: data.spread,
-        timestamp: data.timestamp,
-        high: data.high,
-        low: data.low,
-        change: data.change,
-        changePercent: data.changePercent,
-      }]);
+    // Server emits 'prices' (plural) — array of ticks for all symbols
+    socket.on('prices', (ticks: Array<{ symbol: string; bid: number; ask: number; spread: number; timestamp: number; high: number; low: number; change: number; changePercent: number }>) => {
+      const mapped: PriceTick[] = ticks.map((t) => ({
+        symbol: t.symbol as Symbol,
+        bid: t.bid,
+        ask: t.ask,
+        spread: t.spread,
+        timestamp: t.timestamp,
+        high: t.high,
+        low: t.low,
+        change: t.change,
+        changePercent: t.changePercent,
+      }));
+      setPrices(mapped);
     });
 
-    socket.on('candles', (data: { symbol: string; candles: any[] }) => {
-      updatePriceHistory(data.symbol as Symbol, data.candles);
+    // Server emits 'candles:SYM' per symbol
+    for (const sym of SYMBOLS) {
+      socket.on(`candles:${sym}`, (candles: any[]) => {
+        updatePriceHistory(sym as Symbol, candles);
+      });
+    }
+
+    // Server emits 'indicators:SYM' per symbol
+    for (const sym of SYMBOLS) {
+      socket.on(`indicators:${sym}`, (indicators: Record<string, number>) => {
+        setIndicatorValues(sym, indicators);
+      });
+    }
+
+    // Server emits 'signal' for new trading signals
+    socket.on('signal', (signal: any) => {
+      addSignal({
+        id: signal.id,
+        symbol: signal.symbol as Symbol,
+        direction: signal.direction,
+        confidence: signal.confidence,
+        strategy: signal.strategy,
+        marketCondition: signal.marketCondition,
+        entryPrice: signal.entryPrice,
+        stopLoss: signal.stopLoss,
+        takeProfit: signal.takeProfit,
+        riskReward: signal.riskReward,
+        aiAnalysis: signal.aiAnalysis,
+        isExecuted: false,
+        createdAt: new Date().toISOString(),
+      });
+    });
+
+    // Server emits 'marketConditions' for all symbols
+    socket.on('marketConditions', (conditions: Record<string, string>) => {
+      setMarketConditions(conditions as any);
+    });
+
+    // Server emits 'session:change' on session transitions
+    socket.on('session:change', (data: { name: string; volatilityMultiplier: number }) => {
+      // Session data available for future UI integration
     });
 
     socket.on('disconnect', () => {
@@ -67,12 +112,12 @@ export function useLivePriceFeed() {
       setConnected(false);
     });
 
-    socket.on('session', (data: { session: string; volatilityMultiplier: number }) => {
-      // Could update UI with current session info
+    socket.on('error', (data: { code: string; message: string }) => {
+      console.error('[PriceFeed Error]', data.code, data.message);
     });
 
     socketRef.current = socket;
-  }, [wsPort, setPrices, setConnected, setConnectionStatus, updatePriceHistory]);
+  }, [wsPort, setPrices, setConnected, setConnectionStatus, updatePriceHistory, setMarketConditions, setIndicatorValues, addSignal]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimer.current) {

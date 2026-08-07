@@ -290,10 +290,24 @@ export const useTradingStore = create<TradingState>((set, get) => ({
     // Margin call / stop-out guard
     if (newEquity <= 0) {
       get().addNotification({ type: 'error', title: 'Account Stopped Out', message: 'Equity has reached zero. All positions closed.' });
-      // Force close all open trades
+      // Force close all open trades WITHOUT triggering updateAccountPnl again
       const openIds = state.openTrades.map(t => t.id);
+      set({
+        openTrades: [],
+        dailyPnl: newDailyPnl,
+        totalPnl: newTotalPnl,
+        equity: 0,
+        freeMargin: 0,
+      });
       for (const id of openIds) {
-        get().closeTrade(id);
+        const trade = state.openTrades.find(t => t.id === id);
+        if (trade) {
+          const profit = trade.profit || 0;
+          set({
+            closedTrades: [{ ...trade, status: 'closed' as const, closedAt: new Date().toISOString() }, ...get().closedTrades],
+          });
+          playSound('trade_close');
+        }
       }
       return;
     }
@@ -369,7 +383,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   brokerConfig: {
     brokerUrl: '',
     priceFeedUrl: '',
-    wsPort: 3001,
+    wsPort: 3003,
   },
   setBrokerConfig: (config) => set({ brokerConfig: { ...get().brokerConfig, ...config } }),
 
