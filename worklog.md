@@ -3653,3 +3653,50 @@ Stage Summary:
 - All metrics verified from live project scan
 - API documentation derived from actual source code (not estimated)
 - Pushed to https://github.com/teekar2312/finexfx.git
+
+---
+Task ID: Docs-Update-DEPLOYMENT
+Agent: Main
+Task: Update DEPLOYMENT.md with VS Code on Windows 11 setup and full dependency reference
+
+Work Log:
+- Read current DEPLOYMENT.md (295 lines) and package.json (83 deps)
+- Rewrote DEPLOYMENT.md from 295 → 555 lines
+- Section 2: Added complete dependency reference — 13 categories covering all 83 packages with versions, roles, and relationships
+  - Runtime & Framework (4)
+  - Styling (7)
+  - UI Components — 26 Radix primitives mapped to shadcn/ui components
+  - Data Visualization & Animation (3)
+  - State & Data (5)
+  - Forms & Validation (3)
+  - Utilities (5)
+  - Drag & Drop (3)
+  - Content & Editing (3)
+  - Layout & Interaction (5)
+  - Theming & i18n (2)
+  - Auth & AI (3)
+  - Dev Dependencies (7)
+- Section 3: Added VS Code on Windows 11 guide
+  - Bun installation (PowerShell, npm, WSL2)
+  - 13 recommended extensions with marketplace IDs
+  - One-liner batch install command
+  - Workspace settings (formatting, Tailwind, TS, search/watcher excludes)
+  - 3 debug configurations (server-side, client-side, full-stack)
+  - 5 VS Code tasks (dev, lint, db push, seed, build)
+  - Windows-specific notes (long paths, CRLF, file watcher, AV, WSL2)
+- Created .vscode/ directory with 5 config files:
+  - settings.json (workspace settings)
+  - launch.json (debug configurations)
+  - tasks.json (build/lint tasks)
+  - extensions.json (recommended extensions)
+  - tailwind.json (Tailwind CSS v4 custom data)
+- Added Windows Service section (NSSM)
+- Added Troubleshooting section (10 common issues with solutions)
+- Committed as 3c5659c, pushed to origin/main
+
+Stage Summary:
+- DEPLOYMENT.md: 295 → 555 lines (+260 lines, +88%)
+- All 83 dependencies documented across 13 categories
+- Complete VS Code on Windows 11 setup guide
+- .vscode/ workspace configs created (5 files)
+- Pushed to https://github.com/teekar2312/finexfx.git
