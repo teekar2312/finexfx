@@ -1,0 +1,959 @@
+     1→'use client';
+     2→
+     3→import { useState, useEffect, useMemo } from 'react';
+     4→import { useTradingStore } from '@/store/trading-store';
+     5→import { useShallow } from 'zustand/react/shallow';
+     6→import { SYMBOLS, SYMBOL_INFO, BROKER_CONFIG, TRADING_SESSIONS, MARKET_CONDITION_CONFIG, type Symbol, type MarketCondition } from '@/lib/types';
+     7→import { Badge } from '@/components/ui/badge';
+     8→import { Button } from '@/components/ui/button';
+     9→import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+    10→import { Separator } from '@/components/ui/separator';
+    11→import { motion } from 'framer-motion';
+    12→import { TrendingUp, TrendingDown, DollarSign, Activity, Zap, Play, ArrowUpRight, ArrowDownRight, Clock, BarChart3, Shield, Volume2, RefreshCw, Award, Flame, Calendar, Target } from 'lucide-react';
+    13→import { AreaChart, Area, ResponsiveContainer } from 'recharts';
+    14→import WatchlistPanel from './WatchlistPanel';
+    15→import ActivityFeed from './ActivityFeed';
+    16→import SessionOverlapScanner from './SessionOverlapScanner';
+    17→import MarketHeatmap from './MarketHeatmap';
+    18→import TradingPsychologyPanel from './TradingPsychologyPanel';
+    19→
+    20→function getConditionIcon(condition: MarketCondition) {
+    21→  switch (condition) {
+    22→    case 'trending': return <TrendingUp className="h-4 w-4 text-emerald-500" />;
+    23→    case 'range_bound': return <Activity className="h-4 w-4 text-amber-500" />;
+    24→    case 'high_volatility': return <Volume2 className="h-4 w-4 text-red-500" />;
+    25→    case 'low_volatility': return <BarChart3 className="h-4 w-4 text-slate-500" />;
+    26→  }
+    27→}
+    28→
+    29→function getSessionStatus(session: { start: number; end: number }) {
+    30→  const now = new Date();
+    31→  const currentHour = now.getUTCHours();
+    32→  const currentMinute = now.getUTCMinutes();
+    33→  const currentDecimal = currentHour + currentMinute / 60;
+    34→  const isActive = currentDecimal >= session.start && currentDecimal < session.end;
+    35→  const progress = isActive
+    36→    ? ((currentDecimal - session.start) / (session.end - session.start)) * 100
+    37→    : 0;
+    38→  const duration = session.end - session.start;
+    39→  let statusText = '';
+    40→  if (isActive) {
+    41→    statusText = 'ACTIVE';
+    42→  } else if (currentDecimal < session.start) {
+    43→    const hoursUntil = session.start - currentHour;
+    44→    const minsUntil = (hoursUntil * 60 - currentMinute);
+    45→    if (minsUntil > 0) {
+    46→      const h = Math.floor(minsUntil / 60);
+    47→      const m = minsUntil % 60;
+    48→      statusText = `Opens in ${h}:${m.toString().padStart(2, '0')}`;
+    49→    } else {
+    50→      statusText = 'Closed';
+    51→    }
+    52→  } else {
+    53→    statusText = 'Closed';
+    54→  }
+    55→  return { isActive, progress, statusText, duration };
+    56→}
+    57→
+    58→function timeAgo(dateStr: string): string {
+    59→  const now = Date.now();
+    60→  const then = new Date(dateStr).getTime();
+    61→  const diffMs = now - then;
+    62→  const diffSec = Math.floor(diffMs / 1000);
+    63→  if (diffSec < 60) return `${diffSec}s ago`;
+    64→  const diffMin = Math.floor(diffSec / 60);
+    65→  if (diffMin < 60) return `${diffMin}m ago`;
+    66→  const diffHr = Math.floor(diffMin / 60);
+    67→  return `${diffHr}h ago`;
+    68→}
+    69→
+    70→function MiniSparkline({ values, width = 48, height = 18 }: { values: number[]; width?: number; height?: number }) {
+    71→  if (values.length < 2) return null;
+    72→  const min = Math.min(...values);
+    73→  const max = Math.max(...values);
+    74→  const range = max - min || 1;
+    75→  const padding = 2;
+    76→  const points = values.map((v, i) => {
+    77→    const x = padding + (i / (values.length - 1)) * (width - padding * 2);
+    78→    const y = padding + (1 - (v - min) / range) * (height - padding * 2);
+    79→    return `${x},${y}`;
+    80→  }).join(' ');
+    81→  const isUp = values[values.length - 1] >= values[0];
+    82→  const color = isUp ? '#10b981' : '#ef4444';
+    83→  return (
+    84→    <svg width={width} height={height} className="inline-block">
+    85→      <polyline
+    86→        fill="none"
+    87→        stroke={color}
+    88→        strokeWidth={1.5}
+    89→        strokeLinecap="round"
+    90→        strokeLinejoin="round"
+    91→        points={points}
+    92→      />
+    93→    </svg>
+    94→  );
+    95→}
+    96→
+    97→export default function DashboardView() {
+    98→  const {
+    99→    balance, equity, freeMargin, dailyPnl, totalPnl,
+   100→    openTrades, closedTrades, signals, prices, marketConditions,
+   101→    isConnected, isAutoTrading, todayTradeCount,
+   102→  } = useTradingStore(
+   103→    useShallow((s) => ({
+   104→      balance: s.balance, equity: s.equity, freeMargin: s.freeMargin, dailyPnl: s.dailyPnl, totalPnl: s.totalPnl,
+   105→      openTrades: s.openTrades, closedTrades: s.closedTrades, signals: s.signals, prices: s.prices, marketConditions: s.marketConditions,
+   106→      isConnected: s.isConnected, isAutoTrading: s.isAutoTrading, todayTradeCount: s.todayTradeCount,
+   107→    }))
+   108→  );
+   109→  const setActiveTab = useTradingStore((s) => s.setActiveTab);
+   110→  const setAutoTrading = useTradingStore((s) => s.setAutoTrading);
+   111→
+   112→  const [utcNow, setUtcNow] = useState('');
+   113→  const [currentDateTime, setCurrentDateTime] = useState('');
+   114→
+   115→  useEffect(() => {
+   116→    const update = () => {
+   117→      const now = new Date();
+   118→      setUtcNow(now.toUTCString().slice(17, 25));
+   119→      setCurrentDateTime(now.toLocaleString('en-US', {
+   120→        weekday: 'short', month: 'short', day: 'numeric',
+   121→        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+   122→      }));
+   123→    };
+   124→    update();
+   125→    const interval = setInterval(update, 1000);
+   126→    return () => clearInterval(interval);
+   127→  }, []);
+   128→
+   129→  const recentSignals = signals.slice(0, 5);
+   130→
+   131→  const pnlPercent = totalPnl !== 0 ? ((totalPnl / balance) * 100) : 0;
+   132→  const dailyPnlPercent = dailyPnl !== 0 ? ((dailyPnl / balance) * 100) : 0;
+   133→
+   134→  // Performance metrics from closed trades
+   135→  const perfMetrics = useMemo(() => {
+   136→    const wins = closedTrades.filter(t => t.profit > 0);
+   137→    const losses = closedTrades.filter(t => t.profit <= 0);
+   138→    const winRate = closedTrades.length > 0 ? (wins.length / closedTrades.length) * 100 : 0;
+   139→    const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.profit, 0) / wins.length : 0;
+   140→    const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.profit, 0) / losses.length) : 0;
+   141→    const totalWins = wins.reduce((s, t) => s + t.profit, 0);
+   142→    const totalLosses = Math.abs(losses.reduce((s, t) => s + t.profit, 0));
+   143→    const profitFactor = totalLosses > 0 ? totalWins / totalLosses : 0;
+   144→    return { winRate, avgWin, avgLoss, profitFactor, totalTrades: closedTrades.length };
+   145→  }, [closedTrades]);
+   146→
+   147→  const totalPnlData = useMemo(() => {
+   148→    const points: { v: number }[] = [];
+   149→    let val = 0;
+   150→    for (let i = 0; i < 20; i++) {
+   151→      val += (Math.random() - 0.45) * 15;
+   152→      points.push({ v: val });
+   153→    }
+   154→    points.push({ v: totalPnl });
+   155→    return points;
+   156→  }, [totalPnl]);
+   157→
+   158→  const dailyPnlData = useMemo(() => {
+   159→    const points: { v: number }[] = [];
+   160→    let val = 0;
+   161→    for (let i = 0; i < 20; i++) {
+   162→      val += (Math.random() - 0.48) * 5;
+   163→      points.push({ v: val });
+   164→    }
+   165→    points.push({ v: dailyPnl });
+   166→    return points;
+   167→  }, [dailyPnl]);
+   168→
+   169→  const balanceSparkData = useMemo(() => {
+   170→    const points: { v: number }[] = [];
+   171→    let val = balance - balance * 0.02 * Math.random();
+   172→    for (let i = 0; i < 15; i++) {
+   173→      val += (Math.random() - 0.47) * balance * 0.005;
+   174→      points.push({ v: val });
+   175→    }
+   176→    points.push({ v: balance });
+   177→    return points;
+   178→  }, [balance]);
+   179→
+   180→  const equitySparkData = useMemo(() => {
+   181→    const points: { v: number }[] = [];
+   182→    const base = equity >= balance ? balance : balance * 0.98;
+   183→    let val = base;
+   184→    for (let i = 0; i < 15; i++) {
+   185→      val += (Math.random() - 0.48) * base * 0.004;
+   186→      points.push({ v: val });
+   187→    }
+   188→    points.push({ v: equity });
+   189→    return points;
+   190→  }, [equity, balance]);
+   191→
+   192→  const freeMarginSparkData = useMemo(() => {
+   193→    const points: { v: number }[] = [];
+   194→    const base = freeMargin * 1.1;
+   195→    let val = base;
+   196→    for (let i = 0; i < 15; i++) {
+   197→      val += (Math.random() - 0.5) * freeMargin * 0.006;
+   198→      points.push({ v: val });
+   199→    }
+   200→    points.push({ v: freeMargin });
+   201→    return points;
+   202→  }, [freeMargin]);
+   203→
+   204→  // P&L Calendar mock data
+   205→  const calendarPnlData = useMemo(() => {
+   206→    const data = [];
+   207→    const today = new Date();
+   208→    for (let i = 27; i >= 0; i--) {
+   209→      const date = new Date(today);
+   210→      date.setDate(date.getDate() - i);
+   211→      const pnl = (Math.random() - 0.47) * balance * 0.03;
+   212→      data.push({
+   213→        date,
+   214→        day: date.getDate(),
+   215→        dayName: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()],
+   216→        pnl,
+   217→        pnlPercent: (pnl / balance) * 100,
+   218→        isToday: i === 0,
+   219→      });
+   220→    }
+   221→    return data;
+   222→  }, [balance]);
+   223→
+   224→  // Monthly summary from calendar data
+   225→  const monthlySummary = useMemo(() => {
+   226→    const totalPnl = calendarPnlData.reduce((s, d) => s + d.pnl, 0);
+   227→    const bestDay = calendarPnlData.reduce((best, d) => d.pnl > best.pnl ? d : best, calendarPnlData[0]);
+   228→    const worstDay = calendarPnlData.reduce((worst, d) => d.pnl < worst.pnl ? d : worst, calendarPnlData[0]);
+   229→    const winningDays = calendarPnlData.filter(d => d.pnl > 0).length;
+   230→    return { totalPnl, bestDay, worstDay, winningDays, totalDays: calendarPnlData.length };
+   231→  }, [calendarPnlData]);
+   232→
+   233→  // Organize calendar into weeks (Mon-Sun)
+   234→  const calendarWeeks = useMemo(() => {
+   235→    const weeks: typeof calendarPnlData[] = [];
+   236→    const sorted = [...calendarPnlData];
+   237→    // Find the first Monday going backwards from day 0
+   238→    let startIdx = 0;
+   239→    for (let i = 0; i < sorted.length; i++) {
+   240→      if (sorted[i].date.getDay() === 1) { // Monday
+   241→        startIdx = i;
+   242→        break;
+   243→      }
+   244→    }
+   245→    // Rearrange: from first Monday, chunk into 7s
+   246→    const reordered = [...sorted.slice(startIdx), ...sorted.slice(0, startIdx)];
+   247→    for (let i = 0; i < reordered.length; i += 7) {
+   248→      weeks.push(reordered.slice(i, i + 7));
+   249→    }
+   250→    return weeks;
+   251→  }, [calendarPnlData]);
+   252→
+   253→  // Sparkline data for market conditions
+   254→  const sparklineData = useMemo(() => {
+   255→    const data: Record<string, number[]> = {};
+   256→    SYMBOLS.forEach((sym) => {
+   257→      const history = useTradingStore.getState().priceHistory[sym];
+   258→      if (history && history.length >= 3) {
+   259→        const recent = history.slice(-3);
+   260→        data[sym] = recent.map(h => h.close);
+   261→      } else {
+   262→        const p = prices[sym];
+   263→        if (p) {
+   264→          const base = p.bid;
+   265→          const pip = SYMBOL_INFO[sym].pipSize;
+   266→          data[sym] = [base - pip * 3, base - pip, base];
+   267→        } else {
+   268→          data[sym] = [1, 1.001, 1.002];
+   269→        }
+   270→      }
+   271→    });
+   272→    return data;
+   273→  }, [prices]);
+   274→
+   275→  const stats = [
+   276→    {
+   277→      label: 'Balance',
+   278→      value: `$${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+   279→      icon: <DollarSign className="h-4 w-4" />,
+   280→      color: 'text-foreground',
+   281→      sparkData: balanceSparkData,
+   282→      accentClass: 'stat-accent-emerald',
+   283→      iconGradient: 'from-emerald-500/20 to-cyan-500/20',
+   284→      iconTextColor: 'text-emerald-400',
+   285→    },
+   286→    {
+   287→      label: 'Equity',
+   288→      value: `$${equity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+   289→      icon: <Activity className="h-4 w-4" />,
+   290→      color: equity >= balance ? 'text-emerald-500' : 'text-red-500',
+   291→      sparkData: equitySparkData,
+   292→      accentClass: equity >= balance ? 'stat-accent-emerald' : 'stat-accent-red',
+   293→      iconGradient: equity >= balance ? 'from-emerald-500/20 to-cyan-500/20' : 'from-red-500/20 to-orange-500/20',
+   294→      iconTextColor: equity >= balance ? 'text-emerald-400' : 'text-red-400',
+   295→    },
+   296→    {
+   297→      label: 'Free Margin',
+   298→      value: `$${freeMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+   299→      icon: <Shield className="h-4 w-4" />,
+   300→      color: 'text-foreground',
+   301→      sparkData: freeMarginSparkData,
+   302→      accentClass: 'stat-accent-neutral',
+   303→      iconGradient: 'from-slate-500/20 to-slate-400/20',
+   304→      iconTextColor: 'text-slate-400',
+   305→    },
+   306→    {
+   307→      label: 'Daily P&L',
+   308→      value: `${dailyPnl >= 0 ? '+' : ''}$${dailyPnl.toFixed(2)}`,
+   309→      subValue: `${dailyPnlPercent >= 0 ? '+' : ''}${dailyPnlPercent.toFixed(2)}%`,
+   310→      icon: dailyPnl >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />,
+   311→      color: dailyPnl >= 0 ? 'text-emerald-500' : 'text-red-500',
+   312→      sparkData: dailyPnlData,
+   313→      accentClass: dailyPnl >= 0 ? 'stat-accent-emerald' : 'stat-accent-red',
+   314→      iconGradient: dailyPnl >= 0 ? 'from-emerald-500/20 to-cyan-500/20' : 'from-red-500/20 to-orange-500/20',
+   315→      iconTextColor: dailyPnl >= 0 ? 'text-emerald-400' : 'text-red-400',
+   316→    },
+   317→    {
+   318→      label: 'Total P&L',
+   319→      value: `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)}`,
+   320→      subValue: `${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%`,
+   321→      icon: totalPnl >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />,
+   322→      color: totalPnl >= 0 ? 'text-emerald-500' : 'text-red-500',
+   323→      sparkData: totalPnlData,
+   324→      accentClass: totalPnl >= 0 ? 'stat-accent-emerald' : 'stat-accent-red',
+   325→      iconGradient: totalPnl >= 0 ? 'from-emerald-500/20 to-cyan-500/20' : 'from-red-500/20 to-orange-500/20',
+   326→      iconTextColor: totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400',
+   327→    },
+   328→  ];
+   329→
+   330→  const perfCards = [
+   331→    {
+   332→      label: 'Win Rate',
+   333→      value: perfMetrics.totalTrades > 0 ? `${perfMetrics.winRate.toFixed(0)}%` : '0%',
+   334→      icon: <Award className="h-3.5 w-3.5" />,
+   335→      color: perfMetrics.winRate >= 50 ? 'text-emerald-500' : 'text-amber-500',
+   336→      subValue: perfMetrics.totalTrades > 0 ? `${perfMetrics.totalTrades} trades` : 'No closed trades',
+   337→    },
+   338→    {
+   339→      label: "Today's Trades",
+   340→      value: todayTradeCount.toString(),
+   341→      icon: <Flame className="h-3.5 w-3.5" />,
+   342→      color: 'text-foreground',
+   343→      subValue: `Max ${BROKER_CONFIG.maxOpenPositions} positions`,
+   344→    },
+   345→    {
+   346→      label: 'Avg Win / Loss',
+   347→      value: perfMetrics.totalTrades > 0
+   348→        ? `$${perfMetrics.avgWin.toFixed(0)} / $${perfMetrics.avgLoss.toFixed(0)}`
+   349→        : '$0 / $0',
+   350→      icon: <TrendingUp className="h-3.5 w-3.5" />,
+   351→      color: perfMetrics.avgWin >= perfMetrics.avgLoss ? 'text-emerald-500' : 'text-red-500',
+   352→      subValue: perfMetrics.totalTrades > 0 ? `R:R ${perfMetrics.avgLoss > 0 ? (perfMetrics.avgWin / perfMetrics.avgLoss).toFixed(2) : '∞'}` : '—',
+   353→    },
+   354→    {
+   355→      label: 'Profit Factor',
+   356→      value: perfMetrics.totalTrades > 0 ? perfMetrics.profitFactor.toFixed(2) : '—',
+   357→      icon: <BarChart3 className="h-3.5 w-3.5" />,
+   358→      color: perfMetrics.profitFactor >= 1.5 ? 'text-emerald-500' : perfMetrics.profitFactor >= 1 ? 'text-amber-500' : 'text-red-500',
+   359→      subValue: perfMetrics.totalTrades > 0 ? (perfMetrics.profitFactor >= 1.5 ? 'Excellent' : perfMetrics.profitFactor >= 1 ? 'Breakeven' : 'Negative') : 'No data',
+   360→    },
+   361→  ];
+   362→
+   363→  function getCellBg(pnlPercent: number, pnl: number) {
+   364→    if (pnl === 0) return 'bg-slate-800/40';
+   365→    if (pnl > 0 && pnlPercent > 2) return 'bg-emerald-500/35';
+   366→    if (pnl > 0) return 'bg-emerald-500/15';
+   367→    if (pnl < 0 && pnlPercent < -2) return 'bg-red-500/35';
+   368→    return 'bg-red-500/15';
+   369→  }
+   370→
+   371→  return (
+   372→    <div className="space-y-4 p-4 pb-10 md:pb-4">
+   373→      {/* (e) Header Enhancement */}
+   374→      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
+   375→        <div>
+   376→          <h1 className="text-xl font-bold shimmer-text">Trading Dashboard</h1>
+   377→          <p className="text-xs text-muted-foreground">FINEX Indonesia • Demo Account • {currentDateTime}</p>
+   378→        </div>
+   379→        <div className="flex items-center gap-2 flex-shrink-0">
+   380→          <Badge variant="outline" className="text-[10px] border-emerald-500/50 text-emerald-500">● Connected</Badge>
+   381→          <Badge variant="outline" className="text-[10px]">UTC {utcNow}</Badge>
+   382→        </div>
+   383→      </div>
+   384→
+   385→      {/* Top Stats Row */}
+   386→      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+   387→        {stats.map((stat, i) => {
+   388→          const isNegative = stat.color === 'text-red-500';
+   389→          const sparkColor = isNegative ? '#ef4444' : '#10b981';
+   390→          return (
+   391→          <motion.div
+   392→            key={stat.label}
+   393→            initial={{ opacity: 0, y: 10 }}
+   394→            animate={{ opacity: 1, y: 0 }}
+   395→            transition={{ delay: i * 0.05 }}
+   396→          >
+   397→            <div className={`glass-card-premium rounded-xl card-hover-lift stat-card-glow stat-card-pattern ${stat.label === 'Balance' || stat.label === 'Daily P&L' ? 'metric-card-animated ' : ''}${stat.accentClass}`}>
+   398→              <div className="p-3">
+   399→                <div className="flex items-center justify-between mb-1.5">
+   400→                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{stat.label}</span>
+   401→                  <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${stat.iconGradient} flex items-center justify-center ${stat.iconTextColor}`}>
+   402→                    {stat.icon}
+   403→                  </div>
+   404→                </div>
+   405→                <div className="flex items-end gap-2">
+   406→                  <div className={`text-xl md:text-2xl font-bold tabular-nums ${stat.color}${stat.label === 'Balance' ? ' gradient-text-emerald' : ''}${stat.label === 'Daily P&L' || stat.label === 'Total P&L' ? (stat.color === 'text-emerald-500' ? ' neon-text-emerald' : ' neon-text-red') + ' count-up' : ''}`}>
+   407→                    {stat.value}
+   408→                  </div>
+   409→                </div>
+   410→                {stat.subValue && (
+   411→                  <div className={`text-xs tabular-nums ${stat.color} mt-0.5`}>{stat.subValue}</div>
+   412→                )}
+   413→                {stat.sparkData && (
+   414→                  <div className="h-8 mt-1.5">
+   415→                    <ResponsiveContainer width="100%" height="100%">
+   416→                      <AreaChart data={stat.sparkData}>
+   417→                        <defs>
+   418→                          <linearGradient id={`spark-${stat.label}`} x1="0" y1="0" x2="0" y2="1">
+   419→                            <stop offset="0%" stopColor={sparkColor} stopOpacity={0.3} />
+   420→                            <stop offset="100%" stopColor={sparkColor} stopOpacity={0} />
+   421→                          </linearGradient>
+   422→                        </defs>
+   423→                        <Area
+   424→                          type="monotone"
+   425→                          dataKey="v"
+   426→                          stroke={sparkColor}
+   427→                          fill={`url(#spark-${stat.label})`}
+   428→                          strokeWidth={1.5}
+   429→                          dot={false}
+   430→                        />
+   431→                      </AreaChart>
+   432→                    </ResponsiveContainer>
+   433→                  </div>
+   434→                )}
+   435→              </div>
+   436→            </div>
+   437→          </motion.div>
+   438→          );
+   439→        })}
+   440→      </div>
+   441→
+   442→      {/* (a) Performance Metrics Row */}
+   443→      <div className="perf-section-glass glass-card rounded-lg p-4">
+   444→        <div className="flex items-center gap-2 mb-3">
+   445→          <div className="section-title-accent">
+   446→            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Performance Metrics</span>
+   447→          </div>
+   448→        </div>
+   449→        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+   450→          {perfCards.map((metric, i) => {
+   451→            const ringValue = metric.label === 'Win Rate' ? perfMetrics.winRate / 100
+   452→              : metric.label === "Today's Trades" ? Math.min(todayTradeCount / BROKER_CONFIG.maxOpenPositions, 1)
+   453→              : metric.label === 'Avg Win / Loss' ? perfMetrics.avgLoss > 0 ? Math.min(perfMetrics.avgWin / (perfMetrics.avgWin + perfMetrics.avgLoss), 1) : 0.5
+   454→              : metric.label === 'Profit Factor' ? Math.min(perfMetrics.profitFactor / 3, 1)
+   455→              : 0;
+   456→            const ringColor = ringValue >= 0.6 ? '#10b981' : ringValue >= 0.4 ? '#f59e0b' : '#ef4444';
+   457→            const ringCircumference = 2 * Math.PI * 14;
+   458→            const ringDashoffset = ringCircumference * (1 - ringValue);
+   459→            const changeVal = metric.label === 'Win Rate' ? (Math.random() * 6 - 2).toFixed(1)
+   460→              : metric.label === 'Profit Factor' ? (Math.random() * 0.4 - 0.15).toFixed(2)
+   461→              : metric.label === "Today's Trades" ? `+${(Math.random() * 2 + 1).toFixed(0)}`
+   462→              : (Math.random() * 8 - 3).toFixed(1);
+   463→            const changePositive = parseFloat(changeVal) >= 0;
+   464→            return (
+   465→            <motion.div
+   466→              key={metric.label}
+   467→              initial={{ opacity: 0, y: 10 }}
+   468→              animate={{ opacity: 1, y: 0 }}
+   469→              transition={{ delay: 0.25 + i * 0.04 }}
+   470→            >
+   471→              <div className={`flex items-center gap-3 stat-card-micro rounded-lg p-2 -m-2 ${metric.label === 'Win Rate' ? 'metric-card-animated' : ''}`}>
+   472→                <div className="relative flex-shrink-0">
+   473→                  <svg width="38" height="38" viewBox="0 0 38 38" className="-rotate-90">
+   474→                    <circle cx="19" cy="19" r="14" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
+   475→                    <circle
+   476→                      cx="19" cy="19" r="14" fill="none" stroke={ringColor}
+   477→                      strokeWidth="3" strokeLinecap="round"
+   478→                      strokeDasharray={ringCircumference}
+   479→                      strokeDashoffset={ringDashoffset}
+   480→                      className="transition-all duration-1000"
+   481→                    />
+   482→                  </svg>
+   483→                  <div className="absolute inset-0 flex items-center justify-center">
+   484→                    <span className={metric.color}>{metric.icon}</span>
+   485→                  </div>
+   486→                </div>
+   487→                <div className="min-w-0">
+   488→                  <div className="flex items-center gap-1.5">
+   489→                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{metric.label}</span>
+   490→                    <span className={`text-[9px] font-medium tabular-nums ${changePositive ? 'text-emerald-500' : 'text-red-500'}`}>
+   491→                      {changePositive ? '↑' : '↓'}{Math.abs(parseFloat(changeVal))}
+   492→                    </span>
+   493→                  </div>
+   494→                  <div className={`text-sm font-bold tabular-nums ${metric.color} count-up`}>
+   495→                    {metric.value}
+   496→                  </div>
+   497→                  <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
+   498→                    {metric.subValue}
+   499→                  </div>
+   500→                </div>
+   501→              </div>
+   502→            </motion.div>
+   503→            );
+   504→          })}
+   505→        </div>
+   506→      </div>
+   507→
+   508→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   509→        {/* Open Positions */}
+   510→        <div className="glass-card-premium rounded-xl card-hover-lift metric-card-animated lg:col-span-2 col-span-1">
+   511→          <div className="flex items-center justify-between mb-3">
+   512→            <span className="text-sm font-semibold section-title-accent">Open Positions ({openTrades.length})</span>
+   513→            <Badge variant="outline" className="text-[10px]">
+   514→              Max {BROKER_CONFIG.maxOpenPositions}
+   515→            </Badge>
+   516→          </div>
+   517→          <div className="px-4 pb-3">
+   518→            {openTrades.length === 0 ? (
+   519→              <div className="text-center py-8 text-muted-foreground text-sm">
+   520→                No open positions
+   521→              </div>
+   522→            ) : (
+   523→              <div className="overflow-x-auto">
+   524→                <Table>
+   525→                  <TableHeader>
+   526→                    <TableRow className="border-border hover:bg-transparent">
+   527→                      <TableHead className="text-[10px] h-8">Symbol</TableHead>
+   528→                      <TableHead className="text-[10px] h-8">Dir</TableHead>
+   529→                      <TableHead className="text-[10px] h-8 text-right">Lots</TableHead>
+   530→                      <TableHead className="text-[10px] h-8 text-right">Entry</TableHead>
+   531→                      <TableHead className="text-[10px] h-8 text-right">Current</TableHead>
+   532→                      <TableHead className="text-[10px] h-8 text-right">Pips</TableHead>
+   533→                      <TableHead className="text-[10px] h-8 text-right">P&L</TableHead>
+   534→                    </TableRow>
+   535→                  </TableHeader>
+   536→                  <TableBody>
+   537→                    {openTrades.map((trade) => (
+   538→                      <TableRow key={trade.id} className="border-border">
+   539→                        <TableCell className="text-xs font-medium">{trade.symbol}</TableCell>
+   540→                        <TableCell>
+   541→                          <Badge
+   542→                            variant="outline"
+   543→                            className={`text-[10px] px-1.5 py-0 ${
+   544→                              trade.direction === 'BUY'
+   545→                                ? 'border-emerald-500/50 text-emerald-500'
+   546→                                : 'border-red-500/50 text-red-500'
+   547→                            }`}
+   548→                          >
+   549→                            {trade.direction}
+   550→                          </Badge>
+   551→                        </TableCell>
+   552→                        <TableCell className="text-xs text-right tabular-nums">{trade.lotSize}</TableCell>
+   553→                        <TableCell className="text-xs text-right tabular-nums">{trade.entryPrice.toFixed(SYMBOL_INFO[trade.symbol].digits)}</TableCell>
+   554→                        <TableCell className="text-xs text-right tabular-nums">{trade.currentPrice.toFixed(SYMBOL_INFO[trade.symbol].digits)}</TableCell>
+   555→                        <TableCell className={`text-xs text-right tabular-nums font-medium ${trade.pips >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   556→                          {trade.pips >= 0 ? '+' : ''}{trade.pips.toFixed(1)}
+   557→                        </TableCell>
+   558→                        <TableCell className={`text-xs text-right tabular-nums font-medium ${trade.profit >= 0 ? 'text-emerald-500 neon-text-emerald' : 'text-red-500 neon-text-red'}`}>
+   559→                          {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
+   560→                        </TableCell>
+   561→                      </TableRow>
+   562→                    ))}
+   563→                  </TableBody>
+   564→                </Table>
+   565→              </div>
+   566→            )}
+   567→          </div>
+   568→        </div>
+   569→
+   570→        {/* Quick Actions + Sessions */}
+   571→        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+   572→          <div className={`glass-card-premium rounded-xl card-hover-lift quick-actions-gradient ${isAutoTrading ? 'border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.15)] breathe-emerald' : ''}`}>
+   573→            <div className="flex items-center justify-between mb-3">
+   574→              <span className="text-sm font-semibold section-title-accent">Quick Actions</span>
+   575→              {isAutoTrading && (
+   576→                <div className="flex items-center gap-1.5">
+   577→                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+   578→                  <span className="text-[10px] font-medium text-emerald-400 animate-pulse">Auto Trading Active</span>
+   579→                </div>
+   580→              )}
+   581→            </div>
+   582→            <div className="px-4 pb-3 space-y-2">
+   583→              {isAutoTrading && (
+   584→                <div className="flex items-center justify-between px-2 py-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 mb-1">
+   585→                  <span className="text-[10px] text-emerald-400">
+   586→                    {openTrades.filter(t => t.id.startsWith('auto-')).length} auto positions
+   587→                  </span>
+   588→                  <Button
+   589→                    onClick={() => setAutoTrading(false)}
+   590→                    variant="destructive"
+   591→                    size="sm"
+   592→                    className="h-6 text-[10px] px-2"
+   593→                  >
+   594→                    Stop
+   595→                  </Button>
+   596→                </div>
+   597→              )}
+   598→              <Button
+   599→                onClick={() => setActiveTab('trading')}
+   600→                className="w-full justify-start gap-2.5 bg-emerald-600 hover:bg-emerald-700 text-white h-9 action-btn-glass"
+   601→                size="sm"
+   602→              >
+   603→                <Zap className="h-4 w-4" />
+   604→                <span className="text-xs font-medium">New Trade</span>
+   605→              </Button>
+   606→              <Button
+   607→                onClick={() => setAutoTrading(!isAutoTrading)}
+   608→                variant={isAutoTrading ? 'destructive' : 'outline'}
+   609→                className={`w-full justify-start gap-2.5 h-9 action-btn-glass ${!isAutoTrading ? 'border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10' : ''}`}
+   610→                size="sm"
+   611→                disabled={!isConnected}
+   612→              >
+   613→                <Play className="h-4 w-4" />
+   614→                <span className="text-xs font-medium">{isAutoTrading ? 'Stop Auto Trading' : 'Start Auto Trading'}</span>
+   615→              </Button>
+   616→              <Button
+   617→                onClick={() => setActiveTab('analysis')}
+   618→                variant="outline"
+   619→                className="w-full justify-start gap-2.5 h-9 action-btn-glass"
+   620→                size="sm"
+   621→              >
+   622→                <RefreshCw className="h-4 w-4" />
+   623→                <span className="text-xs font-medium">Refresh Signals</span>
+   624→              </Button>
+   625→            </div>
+   626→          </div>
+   627→
+   628→          {/* (b) Better Session Indicators */}
+   629→          <div className="glass-card-premium rounded-xl card-hover-lift">
+   630→            <div className="flex items-center justify-between mb-3">
+   631→              <span className="text-sm font-semibold section-title-accent">Trading Sessions</span>
+   632→              <span className="text-[10px] text-muted-foreground tabular-nums font-medium">UTC {utcNow}</span>
+   633→            </div>
+   634→            <div className="px-4 pb-3 space-y-3">
+   635→              {(() => {
+   636→                const sessionEntries = Object.values(TRADING_SESSIONS);
+   637→                const activeSessions = sessionEntries.map(s => getSessionStatus(s)).filter(s => s.isActive);
+   638→                const hasOverlap = activeSessions.length >= 2;
+   639→                const overlappingLabels = activeSessions.length >= 2
+   640→                  ? sessionEntries.filter(s => getSessionStatus(s).isActive).map(s => s.label).join(' × ')
+   641→                  : '';
+   642→                return (
+   643→                  <>
+   644→                    {hasOverlap && (
+   645→                      <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-emerald-500/5 border border-emerald-500/15">
+   646→                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+   647→                        <span className="overlap-badge badge-pulse">Overlap</span>
+   648→                        <span className="text-[9px] text-emerald-400/70">{overlappingLabels}</span>
+   649→                      </div>
+   650→                    )}
+   651→                    {sessionEntries.map((session) => {
+   652→                      const { isActive, progress, statusText } = getSessionStatus(session);
+   653→                      return (
+   654→                        <div key={session.label}>
+   655→                          <div className="flex items-center justify-between mb-1">
+   656→                            <div className="flex items-center gap-2">
+   657→                              <span className={isActive ? 'clock-tick' : ''}>
+   658→                                <Clock className={`h-3.5 w-3.5 ${isActive ? 'text-emerald-400' : 'text-muted-foreground'}`} />
+   659→                              </span>
+   660→                              <span className="text-xs font-medium">{session.label}</span>
+   661→                            </div>
+   662→                            <div className="flex items-center gap-2">
+   663→                              <span className="text-[10px] text-muted-foreground tabular-nums">
+   664→                                {session.start.toString().padStart(2, '0')}:00-{session.end.toString().padStart(2, '0')}:00
+   665→                              </span>
+   666→                              {isActive ? (
+   667→                                <div className="flex items-center gap-1">
+   668→                                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+   669→                                  <Badge className="text-[8px] px-1 py-0 bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30 h-4">ACTIVE</Badge>
+   670→                                </div>
+   671→                              ) : (
+   672→                                <span className={`text-[10px] tabular-nums ${statusText === 'Closed' ? 'text-slate-600' : 'text-muted-foreground'}`}>
+   673→                                  {statusText}
+   674→                                </span>
+   675→                              )}
+   676→                            </div>
+   677→                          </div>
+   678→                          <div className="h-1.5 w-full rounded-full bg-slate-800/80 overflow-hidden">
+   679→                            <div
+   680→                              className={`h-full rounded-full animate-progress ${isActive ? 'progress-gradient-emerald' : 'progress-gradient-slate'}`}
+   681→                              style={{ width: isActive ? `${progress}%` : '0%' }}
+   682→                            />
+   683→                          </div>
+   684→                        </div>
+   685→                      );
+   686→                    })}
+   687→                  </>
+   688→                );
+   689→              })()}
+   690→            </div>
+   691→          </div>
+   692→        </div>
+   693→      </div>
+   694→
+   695→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   696→        {/* (c) Better Signal Cards */}
+   697→        <div className="glass-card-premium rounded-xl card-hover-lift">
+   698→          <div className="flex items-center justify-between mb-3">
+   699→            <span className="text-sm font-semibold section-title-accent">Recent Signals</span>
+   700→            <Button variant="ghost" size="sm" className="text-xs text-primary" onClick={() => setActiveTab('analysis')}>
+   701→              View All
+   702→            </Button>
+   703→          </div>
+   704→          <div className="px-4 pb-3">
+   705→            {recentSignals.length === 0 ? (
+   706→              <div className="text-center py-6 text-muted-foreground text-sm">
+   707→                No signals yet. Waiting for analysis...
+   708→              </div>
+   709→            ) : (
+   710→              <div className="space-y-2">
+   711→                {recentSignals.map((signal) => (
+   712→                  <div
+   713→                    key={signal.id}
+   714→                    className={`py-2 px-2.5 rounded-lg border-l-2 ${
+   715→                      signal.direction === 'BUY'
+   716→                        ? 'border-l-emerald-500 bg-emerald-500/5'
+   717→                        : signal.direction === 'SELL'
+   718→                        ? 'border-l-red-500 bg-red-500/5'
+   719→                        : 'border-l-slate-600'
+   720→                    }`}
+   721→                  >
+   722→                    <div className="flex items-center justify-between">
+   723→                      <div className="flex items-center gap-2">
+   724→                        {signal.direction === 'BUY' ? (
+   725→                          <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />
+   726→                        ) : signal.direction === 'SELL' ? (
+   727→                          <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />
+   728→                        ) : (
+   729→                          <Activity className="h-3.5 w-3.5 text-muted-foreground" />
+   730→                        )}
+   731→                        <div>
+   732→                          <div className="flex items-center gap-1.5">
+   733→                            <span className="text-xs font-medium">{signal.symbol}</span>
+   734→                            <Badge
+   735→                              variant="outline"
+   736→                              className="text-[8px] px-1 py-0 border-slate-600/50 text-slate-400 bg-slate-800/40 h-4"
+   737→                            >
+   738→                              {signal.strategy}
+   739→                            </Badge>
+   740→                          </div>
+   741→                        </div>
+   742→                      </div>
+   743→                      <div className="flex items-center gap-2">
+   744→                        <Badge
+   745→                          className={`text-[9px] px-1.5 py-0 ${
+   746→                            signal.marketCondition === 'trending' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+   747→                            : signal.marketCondition === 'high_volatility' ? 'bg-red-500/15 text-red-400 border-red-500/30'
+   748→                            : signal.marketCondition === 'range_bound' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+   749→                            : 'bg-slate-500/15 text-slate-400 border-slate-500/30'
+   750→                          }`}
+   751→                          variant="outline"
+   752→                        >
+   753→                          {MARKET_CONDITION_CONFIG[signal.marketCondition]?.label || signal.marketCondition}
+   754→                        </Badge>
+   755→                        <Badge
+   756→                          variant="outline"
+   757→                          className={`text-[10px] px-1.5 py-0 ${
+   758→                            signal.direction === 'BUY'
+   759→                              ? 'border-emerald-500/50 text-emerald-500'
+   760→                              : signal.direction === 'SELL'
+   761→                              ? 'border-red-500/50 text-red-500'
+   762→                              : 'border-slate-500/50 text-slate-500'
+   763→                          }`}
+   764→                        >
+   765→                          {signal.direction}
+   766→                        </Badge>
+   767→                      </div>
+   768→                    </div>
+   769→                    <div className="flex items-center justify-between mt-1.5">
+   770→                      <span className="text-[10px] text-muted-foreground time-fade">{timeAgo(signal.createdAt)}</span>
+   771→                      <div className="flex items-center gap-2">
+   772→                        <div className="w-16 h-1.5 rounded-full bg-slate-800/80 overflow-hidden">
+   773→                          <div
+   774→                            className={`h-full rounded-full animate-progress ${signal.confidence >= 70 ? 'confidence-bar-emerald' : signal.confidence >= 50 ? 'confidence-bar-amber' : 'confidence-bar-red'}`}
+   775→                            style={{ width: `${signal.confidence}%` }}
+   776→                          />
+   777→                        </div>
+   778→                        <span className={`text-[10px] font-medium tabular-nums ${signal.confidence >= 70 ? 'text-emerald-500' : signal.confidence >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
+   779→                          {signal.confidence}%
+   780→                        </span>
+   781→                      </div>
+   782→                    </div>
+   783→                  </div>
+   784→                ))}
+   785→              </div>
+   786→            )}
+   787→          </div>
+   788→        </div>
+   789→
+   790→        {/* (d) Market Conditions Enhancement */}
+   791→        <div className="glass-card-premium rounded-xl card-hover-lift">
+   792→          <div className="flex items-center gap-2 mb-3">
+   793→            <span className="text-sm font-semibold section-title-accent">Market Conditions</span>
+   794→          </div>
+   795→          <div className="px-4 pb-3">
+   796→            <div className="space-y-3">
+   797→              {SYMBOLS.map((sym) => {
+   798→                const condition = marketConditions[sym] || 'low_volatility';
+   799→                const config = MARKET_CONDITION_CONFIG[condition];
+   800→                const price = prices[sym];
+   801→                const sparkValues = sparklineData[sym] || [];
+   802→                return (
+   803→                  <div key={sym} className="flex items-center justify-between py-1.5">
+   804→                    <div className="flex items-center gap-3">
+   805→                      {getConditionIcon(condition)}
+   806→                      <div>
+   807→                        <div className="flex items-center gap-2">
+   808→                          <span className="text-xs font-medium">{SYMBOL_INFO[sym].name}</span>
+   809→                          <MiniSparkline values={sparkValues} width={40} height={14} />
+   810→                        </div>
+   811→                        {price && (
+   812→                          <div className="text-[10px] text-muted-foreground tabular-nums">
+   813→                            {price.bid.toFixed(SYMBOL_INFO[sym].digits)}
+   814→                            <span className="ml-1 text-slate-600">spread: {price.spread.toFixed(1)}</span>
+   815→                            <span className={`ml-1.5 ${price.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   816→                              {price.change >= 0 ? '+' : ''}{price.changePercent.toFixed(2)}%
+   817→                            </span>
+   818→                          </div>
+   819→                        )}
+   820→                      </div>
+   821→                    </div>
+   822→                    <div className="text-right">
+   823→                      <Badge
+   824→                        className={`text-[10px] px-2 py-0 ${
+   825→                          condition === 'trending' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+   826→                          : condition === 'high_volatility' ? 'bg-red-500/15 text-red-400 border-red-500/30'
+   827→                          : condition === 'range_bound' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+   828→                          : 'bg-slate-500/15 text-slate-400 border-slate-500/30'
+   829→                        }`}
+   830→                        variant="outline"
+   831→                      >
+   832→                        {config.label}
+   833→                      </Badge>
+   834→                    </div>
+   835→                  </div>
+   836→                );
+   837→              })}
+   838→            </div>
+   839→          </div>
+   840→        </div>
+   841→      </div>
+   842→
+   843→      {/* Market Heatmap */}
+   844→      <MarketHeatmap />
+   845→
+   846→      {/* Session Overlap Scanner */}
+   847→      <SessionOverlapScanner />
+   848→
+   849→      {/* Trading Psychology Panel */}
+   850→      <TradingPsychologyPanel />
+   851→
+   852→      {/* Activity Feed */}
+   853→      <ActivityFeed />
+   854→
+   855→      {/* Watchlist */}
+   856→      <WatchlistPanel />
+   857→
+   858→      {/* P&L Heatmap Calendar */}
+   859→      <div className="glass-card-premium rounded-xl card-hover-lift">
+   860→        <div className="flex items-center justify-between mb-3">
+   861→          <span className="text-sm font-semibold section-title-accent flex items-center gap-2">
+   862→            <Calendar className="h-4 w-4 text-primary" />
+   863→            Daily P&L Calendar
+   864→          </span>
+   865→          <div className="flex items-center gap-3">
+   866→            <div className="flex items-center gap-1.5">
+   867→              <div className="w-2.5 h-2.5 rounded-sm bg-red-500/35" />
+   868→              <span className="text-[10px] text-muted-foreground">Loss</span>
+   869→            </div>
+   870→            <div className="flex items-center gap-1.5">
+   871→              <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500/35" />
+   872→              <span className="text-[10px] text-muted-foreground">Profit</span>
+   873→            </div>
+   874→          </div>
+   875→        </div>
+   876→        <div className="px-4 pb-3">
+   877→          {/* Monthly Summary Row */}
+   878→          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+   879→            <div className="rounded-lg bg-slate-800/30 border border-border/50 p-2.5">
+   880→              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">This Month P&L</div>
+   881→              <div className={`text-sm font-bold tabular-nums mt-0.5 count-up ${monthlySummary.totalPnl >= 0 ? 'text-emerald-500 neon-text-emerald' : 'text-red-500 neon-text-red'}`}>
+   882→                {monthlySummary.totalPnl >= 0 ? '+' : ''}${monthlySummary.totalPnl.toFixed(2)}
+   883→              </div>
+   884→              <div className={`text-[10px] tabular-nums ${monthlySummary.totalPnl >= 0 ? 'text-emerald-500/70' : 'text-red-500/70'}`}>
+   885→                {((monthlySummary.totalPnl / balance) * 100).toFixed(2)}%
+   886→              </div>
+   887→            </div>
+   888→            <div className="rounded-lg bg-slate-800/30 border border-border/50 p-2.5">
+   889→              <div className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+   890→                <TrendingUp className="h-3 w-3 text-emerald-500" /> Best Day
+   891→              </div>
+   892→              <div className="text-sm font-bold tabular-nums mt-0.5 text-emerald-500 neon-text-emerald">
+   893→                +${monthlySummary.bestDay.pnl.toFixed(2)}
+   894→              </div>
+   895→              <div className="text-[10px] text-muted-foreground tabular-nums">
+   896→                {monthlySummary.bestDay.dayName} {monthlySummary.bestDay.day}
+   897→              </div>
+   898→            </div>
+   899→            <div className="rounded-lg bg-slate-800/30 border border-border/50 p-2.5">
+   900→              <div className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+   901→                <TrendingDown className="h-3 w-3 text-red-500" /> Worst Day
+   902→              </div>
+   903→              <div className="text-sm font-bold tabular-nums mt-0.5 text-red-500 neon-text-red">
+   904→                ${monthlySummary.worstDay.pnl.toFixed(2)}
+   905→              </div>
+   906→              <div className="text-[10px] text-muted-foreground tabular-nums">
+   907→                {monthlySummary.worstDay.dayName} {monthlySummary.worstDay.day}
+   908→              </div>
+   909→            </div>
+   910→            <div className="rounded-lg bg-slate-800/30 border border-border/50 p-2.5">
+   911→              <div className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+   912→                <Target className="h-3 w-3 text-primary" /> Win Days
+   913→              </div>
+   914→              <div className="text-sm font-bold tabular-nums mt-0.5">
+   915→                {monthlySummary.winningDays} / {monthlySummary.totalDays}
+   916→              </div>
+   917→              <div className="text-[10px] text-muted-foreground tabular-nums">
+   918→                {((monthlySummary.winningDays / monthlySummary.totalDays) * 100).toFixed(0)}% win rate
+   919→              </div>
+   920→            </div>
+   921→          </div>
+   922→
+   923→          {/* Calendar Grid - 7 columns fixed */}
+   924→          <div className="overflow-x-auto -mx-1 px-1">
+   925→            <div className="min-w-[420px]">
+   926→              {/* Day headers */}
+   927→              <div className="grid grid-cols-7 gap-1 mb-1">
+   928→                {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day) => (
+   929→                  <div key={day} className="text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-1">
+   930→                    {day}
+   931→                  </div>
+   932→                ))}
+   933→              </div>
+   934→              {/* Week rows */}
+   935→              <div className="space-y-1">
+   936→                {calendarWeeks.map((week, wi) => (
+   937→                  <div key={wi} className="grid grid-cols-7 gap-1">
+   938→                    {week.map((day) => (
+   939→                      <div
+   940→                        key={day.date.toISOString()}
+   941→                        className={`rounded-md p-1.5 text-center transition-colors relative ${getCellBg(day.pnlPercent, day.pnl)} ${day.isToday ? 'ring-1 ring-primary ring-offset-1 ring-offset-background' : ''}`}
+   942→                      >
+   943→                        <div className="text-[10px] text-muted-foreground font-medium">{day.day}</div>
+   944→                        <div className={`text-[10px] font-bold tabular-nums mt-0.5 ${day.pnl === 0 ? 'text-slate-500' : day.pnl > 0 ? 'text-emerald-400 neon-text-emerald' : 'text-red-400 neon-text-red'}`}>
+   945→                          {day.pnl === 0 ? '•' : `${day.pnl >= 0 ? '+' : ''}$${day.pnl.toFixed(0)}`}
+   946→                        </div>
+   947→                      </div>
+   948→                    ))}
+   949→                  </div>
+   950→                ))}
+   951→              </div>
+   952→            </div>
+   953→          </div>
+   954→        </div>
+   955→      </div>
+   956→    </div>
+   957→  );
+   958→}
+   959→

@@ -2851,3 +2851,92 @@ Stage Summary:
 - **1 file fixed** for pre-existing syntax errors (WatchlistPanel)
 - All changes are minimal and non-breaking — only adding accessibility attributes
 - Lint passes with zero errors
+
+---
+Task ID: Opt-R13-Push
+Agent: Main
+Task: Apply critical optimizations and push to GitHub repository
+
+Work Log:
+- Read worklog (2833 lines) to assess full project state
+- Identified remaining Tier 1-2 items from prior audit rounds
+- Implemented 4 categories of changes across 8 source files
+
+### Changes Applied (8 files modified)
+
+**1. Store Safety (trading-store.ts):**
+- Added negative equity guard in updateAccountPnl — auto-closes all positions when equity ≤ 0
+- Added margin call warning notification at 50% equity level (uses BROKER_CONFIG.marginCall)
+- Added risk settings validation in setRiskSettings — all 8 numeric fields clamped to safe ranges
+- Added daily trade limit check in addTrade (maxDailyTrades)
+- Added daily risk limit check in addTrade (dailyRiskLimit)
+- Replaced `any` type on priceHistory with `Record<Symbol, PriceHistory[]>`
+- Replaced `any` type on updatePriceHistory param with `PriceHistory[]`
+- Replaced `any` type on addPriceAlert param with proper typed object
+- Replaced `any` type on addErrorLog param with proper typed object
+- Added BROKER_CONFIG import for margin call level reference
+
+**2. Performance (WatchlistPanel.tsx, DashboardView.tsx):**
+- Removed `layout` prop from WatchlistPanel framer-motion rows (was causing layout recalculation every 500ms tick)
+- Changed `motion.button` to `motion.div` for consistent clickable div pattern
+- Wrapped MiniSparkline in React.memo (render bailout on unchanged props)
+- Wrapped ConditionBadge in React.memo
+- Wrapped PriceCell in React.memo
+- Added seededRandom() deterministic PRNG to DashboardView (eliminates visual jitter)
+- Replaced 11 Math.random() calls across 6 useMemo blocks with seeded PRNG
+- Replaced 4 Math.random() calls in perfCards render with real computed values from perfMetrics
+
+**3. Accessibility (Sidebar.tsx, Footer.tsx, QuickTradePanel.tsx, TradingView.tsx, page.tsx):**
+- Added role="tablist" to Sidebar nav container
+- Added role="tab" + aria-selected to each Sidebar tab button
+- Added aria-label to all Sidebar icon-only buttons (compact mode)
+- Added aria-label="Close navigation" to mobile close button
+- Added dynamic aria-label to sidebar collapse/expand button
+- Added role="contentinfo" to Footer element
+- Added aria-label="Connection status" to LIVE/OFF indicator
+- Added aria-label to QuickTradePanel close, buy, sell buttons
+- Added aria-label="Close trade" to icon-only close-trade buttons
+- Added aria-sort="none" to 8 sortable table headers in TradingView
+- Added role="main" to page.tsx main content area
+
+### Verification:
+- `bun run lint`: ZERO errors
+- `bun run dev`: GET / 200 in 8.8s (compile: 8.3s, render: 495ms)
+- Git commit: a8ac1c9
+- Pushed to https://github.com/teekar2312/finexfx.git (main branch)
+- Cron job created (ID: 311735, every 15 minutes)
+
+Stage Summary:
+- **8 files modified** with critical optimizations
+- **Zero `any` types remaining** in store interfaces (was 4)
+- **Negative equity / margin call guard** now active
+- **Risk settings validation** prevents invalid configurations
+- **DashboardView sparklines** no longer jitter on every render
+- **WatchlistPanel** no longer triggers layout recalculation per tick
+- **3 components** wrapped in React.memo for render bailout
+- **WCAG 2.1 accessibility** improvements across 5 files
+
+### Remaining Items (Next Rounds)
+**Tier 2 (Performance):**
+- Merge pnlInterval into priceInterval (batch updates)
+- Dynamic import tab views (code splitting)
+- Wrap PriceChart tooltipContent in useCallback
+
+**Tier 3 (Data Integrity):**
+- Wire PerformanceScorecard to closedTrades store data
+- Wire TradingPsychologyPanel to journal entries
+- Wire BacktestingView to real priceHistory
+- Wire CandlestickPatternRecognition to live priceHistory
+- Compute margin field in addTrade/closeTrade
+
+**Tier 4 (UX/A11y):**
+- Add aria-live regions for price/P&L updates
+- Add loading skeletons to Dashboard/Trading/Analysis views
+- Add empty states to 5 views
+- Fix QuickTradePanel mobile (44px touch targets)
+
+**Tier 5-6 (Polish):**
+- Add role="img" + aria-label to 10 SVG visualizations
+- Replace 22 `transition: all` with specific properties
+- React Error Boundaries per tab
+- safeFormat() utility for numeric displays
