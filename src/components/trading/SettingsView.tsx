@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
+import { useShallow } from 'zustand/react/shallow';
 import { BROKER_CONFIG, SYMBOL_INFO } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,9 +23,18 @@ import SoundNotificationPanel from './SoundNotificationPanel';
 export default function SettingsView() {
   const {
     accountType, balance, equity, margin, dailyPnl, totalPnl, isConnected, isAutoTrading,
-    priceAlerts, addPriceAlert, removePriceAlert, togglePriceAlert,
-    errorLogs, clearResolvedLogs, addNotification, notifications, closedTrades, openTrades,
-  } = useTradingStore();
+    priceAlerts, errorLogs, notifications, closedTrades, openTrades,
+  } = useTradingStore(
+    useShallow((s) => ({
+      accountType: s.accountType, balance: s.balance, equity: s.equity, margin: s.margin, dailyPnl: s.dailyPnl, totalPnl: s.totalPnl, isConnected: s.isConnected, isAutoTrading: s.isAutoTrading,
+      priceAlerts: s.priceAlerts, errorLogs: s.errorLogs, notifications: s.notifications, closedTrades: s.closedTrades, openTrades: s.openTrades,
+    }))
+  );
+  const addPriceAlert = useTradingStore((s) => s.addPriceAlert);
+  const removePriceAlert = useTradingStore((s) => s.removePriceAlert);
+  const togglePriceAlert = useTradingStore((s) => s.togglePriceAlert);
+  const clearResolvedLogs = useTradingStore((s) => s.clearResolvedLogs);
+  const addNotification = useTradingStore((s) => s.addNotification);
 
   const [emailNotif, setEmailNotif] = useState(true);
   const [pushNotif, setPushNotif] = useState(true);

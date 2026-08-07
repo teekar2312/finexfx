@@ -1,6 +1,7 @@
 'use client';
 import { useMemo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
+import { useShallow } from 'zustand/react/shallow';
 import { SYMBOLS, SYMBOL_INFO, BROKER_CONFIG, type Symbol } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -145,7 +146,12 @@ export default function Footer() {
   const {
     prices, isConnected, openTrades, dailyPnl, isAutoTrading,
     marketConditions, totalPnl, balance, equity, selectedSymbol,
-  } = useTradingStore();
+  } = useTradingStore(
+    useShallow((s) => ({
+      prices: s.prices, isConnected: s.isConnected, openTrades: s.openTrades, dailyPnl: s.dailyPnl, isAutoTrading: s.isAutoTrading,
+      marketConditions: s.marketConditions, totalPnl: s.totalPnl, balance: s.balance, equity: s.equity, selectedSymbol: s.selectedSymbol,
+    }))
+  );
 
   const now = new Date();
   const utcH = now.getUTCHours();

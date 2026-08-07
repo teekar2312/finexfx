@@ -152,7 +152,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   priceHistory: {} as any,
   updatePriceHistory: (symbol, candles) => {
     const history = { ...get().priceHistory };
-    const existing = history[symbol] || [];
+    const existing = history[symbol] ? [...history[symbol]] : [];
     if (candles.length === 1) {
       existing.push(candles[0]);
       if (existing.length > 200) existing.shift();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 
 import { type Symbol, SYMBOL_INFO } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -85,18 +85,20 @@ export default function OrderBookDepth({ symbol, bid, ask }: OrderBookDepthProps
     generateOrderBook(bid, ask, symbol)
   );
 
-  const updateLevels = useCallback(() => {
-    setLevels((prev) => generateOrderBook(bid, ask, symbol, prev));
-  }, [bid, ask, symbol]);
+  // Use refs for bid/ask so the interval doesn't restart on every price tick
+  const bidRef = useRef(bid);
+  const askRef = useRef(ask);
+  useEffect(() => {
+    bidRef.current = bid;
+    askRef.current = ask;
+  });
 
   useEffect(() => {
-    const interval = setInterval(updateLevels, 2000);
+    const interval = setInterval(() => {
+      setLevels((prev) => generateOrderBook(bidRef.current, askRef.current, symbol, prev));
+    }, 2000);
     return () => clearInterval(interval);
-  }, [updateLevels]);
-
-  useEffect(() => {
-    setLevels(generateOrderBook(bid, ask, symbol));
-  }, [symbol, bid, ask]);
+  }, [symbol]);
 
   const { bids, asks } = levels;
   const maxCumBid = bids[bids.length - 1]?.cumulative || 1;

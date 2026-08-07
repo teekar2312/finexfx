@@ -11,13 +11,15 @@ import {
   BarChart3,
   Clock,
 } from 'lucide-react';
+import { useTradingStore } from '@/store/trading-store';
+import { SYMBOL_INFO, type Symbol } from '@/lib/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface PairData {
   pair: string;
   displayName: string;
-  price: number;
+  symbol: Symbol;
 }
 
 interface HeatmapCell {
@@ -46,11 +48,11 @@ type MarketBias = 'BULLISH' | 'BEARISH' | 'MIXED';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const PAIRS: PairData[] = [
-  { pair: 'EUR/USD', displayName: 'EUR/USD', price: 1.0873 },
-  { pair: 'USD/JPY', displayName: 'USD/JPY', price: 157.42 },
-  { pair: 'GBP/USD', displayName: 'GBP/USD', price: 1.2715 },
-  { pair: 'XAU/USD', displayName: 'XAU/USD', price: 2348.60 },
+const PAIR_CONFIG: { pair: string; displayName: string; symbol: Symbol }[] = [
+  { pair: 'EUR/USD', displayName: 'EUR/USD', symbol: 'EURUSD' },
+  { pair: 'USD/JPY', displayName: 'USD/JPY', symbol: 'USDJPY' },
+  { pair: 'GBP/USD', displayName: 'GBP/USD', symbol: 'GBPUSD' },
+  { pair: 'XAU/USD', displayName: 'XAU/USD', symbol: 'XAUUSD' },
 ];
 
 const TIMEFRAMES = ['M5', 'M15', 'H1', 'H4', 'D1', 'W1'];
@@ -81,7 +83,7 @@ function generateMockData(): HeatmapCell[] {
     'XAU/USD': -0.10,  // mildly negative
   };
 
-  for (const p of PAIRS) {
+  for (const p of PAIR_CONFIG) {
     for (const tf of TIMEFRAMES) {
       const bias = pairBias[p.pair];
       // Scale bias by timeframe weight (higher TF = bigger moves)
@@ -92,10 +94,10 @@ function generateMockData(): HeatmapCell[] {
       const noise = (rand() - 0.5) * 0.12;
       const changePercent = parseFloat((base + noise).toFixed(3));
 
-      // Pip calculation (simplified: 1 pip = 0.0001 for FX, 0.1 for gold)
-      const pipMultiplier = p.pair === 'XAU/USD' ? 10 : 10000;
+      // Pip calculation using SYMBOL_INFO
+      const info = SYMBOL_INFO[p.symbol];
       const changePips = parseFloat(
-        (changePercent / 100 * p.price * pipMultiplier).toFixed(1)
+        (changePercent / 100 / info.pipSize).toFixed(1)
       );
 
       const trend: 'up' | 'down' | 'neutral' =
@@ -370,7 +372,33 @@ function PairRankingList({ rankings }: { rankings: PairRanking[] }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function MarketHeatmap() {
-  const cells = useMemo(() => generateMockData(), []);
+  // Subscribe to live prices for M5 timeframe
+  const livePrices = useTradingStore((s) => s.prices);
+
+  const cells = useMemo(() => {
+    const baseCells = generateMockData();
+    // Override M5 timeframe with live price changes from store
+    return baseCells.map((cell) => {
+      if (cell.timeframe === 'M5') {
+        const config = PAIR_CONFIG.find((p) => p.pair === cell.pair);
+        if (config) {
+          const livePrice = livePrices[config.symbol];
+          if (livePrice && livePrice.change !== 0) {
+            const info = SYMBOL_INFO[config.symbol];
+            const changePercent = (livePrice.change / livePrice.bid) * 100;
+            const changePips = livePrice.change / info.pipSize;
+            return {
+              ...cell,
+              changePercent: parseFloat(changePercent.toFixed(3)),
+              changePips: parseFloat(changePips.toFixed(1)),
+              trend: changePercent > 0.02 ? 'up' as const : changePercent < -0.02 ? 'down' as const : 'neutral' as const,
+            };
+          }
+        }
+      }
+      return cell;
+    });
+  }, [livePrices]);
 
   // Timeframe averages
   const timeframeAverages = useMemo(() => {
@@ -384,7 +412,7 @@ export default function MarketHeatmap() {
   // Pair rankings
   const rankings = useMemo(() => {
     const tfWeights: Record<string, number> = { M5: 0.1, M15: 0.15, H1: 0.25, H4: 0.3, D1: 0.5, W1: 0.7 };
-    const pairScores: PairRanking[] = PAIRS.map((p) => {
+    const pairScores: PairRanking[] = PAIR_CONFIG.map((p) => {
       const pCells = cells.filter((c) => c.pair === p.pair);
       let wSum = 0;
       let wTotal = 0;
@@ -478,12 +506,17 @@ export default function MarketHeatmap() {
           {/* Column headers (pairs) */}
           <div className="grid grid-cols-[40px_repeat(4,1fr)] gap-1.5 mb-1.5">
             <div /> {/* empty corner */}
-            {PAIRS.map((p) => (
-              <div key={p.pair} className="text-center">
-                <div className="text-[10px] font-semibold text-white/70">{p.displayName}</div>
-                <div className="text-[9px] font-mono text-white/30">{p.price.toFixed(p.pair === 'XAU/USD' ? 2 : 4)}</div>
-              </div>
-            ))}
+            {PAIR_CONFIG.map((p) => {
+              const live = livePrices[p.symbol];
+              const price = live ? live.bid : 0;
+              const digits = SYMBOL_INFO[p.symbol].digits;
+              return (
+                <div key={p.pair} className="text-center">
+                  <div className="text-[10px] font-semibold text-white/70">{p.displayName}</div>
+                  <div className="text-[9px] font-mono text-white/30">{price > 0 ? price.toFixed(digits) : '---'}</div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Rows */}
@@ -494,10 +527,10 @@ export default function MarketHeatmap() {
                 <span className="text-[10px] font-mono text-white/40 font-medium">{tf}</span>
               </div>
               {/* Cells */}
-              {PAIRS.map((p, pIdx) => {
+              {PAIR_CONFIG.map((p, pIdx) => {
                 const cell = cells.find((c) => c.pair === p.pair && c.timeframe === tf);
                 if (!cell) return null;
-                const idx = tfIdx * PAIRS.length + pIdx;
+                const idx = tfIdx * PAIR_CONFIG.length + pIdx;
                 return <HeatmapCellComponent key={`${p.pair}-${tf}`} cell={cell} index={idx} />;
               })}
             </div>

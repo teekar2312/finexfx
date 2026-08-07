@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useTradingStore, type TabId } from '@/store/trading-store';
+import { useShallow } from 'zustand/react/shallow';
 import { BROKER_CONFIG, TRADING_SESSIONS } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -72,19 +73,17 @@ function generateSparkline(seed: number): number[] {
 
 export default function Sidebar() {
   const {
-    activeTab,
-    setActiveTab,
-    sidebarOpen,
-    setSidebarOpen,
-    isConnected,
-    accountType,
-    setAccountType,
-    isAutoTrading,
-    setAutoTrading,
-    errorLogs,
-    signals,
-    balance,
-  } = useTradingStore();
+    activeTab, sidebarOpen, isConnected, accountType, isAutoTrading, errorLogs, signals, balance,
+  } = useTradingStore(
+    useShallow((s) => ({
+      activeTab: s.activeTab, sidebarOpen: s.sidebarOpen, isConnected: s.isConnected, accountType: s.accountType,
+      isAutoTrading: s.isAutoTrading, errorLogs: s.errorLogs, signals: s.signals, balance: s.balance,
+    }))
+  );
+  const setActiveTab = useTradingStore((s) => s.setActiveTab);
+  const setSidebarOpen = useTradingStore((s) => s.setSidebarOpen);
+  const setAccountType = useTradingStore((s) => s.setAccountType);
+  const setAutoTrading = useTradingStore((s) => s.setAutoTrading);
 
   const isMobile = useIsMobile();
   const unresolvedErrors = errorLogs.filter(e => !e.resolved).length;

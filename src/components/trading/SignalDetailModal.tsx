@@ -31,6 +31,7 @@ import {
   Award,
 } from 'lucide-react';
 import { useTradingStore } from '@/store/trading-store';
+import { useShallow } from 'zustand/react/shallow';
 import {
   SYMBOL_INFO,
   STRATEGIES,
@@ -150,7 +151,12 @@ function generateHistoricalAccuracy(signal: TradingSignal) {
 }
 
 export default function SignalDetailModal({ signal, open, onOpenChange }: SignalDetailModalProps) {
-  const { addTrade, addPriceAlert, addNotification, prices, riskSettings } = useTradingStore();
+  const { prices, riskSettings } = useTradingStore(
+    useShallow((s) => ({ prices: s.prices, riskSettings: s.riskSettings }))
+  );
+  const addTrade = useTradingStore((s) => s.addTrade);
+  const addPriceAlert = useTradingStore((s) => s.addPriceAlert);
+  const addNotification = useTradingStore((s) => s.addNotification);
 
   const isBuy = signal?.direction === 'BUY';
   const isSell = signal?.direction === 'SELL';

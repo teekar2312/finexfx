@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTradingStore } from '@/store/trading-store';
+import { useShallow } from 'zustand/react/shallow';
 import { SYMBOLS, SYMBOL_INFO } from '@/lib/types';
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -130,7 +131,9 @@ const item = {
 };
 
 export default function PerformanceAnalyticsView() {
-  const { journalEntries, closedTrades, balance, totalPnl } = useTradingStore();
+  const { journalEntries, closedTrades, balance, totalPnl } = useTradingStore(
+    useShallow((s) => ({ journalEntries: s.journalEntries, closedTrades: s.closedTrades, balance: s.balance, totalPnl: s.totalPnl }))
+  );
   const [timeframe, setTimeframe] = useState<Timeframe>('all');
 
   // Generate mock historical data

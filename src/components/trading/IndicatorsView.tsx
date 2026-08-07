@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
+import { useShallow } from 'zustand/react/shallow';
 import { INDICATOR_POOL, type Symbol } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -164,7 +165,11 @@ function MiniSparkline({ values, color, width = 280, height = 80 }: { values: nu
 }
 
 export default function IndicatorsView() {
-  const { selectedSymbol, setSelectedSymbol, indicatorValues, indicatorConfigs, setIndicatorConfigs } = useTradingStore();
+  const { selectedSymbol, indicatorValues, indicatorConfigs } = useTradingStore(
+    useShallow((s) => ({ selectedSymbol: s.selectedSymbol, indicatorValues: s.indicatorValues, indicatorConfigs: s.indicatorConfigs }))
+  );
+  const setSelectedSymbol = useTradingStore((s) => s.setSelectedSymbol);
+  const setIndicatorConfigs = useTradingStore((s) => s.setIndicatorConfigs);
   const [selectedIndicator, setSelectedIndicator] = useState<IndicatorDisplay | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 

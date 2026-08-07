@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
+import { useShallow } from 'zustand/react/shallow';
 import { SYMBOLS, SYMBOL_INFO, STRATEGIES, type Symbol, type StrategyName, type BacktestResult } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -122,7 +123,12 @@ function WinRateRing({ value }: { value: number }) {
 }
 
 export default function BacktestingView() {
-  const { backtestResults, setBacktestResults, isBacktesting, setIsBacktesting, addNotification } = useTradingStore();
+  const { backtestResults, isBacktesting } = useTradingStore(
+    useShallow((s) => ({ backtestResults: s.backtestResults, isBacktesting: s.isBacktesting }))
+  );
+  const setBacktestResults = useTradingStore((s) => s.setBacktestResults);
+  const setIsBacktesting = useTradingStore((s) => s.setIsBacktesting);
+  const addNotification = useTradingStore((s) => s.addNotification);
 
   const [selectedStrategy, setSelectedStrategy] = useState<StrategyName>('EMA_Crossover');
   const [selectedSymbol, setSelectedSymbol] = useState<Symbol>('EURUSD');

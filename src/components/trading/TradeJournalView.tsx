@@ -791,7 +791,11 @@ function JournalAnalytics({ entries }: { entries: JournalEntry[] }) {
 
 // --- Main Journal View ---
 export default function TradeJournalView() {
-  const { journalEntries, addJournalEntry, updateJournalEntry, deleteJournalEntry, addNotification } = useTradingStore();
+  const journalEntries = useTradingStore((s) => s.journalEntries);
+  const addJournalEntry = useTradingStore((s) => s.addJournalEntry);
+  const updateJournalEntry = useTradingStore((s) => s.updateJournalEntry);
+  const deleteJournalEntry = useTradingStore((s) => s.deleteJournalEntry);
+  const addNotification = useTradingStore((s) => s.addNotification);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSymbol, setFilterSymbol] = useState<string>('all');

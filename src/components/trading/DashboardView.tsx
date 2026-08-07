@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
+import { useShallow } from 'zustand/react/shallow';
 import { SYMBOLS, SYMBOL_INFO, BROKER_CONFIG, TRADING_SESSIONS, MARKET_CONDITION_CONFIG, type Symbol, type MarketCondition } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -97,9 +98,16 @@ export default function DashboardView() {
   const {
     balance, equity, freeMargin, dailyPnl, totalPnl,
     openTrades, closedTrades, signals, prices, marketConditions,
-    isConnected, isAutoTrading, setActiveTab, setAutoTrading,
-    todayTradeCount,
-  } = useTradingStore();
+    isConnected, isAutoTrading, todayTradeCount,
+  } = useTradingStore(
+    useShallow((s) => ({
+      balance: s.balance, equity: s.equity, freeMargin: s.freeMargin, dailyPnl: s.dailyPnl, totalPnl: s.totalPnl,
+      openTrades: s.openTrades, closedTrades: s.closedTrades, signals: s.signals, prices: s.prices, marketConditions: s.marketConditions,
+      isConnected: s.isConnected, isAutoTrading: s.isAutoTrading, todayTradeCount: s.todayTradeCount,
+    }))
+  );
+  const setActiveTab = useTradingStore((s) => s.setActiveTab);
+  const setAutoTrading = useTradingStore((s) => s.setAutoTrading);
 
   const [utcNow, setUtcNow] = useState('');
   const [currentDateTime, setCurrentDateTime] = useState('');

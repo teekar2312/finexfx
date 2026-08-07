@@ -1,0 +1,724 @@
+     1→'use client';
+     2→
+     3→import { useState, useEffect, useMemo } from 'react';
+     4→import { motion, AnimatePresence } from 'framer-motion';
+     5→import { STRATEGIES, SYMBOLS } from '@/lib/types';
+     6→import type { StrategyName, Symbol } from '@/lib/types';
+     7→import { Clock, Zap, TrendingUp, BarChart3, ArrowRight, Activity, Globe } from 'lucide-react';
+     8→
+     9→// ---------- local session definitions ----------
+    10→const SESSIONS = [
+    11→  { id: 'sydney',   label: 'Sydney',   start: 22, end: 7,  color: '#06b6d4', bg: 'bg-cyan-500',   text: 'text-cyan-400',  border: 'border-cyan-500/30' },
+    12→  { id: 'tokyo',    label: 'Tokyo',    start: 0,  end: 9,  color: '#8b5cf6', bg: 'bg-violet-500', text: 'text-violet-400', border: 'border-violet-500/30' },
+    13→  { id: 'london',   label: 'London',   start: 8,  end: 17, color: '#10b981', bg: 'bg-emerald-500',text: 'text-emerald-400',border: 'border-emerald-500/30' },
+    14→  { id: 'newyork',  label: 'New York', start: 13, end: 22, color: '#f59e0b', bg: 'bg-amber-500',  text: 'text-amber-400',  border: 'border-amber-500/30' },
+    15→] as const;
+    16→
+    17→type SessionId = 'sydney' | 'tokyo' | 'london' | 'newyork';
+    18→
+    19→interface SessionBlock {
+    20→  id: SessionId;
+    21→  label: string;
+    22→  start: number;
+    23→  end: number;
+    24→  color: string;
+    25→  text: string;
+    26→  isActive: boolean;
+    27→}
+    28→
+    29→interface OverlapInfo {
+    30→  id: string;
+    31→  label: string;
+    32→  session1: SessionId;
+    33→  session2: SessionId;
+    34→  start: number;
+    35→  end: number;
+    36→  color1: string;
+    37→  color2: string;
+    38→  volatility: 'Low' | 'Medium' | 'High' | 'Extreme';
+    39→  volatilityColor: string;
+    40→  description: string;
+    41→}
+    42→
+    43→const OVERLAPS: OverlapInfo[] = [
+    44→  {
+    45→    id: 'tokyo-london',
+    46→    label: 'Tokyo–London',
+    47→    session1: 'tokyo', session2: 'london',
+    48→    start: 8, end: 9,
+    49→    color1: '#8b5cf6', color2: '#10b981',
+    50→    volatility: 'High',
+    51→    volatilityColor: 'text-amber-400',
+    52→    description: 'Asian-European transition - increased volume and directional moves',
+    53→  },
+    54→  {
+    55→    id: 'london-newyork',
+    56→    label: 'London–New York',
+    57→    session1: 'london', session2: 'newyork',
+    58→    start: 13, end: 17,
+    59→    color1: '#10b981', color2: '#f59e0b',
+    60→    volatility: 'Extreme',
+    61→    volatilityColor: 'text-red-400',
+    62→    description: 'Peak liquidity window - highest volatility and volume of the day',
+    63→  },
+    64→  {
+    65→    id: 'sydney-tokyo',
+    66→    label: 'Sydney–Tokyo',
+    67→    session1: 'sydney', session2: 'tokyo',
+    68→    start: 0, end: 7,
+    69→    color1: '#06b6d4', color2: '#8b5cf6',
+    70→    volatility: 'Low',
+    71→    volatilityColor: 'text-slate-400',
+    72→    description: 'Asian session - lower volatility, range-bound conditions',
+    73→  },
+    74→];
+    75→
+    76→// best pairs per session
+    77→const SESSION_PAIRS: Record<SessionId, { symbol: Symbol; reason: string }[]> = {
+    78→  sydney: [
+    79→    { symbol: 'AUDUSD', reason: 'Sydney session - direct AUD exposure' },
+    80→    { symbol: 'NZDUSD', reason: 'Antipodean liquidity peak' },
+    81→  ],
+    82→  tokyo: [
+    83→    { symbol: 'USDJPY', reason: 'BoJ window - JPY volatility peak' },
+    84→    { symbol: 'AUDJPY', reason: 'Cross-pair Asian liquidity' },
+    85→  ],
+    86→  london: [
+    87→    { symbol: 'EURUSD', reason: 'ECB/London fix - highest EUR liquidity' },
+    88→    { symbol: 'GBPUSD', reason: 'Cable peak during London hours' },
+    89→  ],
+    90→  newyork: [
+    91→    { symbol: 'EURUSD', reason: 'Fed-driven USD moves' },
+    92→    { symbol: 'XAUUSD', reason: 'Gold peak volume NY session' },
+    93→  ],
+    94→};
+    95→
+    96→// strategies per volatility level
+    97→const VOLATILITY_STRATEGIES: Record<string, StrategyName[]> = {
+    98→  Low: ['Pivot_Points', 'Linear_Regression', 'EMA_RSI_Filter'],
+    99→  Medium: ['EMA_Crossover', 'RMI_Trend_Sync', 'MA_Ribbon'],
+   100→  High: ['MA_Ribbon', 'Momentum_Scalping', 'EMA_Crossover'],
+   101→  Extreme: ['Momentum_Scalping'],
+   102→};
+   103→
+   104→
+   105→// pip ranges per session (typical)
+   106→const SESSION_PIP_RANGE: Record<SessionId, { min: number; max: number; avg: number }> = {
+   107→  sydney:  { min: 15, max: 35, avg: 25 },
+   108→  tokyo:   { min: 20, max: 45, avg: 30 },
+   109→  london:  { min: 40, max: 90, avg: 65 },
+   110→  newyork: { min: 50, max: 120, avg: 80 },
+   111→};
+   112→
+   113→// ---------- helpers ----------
+   114→
+   115→function getUtcHour(): number {
+   116→  const now = new Date();
+   117→  return now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
+   118→}
+   119→
+   120→function isSessionActive(utcH: number, start: number, end: number): boolean {
+   121→  if (start < end) return utcH >= start && utcH < end;
+   122→  // wraps midnight (e.g. Sydney 22-7)
+   123→  return utcH >= start || utcH < end;
+   124→}
+   125→
+   126→function timeRemainingInSession(utcH: number, end: number): number {
+   127→  if (utcH < end) return end - utcH;
+   128→  return 24 - utcH + end;
+   129→}
+   130→
+   131→function timeUntilSessionStart(utcH: number, start: number): number {
+   132→  if (start > utcH) return start - utcH;
+   133→  return 24 - utcH + start;
+   134→}
+   135→
+   136→function formatCountdown(hours: number): string {
+   137→  const h = Math.floor(hours);
+   138→  const m = Math.floor((hours - h) * 60);
+   139→  const s = Math.floor(((hours - h) * 60 - m) * 60);
+   140→  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+   141→}
+   142→
+   143→function getActiveSessions(utcH: number): SessionId[] {
+   144→  return SESSIONS.filter(s => isSessionActive(utcH, s.start, s.end)).map(s => s.id as SessionId);
+   145→}
+   146→
+   147→function getActiveOverlaps(utcH: number): OverlapInfo[] {
+   148→  return OVERLAPS.filter(o => {
+   149→    if (o.start < o.end) return utcH >= o.start && utcH < o.end;
+   150→    return utcH >= o.start || utcH < o.end;
+   151→  });
+   152→}
+   153→
+   154→function getNextOverlap(utcH: number): OverlapInfo | null {
+   155→  let best: OverlapInfo | null = null;
+   156→  let bestDist = 999;
+   157→  for (const o of OVERLAPS) {
+   158→    const dist = timeUntilSessionStart(utcH, o.start);
+   159→    if (dist < bestDist && dist > 0) {
+   160→      bestDist = dist;
+   161→      best = o;
+   162→    }
+   163→  }
+   164→  return best;
+   165→}
+   166→
+   167→function getTimelineBlocks(utcH: number): SessionBlock[] {
+   168→  // render each session as a block on the 0-24 timeline
+   169→  return SESSIONS.map(s => ({
+   170→    id: s.id as SessionId,
+   171→    label: s.label,
+   172→    start: s.start,
+   173→    end: s.end,
+   174→    color: s.color,
+   175→    text: s.text,
+   176→    isActive: isSessionActive(utcH, s.start, s.end),
+   177→  }));
+   178→}
+   179→
+   180→function blockToPosition(start: number, end: number): { left: string; width: string } {
+   181→  if (start < end) {
+   182→    return { left: `${(start / 24) * 100}%`, width: `${((end - start) / 24) * 100}%` };
+   183→  }
+   184→  // wraps midnight: two segments
+   185→  const w1 = 24 - start;
+   186→  const w2 = end;
+   187→  // just show the first segment for simplicity on the timeline
+   188→  return { left: `${(start / 24) * 100}%`, width: `${(w1 / 24) * 100}%` };
+   189→}
+   190→
+   191→function blockToPositionWrap(start: number, end: number): { left1: string; width1: string; left2: string; width2: string } | { left: string; width: string } {
+   192→  if (start < end) {
+   193→    return { left: `${(start / 24) * 100}%`, width: `${((end - start) / 24) * 100}%` };
+   194→  }
+   195→  const w1 = 24 - start;
+   196→  return {
+   197→    left1: `${(start / 24) * 100}%`,
+   198→    width1: `${(w1 / 24) * 100}%`,
+   199→    left2: '0%',
+   200→    width2: `${(end / 24) * 100}%`,
+   201→  };
+   202→}
+   203→
+   204→// ---------- component ----------
+   205→
+   206→export default function SessionOverlapScanner() {
+   207→  const [utcH, setUtcH] = useState(getUtcHour());
+   208→  const [now, setNow] = useState(Date.now());
+   209→
+   210→  useEffect(() => {
+   211→    const id = setInterval(() => {
+   212→      setUtcH(getUtcHour());
+   213→      setNow(Date.now());
+   214→    }, 1000);
+   215→    return () => clearInterval(id);
+   216→  }, []);
+   217→
+   218→  const activeSessions = useMemo(() => getActiveSessions(utcH), [utcH]);
+   219→  const activeOverlaps = useMemo(() => getActiveOverlaps(utcH), [utcH]);
+   220→  const nextOverlap = useMemo(() => getNextOverlap(utcH), [utcH]);
+   221→  const timelineBlocks = useMemo(() => getTimelineBlocks(utcH), [utcH]);
+   222→
+   223→  // current volatility - max of active overlaps, else based on active sessions
+   224→  const currentVolatility = useMemo((): 'Low' | 'Medium' | 'High' | 'Extreme' => {
+   225→    if (activeOverlaps.length > 0) {
+   226→      const volOrder = ['Low', 'Medium', 'High', 'Extreme'];
+   227→      const maxVol = activeOverlaps.reduce((best, o) => {
+   228→        return volOrder.indexOf(o.volatility) > volOrder.indexOf(best) ? o.volatility : best;
+   229→      }, 'Low' as string);
+   230→      return maxVol as 'Low' | 'Medium' | 'High' | 'Extreme';
+   231→    }
+   232→    if (activeSessions.includes('london') || activeSessions.includes('newyork')) return 'Medium';
+   233→    if (activeSessions.includes('tokyo')) return 'Low';
+   234→    return 'Low';
+   235→  }, [activeOverlaps, activeSessions]);
+   236→
+   237→  // current session for stats (priority: NY > London > Tokyo > Sydney)
+   238→  const currentSessionId = useMemo((): SessionId | null => {
+   239→    const priority: SessionId[] = ['newyork', 'london', 'tokyo', 'sydney'];
+   240→    for (const s of priority) {
+   241→      if (activeSessions.includes(s)) return s;
+   242→    }
+   243→    return null;
+   244→  }, [activeSessions]);
+   245→
+   246→  const currentSessionMeta = useMemo(() => {
+   247→    if (!currentSessionId) return null;
+   248→    return SESSIONS.find(s => s.id === currentSessionId)!;
+   249→  }, [currentSessionId]);
+   250→
+   251→  // next session
+   252→  const nextSessionId = useMemo((): SessionId | null => {
+   253→    const priority: SessionId[] = ['newyork', 'london', 'tokyo', 'sydney'];
+   254→    let best: SessionId | null = null;
+   255→    let bestDist = 999;
+   256→    for (const s of priority) {
+   257→      const meta = SESSIONS.find(sm => sm.id === s)!;
+   258→      if (activeSessions.includes(s)) continue;
+   259→      const dist = timeUntilSessionStart(utcH, meta.start);
+   260→      if (dist > 0 && dist < bestDist) {
+   261→        bestDist = dist;
+   262→        best = s;
+   263→      }
+   264→    }
+   265→    return best;
+   266→  }, [utcH, activeSessions]);
+   267→
+   268→  const nextSessionMeta = useMemo(() => {
+   269→    if (!nextSessionId) return null;
+   270→    return SESSIONS.find(s => s.id === nextSessionId)!;
+   271→  }, [nextSessionId]);
+   272→
+   273→  // recommended strategies
+   274→  const recommendedStrategies = useMemo(() => {
+   275→    return VOLATILITY_STRATEGIES[currentVolatility] || [];
+   276→  }, [currentVolatility]);
+   277→
+   278→  // recommended pairs
+   279→  const recommendedPairs = useMemo(() => {
+   280→    const pairs: { symbol: Symbol; reason: string }[] = [];
+   281→    for (const s of activeSessions) {
+   282→      const sp = SESSION_PAIRS[s];
+   283→      if (sp) pairs.push(...sp);
+   284→    }
+   285→    if (pairs.length === 0) {
+   286→      // default
+   287→      pairs.push({ symbol: 'EURUSD', reason: 'Most liquid pair' });
+   288→    }
+   289→    return pairs;
+   290→  }, [activeSessions]);
+   291→
+   292→  // volatility bar percentage
+   293→  const volPct = useMemo(() => {
+   294→    const map: Record<string, number> = { Low: 20, Medium: 45, High: 70, Extreme: 95 };
+   295→    return map[currentVolatility];
+   296→  }, [currentVolatility]);
+   297→
+   298→  const volColor = useMemo(() => {
+   299→    const map: Record<string, string> = {
+   300→      Low: 'bg-slate-500',
+   301→      Medium: 'bg-amber-500',
+   302→      High: 'bg-orange-500',
+   303→      Extreme: 'bg-red-500',
+   304→    };
+   305→    return map[currentVolatility];
+   306→  }, [currentVolatility]);
+   307→
+   308→  const currentUtcTime = useMemo(() => {
+   309→    const d = new Date();
+   310→    return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}:${String(d.getUTCSeconds()).padStart(2, '0')} UTC`;
+   311→  }, [now]);
+   312→
+   313→  const timeMarkerLeft = `${(utcH / 24) * 100}%`;
+   314→
+   315→  return (
+   316→    <div className="space-y-3">
+   317→      {/* Header */}
+   318→      <div className="flex items-center justify-between">
+   319→        <div className="flex items-center gap-2">
+   320→          <Globe className="w-3.5 h-3.5 text-cyan-400" />
+   321→          <h3 className="section-title-accent text-xs font-semibold">Session Overlap Scanner</h3>
+   322→        </div>
+   323→        <div className="flex items-center gap-1.5">
+   324→          <span className="pulse-dot w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />\n          <span className="text-[9px] text-muted-foreground tabular-nums live-value">{currentUtcTime}</span>
+   325→        </div>
+   326→      </div>
+   327→
+   328→      {/* 24h Timeline Bar */}
+   329→      <div className="glass-card p-3 space-y-1.5">
+   330→        <div className="flex items-center justify-between text-[9px] text-muted-foreground mb-1">
+   331→          <span>00:00</span>
+   332→          <span>06:00</span>
+   333→          <span>12:00</span>
+   334→          <span>18:00</span>
+   335→          <span>24:00</span>
+   336→        </div>
+   337→        <div className="relative h-8 rounded-md overflow-hidden bg-black/30">
+   338→          {/* Session blocks */}
+   339→          {timelineBlocks.map(block => {
+   340→            const pos = blockToPositionWrap(block.start, block.end);
+   341→            if ('left1' in pos) {
+   342→              return (
+   343→                <div key={block.id}>
+   344→                  <div
+   345→                    className={`absolute top-0 h-full rounded-l-sm transition-opacity duration-500 ${
+   346→                      block.isActive ? 'opacity-90' : 'opacity-30'
+   347→                    }`}
+   348→                    style={{
+   349→                      left: pos.left1,
+   350→                      width: pos.width1,
+   351→                      backgroundColor: block.color,
+   352→                      boxShadow: block.isActive ? `0 0 12px ${block.color}60` : 'none',
+   353→                    }}
+   354→                  />
+   355→                  <div
+   356→                    className={`absolute top-0 h-full rounded-r-sm transition-opacity duration-500 ${
+   357→                      block.isActive ? 'opacity-90' : 'opacity-30'
+   358→                    }`}
+   359→                    style={{
+   360→                      left: pos.left2,
+   361→                      width: pos.width2,
+   362→                      backgroundColor: block.color,
+   363→                      boxShadow: block.isActive ? `0 0 12px ${block.color}60` : 'none',
+   364→                    }}
+   365→                  />
+   366→                </div>
+   367→              );
+   368→            }
+   369→            return (
+   370→              <div
+   371→                key={block.id}
+   372→                className={`absolute top-0 h-full rounded-sm transition-opacity duration-500 ${
+   373→                  block.isActive ? 'opacity-90' : 'opacity-30'
+   374→                }`}
+   375→                style={{
+   376→                  left: pos.left,
+   377→                  width: pos.width,
+   378→                  backgroundColor: block.color,
+   379→                  boxShadow: block.isActive ? `0 0 12px ${block.color}60` : 'none',
+   380→                }}
+   381→              />
+   382→            );
+   383→          })}
+   384→
+   385→          {/* Overlap highlights */}
+   386→          {OVERLAPS.map(o => {
+   387→            const pos = blockToPosition(o.start, o.end);
+   388→            const isActive = activeOverlaps.some(ao => ao.id === o.id);
+   389→            return (
+   390→              <div
+   391→                key={o.id}
+   392→                className={`absolute top-0 h-full transition-opacity duration-500 ${
+   393→                  isActive ? 'opacity-70' : 'opacity-10'
+   394→                }`}
+   395→                style={{
+   396→                  left: pos.left,
+   397→                  width: pos.width,
+   398→                  background: `repeating-linear-gradient(45deg, ${o.color1}40, ${o.color1}40 2px, ${o.color2}40 2px, ${o.color2}40 4px)`,
+   399→                }}
+   400→              />
+   401→            );
+   402→          })}
+   403→
+   404→          {/* UTC time marker */}
+   405→          <motion.div
+   406→            className="absolute top-0 h-full w-0.5 bg-white z-10"
+   407→            style={{ left: timeMarkerLeft }}
+   408→            animate={{ opacity: [0.6, 1, 0.6] }}
+   409→            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+   410→          >
+   411→            <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.8)]" />
+   412→          </motion.div>
+   413→        </div>
+   414→
+   415→        {/* Session legend */}
+   416→        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+   417→          {SESSIONS.map(s => {
+   418→            const active = activeSessions.includes(s.id as SessionId);
+   419→            return (
+   420→              <div key={s.id} className="flex items-center gap-1">
+   421→                <span
+   422→                  className={`w-2 h-2 rounded-sm transition-all duration-300 ${active ? 'badge-pulse' : 'opacity-40'}`}
+   423→                  style={{ backgroundColor: s.color, boxShadow: active ? `0 0 6px ${s.color}` : 'none' }}
+   424→                />\n                <span className={`text-[9px] ${active ? s.text : 'text-muted-foreground'}`}>{s.label}</span>
+   425→              </div>
+   426→            );
+   427→          })}
+   428→          <span className="text-[9px] text-muted-foreground ml-auto">
+   429→            {activeSessions.length > 0 ? `${activeSessions.length} active` : 'No active sessions'}
+   430→          </span>
+   431→        </div>
+   432→      </div>
+   433→
+   434→      {/* Grid: Overlaps + Volatility + Stats */}
+   435→      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+   436→
+   437→        {/* Overlap Detection Card */}
+   438→        <div className="glass-card-premium rounded-xl card-hover-lift p-3 space-y-2 sm:col-span-2 lg:col-span-2">
+   439→          <div className="flex items-center gap-1.5 mb-1">
+   440→            <Zap className="w-3 h-3 text-amber-400" />\n            <span className="text-[10px] font-medium">Overlap Zones</span>
+   441→          </div>
+   442→
+   443→          <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+   444→            <AnimatePresence mode="popLayout">
+   445→              {activeOverlaps.map(o => (
+   446→                <motion.div
+   447→                  key={o.id}
+   448→                  layout
+   449→                  initial={{ opacity: 0, y: 8 }}
+   450→                  animate={{ opacity: 1, y: 0 }}
+   451→                  exit={{ opacity: 0, y: -8 }}
+   452→                  transition={{ duration: 0.3 }}
+   453→                  className="rounded-md p-2.5 border border-emerald-500/30 bg-emerald-500/5 shadow-[0_0_12px_rgba(16,185,129,0.1)]"
+   454→                >
+   455→                  <div className="flex items-center justify-between mb-1.5">
+   456→                    <div className="flex items-center gap-1.5">
+   457→                      <span className="pulse-dot w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />\n                      <span className="text-[10px] font-semibold text-emerald-300">{o.label}</span>
+   458→                      <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full">ACTIVE</span>
+   459→                    </div>
+   460→                    <div className="flex items-center gap-1.5">
+   461→                      <span className="text-[9px] text-muted-foreground">Closes in</span>
+   462→                      <span className="text-[10px] font-mono tabular-nums text-emerald-300 live-value">
+   463→                        {formatCountdown(timeRemainingInSession(utcH, o.end))}
+   464→                      </span>
+   465→                    </div>
+   466→                  </div>
+   467→                  <p className="text-[9px] text-muted-foreground mb-1.5">{o.description}</p>
+   468→                  <div className="flex items-center justify-between">
+   469→                    <div className="flex items-center gap-1">
+   470→                      <Activity className="w-2.5 h-2.5 text-muted-foreground" />
+   471→                      <span className="text-[9px] text-muted-foreground">Volatility:</span>
+   472→                      <span className={`text-[9px] font-semibold ${o.volatilityColor}`}>{o.volatility}</span>
+   473→                    </div>
+   474→                    <div className="flex items-center gap-1">
+   475→                      <Clock className="w-2.5 h-2.5 text-muted-foreground" />
+   476→                      <span className="text-[9px] text-muted-foreground">{String(o.start).padStart(2, '0')}:00–{String(o.end).padStart(2, '0')}:00 UTC</span>
+   477→                    </div>
+   478→                  </div>
+   479→                </motion.div>
+   480→              ))}
+   481→            </AnimatePresence>
+   482→
+   483→            {/* Upcoming overlaps */}
+   484→            {activeOverlaps.length === 0 && nextOverlap && (
+   485→              <div className="rounded-md p-2.5 border border-green-500/20 bg-green-500/5">
+   486→                <div className="flex items-center justify-between mb-1">
+   487→                  <div className="flex items-center gap-1.5">
+   488→                    <ArrowRight className="w-3 h-3 text-green-400" />
+   489→                    <span className="text-[10px] font-semibold text-green-300">Next: {nextOverlap.label}</span>
+   490→                  </div>
+   491→                  <span className="text-[10px] font-mono tabular-nums text-green-300 live-value">
+   492→                    in {formatCountdown(timeUntilSessionStart(utcH, nextOverlap.start))}
+   493→                  </span>
+   494→                </div>
+   495→                <p className="text-[9px] text-muted-foreground">{nextOverlap.description}</p>
+   496→                <div className="flex items-center gap-1 mt-1">
+   497→                  <Activity className="w-2.5 h-2.5 text-muted-foreground" />\n                  <span className="text-[9px] text-muted-foreground">Expected Volatility:</span>
+   498→                  <span className={`text-[9px] font-semibold ${nextOverlap.volatilityColor}`}>{nextOverlap.volatility}</span>
+   499→                </div>
+   500→              </div>
+   501→            )}
+   502→
+   503→            {/* All overlaps summary when none active and no upcoming soon */}
+   504→            {activeOverlaps.length === 0 && !nextOverlap && (
+   505→              <div className="text-center py-3">
+   506→                <p className="text-[9px] text-muted-foreground">No overlap zones - checking...</p>
+   507→              </div>
+   508→            )}
+   509→          </div>
+   510→
+   511→          {/* Quick upcoming overlaps list */}
+   512→          {OVERLAPS.map(o => {
+   513→            const isAct = activeOverlaps.some(ao => ao.id === o.id);
+   514→            if (isAct) return null;
+   515→            const dist = timeUntilSessionStart(utcH, o.start);
+   516→            if (dist > 12) return null; // don't show if too far
+   517→            return (
+   518→              <div key={`up-${o.id}`} className="flex items-center justify-between text-[9px] py-1 border-t border-white/5">
+   519→                <div className="flex items-center gap-1.5">
+   520→                  <span className="w-2 h-2 rounded-sm opacity-60" style={{ background: `linear-gradient(135deg, ${o.color1}, ${o.color2})` }} />
+   521→                  <span className="text-muted-foreground">{o.label}</span>
+   522→                </div>
+   523→                <div className="flex items-center gap-2">
+   524→                  <span className={`font-medium ${o.volatilityColor}`}>{o.volatility}</span>
+   525→                  <span className="tabular-nums text-muted-foreground">{formatCountdown(dist)}</span>
+   526→                </div>
+   527→              </div>
+   528→            );
+   529→          })}
+   530→        </div>
+   531→
+   532→        {/* Volatility Prediction Card */}
+   533→        <div className="glass-card-premium rounded-xl card-hover-lift p-3 space-y-2.5">
+   534→          <div className="flex items-center gap-1.5 mb-1">
+   535→            <BarChart3 className="w-3 h-3 text-orange-400" />\n            <span className="text-[10px] font-medium">Volatility Prediction</span>
+   536→          </div>
+   537→
+   538→          {/* Volatility gauge */}
+   539→          <div className="space-y-1">
+   540→            <div className="flex items-center justify-between">
+   541→              <span className="text-[9px] text-muted-foreground">Current Level</span>
+   542→              <motion.span
+   543→                key={currentVolatility}
+   544→                initial={{ scale: 0.9, opacity: 0 }}
+   545→                animate={{ scale: 1, opacity: 1 }}
+   546→                className={`text-[10px] font-bold ${
+   547→                  currentVolatility === 'Extreme' ? 'text-red-400' :
+   548→                  currentVolatility === 'High' ? 'text-orange-400' :
+   549→                  currentVolatility === 'Medium' ? 'text-amber-400' :
+   550→                  'text-slate-400'
+   551→                }`}
+   552→              >
+   553→                {currentVolatility}
+   554→              </motion.span>
+   555→            </div>
+   556→            <div className="h-2 rounded-full bg-black/40 overflow-hidden">
+   557→              <motion.div
+   558→                className={`h-full rounded-full ${volColor}`}
+   559→                initial={{ width: 0 }}
+   560→                animate={{ width: `${volPct}%` }}
+   561→                transition={{ duration: 0.8, ease: 'easeOut' }}
+   562→              />
+   563→            </div>
+   564→            <div className="flex justify-between text-[8px] text-muted-foreground">
+   565→              <span>Low</span><span>Med</span><span>High</span><span>Extreme</span>
+   566→            </div>
+   567→          </div>
+   568→
+   569→          {/* Recommended Strategies */}
+   570→          <div className="space-y-1.5">
+   571→            <span className="text-[9px] text-muted-foreground">Recommended Strategies</span>
+   572→            <div className="space-y-1">
+   573→              {recommendedStrategies.map(sName => {
+   574→                const strat = STRATEGIES[sName];
+   575→                return (
+   576→                  <div key={sName} className="flex items-start gap-1.5 p-1.5 rounded bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+   577→                    <TrendingUp className="w-2.5 h-2.5 text-emerald-400 mt-0.5 shrink-0" />
+   578→                    <div className="min-w-0">
+   579→                      <span className="text-[9px] font-medium block">{strat.label}</span>
+   580→                      <span className="text-[8px] text-muted-foreground block truncate">{strat.timeframe} · {strat.indicators.slice(0, 2).join(', ')}</span>
+   581→                    </div>
+   582→                  </div>
+   583→                );
+   584→              })}
+   585→            </div>
+   586→          </div>
+   587→
+   588→          {/* Recommended Pairs */}
+   589→          <div className="space-y-1.5">
+   590→            <span className="text-[9px] text-muted-foreground">Best Pairs Now</span>
+   591→            <div className="space-y-1">
+   592→              {recommendedPairs.slice(0, 3).map((p, i) => (
+   593→                <div key={i} className="flex items-center justify-between p-1.5 rounded bg-white/[0.02]">
+   594→                  <div className="flex items-center gap-1.5">
+   595→                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+   596→                    <span className="text-[9px] font-medium font-mono">{p.symbol}</span>
+   597→                  </div>
+   598→                  <span className="text-[8px] text-muted-foreground truncate max-w-[100px] text-right">{p.reason}</span>
+   599→                </div>
+   600→              ))}
+   601→            </div>
+   602→          </div>
+   603→        </div>
+   604→      </div>
+   605→
+   606→      {/* Session Stats Row */}
+   607→      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+   608→        {/* Current Session */}
+   609→        {currentSessionMeta && currentSessionId && (
+   610→          <div className="glass-card card-hover p-3 space-y-1.5">
+   611→            <div className="flex items-center justify-between">
+   612→              <span className="text-[9px] text-muted-foreground">Current Session</span>
+   613→              <span className="pulse-dot w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: currentSessionMeta.color }} />
+   614→            </div>
+   615→            <span className="text-[10px] font-semibold" style={{ color: currentSessionMeta.color }}>{currentSessionMeta.label}</span>
+   616→            <div className="flex items-center justify-between">
+   617→              <span className="text-[8px] text-muted-foreground">Time Remaining</span>
+   618→              <span className="text-[9px] font-mono tabular-nums live-value">
+   619→                {formatCountdown(timeRemainingInSession(utcH, SESSIONS.find(s => s.id === currentSessionId)!.end))}
+   620→              </span>
+   621→            </div>
+   622→            <div className="flex items-center justify-between">
+   623→              <span className="text-[8px] text-muted-foreground">Typical Pip Range</span>
+   624→              <span className="text-[9px] font-mono tabular-nums">
+   625→                {SESSION_PIP_RANGE[currentSessionId].min}–{SESSION_PIP_RANGE[currentSessionId].max}
+   626→              </span>
+   627→            </div>
+   628→            <div className="flex items-center justify-between">
+   629→              <span className="text-[8px] text-muted-foreground">Avg Daily Range</span>
+   630→              <span className="text-[9px] font-mono tabular-nums metric-compact">
+   631→                {SESSION_PIP_RANGE[currentSessionId].avg} pips
+   632→              </span>
+   633→            </div>
+   634→          </div>
+   635→        )}
+   636→
+   637→        {/* No active session fallback */}
+   638→        {!currentSessionMeta && (
+   639→          <div className="glass-card p-3 space-y-1.5">
+   640→            <span className="text-[9px] text-muted-foreground">Current Session</span>
+   641→            <span className="text-[10px] text-muted-foreground">Between Sessions</span>
+   642→            <span className="text-[8px] text-muted-foreground">Low liquidity - avoid trading</span>
+   643→          </div>
+   644→        )}
+   645→
+   646→        {/* Next Session */}
+   647→        {nextSessionMeta && nextSessionId && (
+   648→          <div className="glass-card card-hover p-3 space-y-1.5">
+   649→            <div className="flex items-center justify-between">
+   650→              <span className="text-[9px] text-muted-foreground">Next Session</span>
+   651→              <ArrowRight className="w-3 h-3 text-muted-foreground" />
+   652→            </div>
+   653→            <span className="text-[10px] font-semibold" style={{ color: nextSessionMeta.color }}>{nextSessionMeta.label}</span>
+   654→            <div className="flex items-center justify-between">
+   655→              <span className="text-[8px] text-muted-foreground">Opens In</span>
+   656→              <motion.span
+   657→                className="text-[9px] font-mono tabular-nums live-value text-green-400"
+   658→                key={Math.floor(utcH)}
+   659→                initial={{ opacity: 0.7 }}
+   660→                animate={{ opacity: 1 }}
+   661→              >
+   662→                {formatCountdown(timeUntilSessionStart(utcH, SESSIONS.find(s => s.id === nextSessionId)!.start))}
+   663→              </motion.span>
+   664→            </div>
+   665→            <div className="flex items-center justify-between">
+   666→              <span className="text-[8px] text-muted-foreground">Expected Range</span>
+   667→              <span className="text-[9px] font-mono tabular-nums">
+   668→                {SESSION_PIP_RANGE[nextSessionId].min}–{SESSION_PIP_RANGE[nextSessionId].max} pips
+   669→              </span>
+   670→            </div>
+   671→          </div>
+   672→        )}
+   673→
+   674→        {/* Best Session per Pair */}
+   675→        <div className="glass-card p-3 space-y-1.5 sm:col-span-2">
+   676→          <div className="flex items-center gap-1.5 mb-1">
+   677→            <BarChart3 className="w-3 h-3 text-violet-400" />
+   678→            <span className="text-[9px] text-muted-foreground">Best Session by Pair</span>
+   679→          </div>
+   680→          <div className="grid grid-cols-2 gap-1.5">
+   681→            {SYMBOLS.map(sym => {
+   682→              // determine best session based on currency exposure
+   683→              let bestSession: { id: SessionId; reason: string };
+   684→              if (sym === 'USDJPY') {
+   685→                bestSession = { id: 'tokyo', reason: 'JPY peak' };
+   686→              } else if (sym === 'XAUUSD') {
+   687→                bestSession = { id: 'newyork', reason: 'Gold peak vol' };
+   688→              } else if (sym === 'GBPUSD') {
+   689→                bestSession = { id: 'london', reason: 'Cable session' };
+   690→              } else {
+   691→                bestSession = { id: 'london', reason: 'EUR liquidity' };
+   692→              }
+   693→              const meta = SESSIONS.find(s => s.id === bestSession.id)!;
+   694→              const isActive = activeSessions.includes(bestSession.id);
+   695→              return (
+   696→                <div
+   697→                  key={sym}
+   698→                  className={`flex items-center justify-between p-1.5 rounded text-[9px] ${
+   699→                    isActive ? 'bg-white/[0.04]' : 'bg-white/[0.01]'
+   700→                  }`}
+   701→                >
+   702→                  <div className="flex items-center gap-1.5">
+   703→                    <span
+   704→                      className={`w-2 h-2 rounded-sm ${isActive ? 'badge-pulse' : 'opacity-40'}`}
+   705→                      style={{ backgroundColor: meta.color }}
+   706→                    />
+   707→                    <span className="font-mono font-medium">{sym}</span>
+   708→                  </div>
+   709→                  <div className="flex items-center gap-1.5">
+   710→                    <span style={{ color: meta.color }}>{meta.label}</span>
+   711→                    {isActive && (
+   712→                      <span className="text-[7px] bg-emerald-500/20 text-emerald-400 px-1 py-0.5 rounded-full">NOW</span>
+   713→                    )}
+   714→                  </div>
+   715→                </div>
+   716→              );
+   717→            })}
+   718→          </div>
+   719→        </div>
+   720→      </div>
+   721→    </div>
+   722→  );
+   723→}
+   724→

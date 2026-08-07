@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
+import { useShallow } from 'zustand/react/shallow';
 import { BROKER_CONFIG, SYMBOL_INFO, type Symbol } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,9 +66,16 @@ function DonutGauge({ value, max, size = 80, strokeWidth = 6, showPercent = fals
 
 export default function RiskView() {
   const {
-    riskSettings, setRiskSettings, balance, equity, margin, todayRiskUsed, todayTradeCount, openTrades,
-    addNotification, setSuggestedLotSize,
-  } = useTradingStore();
+    riskSettings, balance, equity, margin, todayRiskUsed, todayTradeCount, openTrades,
+  } = useTradingStore(
+    useShallow((s) => ({
+      riskSettings: s.riskSettings, balance: s.balance, equity: s.equity, margin: s.margin,
+      todayRiskUsed: s.todayRiskUsed, todayTradeCount: s.todayTradeCount, openTrades: s.openTrades,
+    }))
+  );
+  const setRiskSettings = useTradingStore((s) => s.setRiskSettings);
+  const addNotification = useTradingStore((s) => s.addNotification);
+  const setSuggestedLotSize = useTradingStore((s) => s.setSuggestedLotSize);
 
   const [calcSymbol, setCalcSymbol] = useState<Symbol>('EURUSD');
   const [calcBalance, setCalcBalance] = useState(balance.toString());

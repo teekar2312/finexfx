@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useTradingStore } from '@/store/trading-store';
+import { useShallow } from 'zustand/react/shallow';
 import { SYMBOLS, SYMBOL_INFO, MARKET_CONDITION_CONFIG, STRATEGIES, type Symbol, type MarketCondition, type StrategyName } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -221,7 +222,9 @@ function CorrelationGrid({ priceHistory }: { priceHistory: Record<Symbol, any[]>
 }
 
 export default function AnalysisView() {
-  const { signals, marketConditions } = useTradingStore();
+  const { signals, marketConditions } = useTradingStore(
+    useShallow((s) => ({ signals: s.signals, marketConditions: s.marketConditions }))
+  );
   const [expandedAnalysis, setExpandedAnalysis] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedSignal, setSelectedSignal] = useState<TradingSignal | null>(null);

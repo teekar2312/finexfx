@@ -15,6 +15,7 @@ import {
   Pause,
 } from 'lucide-react';
 import { useTradingStore } from '@/store/trading-store';
+import { useShallow } from 'zustand/react/shallow';
 import { SYMBOLS, SYMBOL_INFO, type Symbol, type MarketCondition, type StrategyName } from '@/lib/types';
 
 // ─── Event types ───────────────────────────────────────────────
@@ -257,7 +258,9 @@ function seedInitialEvents(): ActivityEvent[] {
 
 // ─── Component ──────────────────────────────────────────────────
 export default function ActivityFeed() {
-  const { openTrades, closedTrades, signals, priceAlerts, notifications } = useTradingStore();
+  const { openTrades, closedTrades, signals, priceAlerts, notifications } = useTradingStore(
+    useShallow((s) => ({ openTrades: s.openTrades, closedTrades: s.closedTrades, signals: s.signals, priceAlerts: s.priceAlerts, notifications: s.notifications }))
+  );
   const [events, setEvents] = useState<ActivityEvent[]>(seedInitialEvents);
   const [now, setNow] = useState(Date.now());
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -357,9 +360,10 @@ export default function ActivityFeed() {
 
   // Auto-generate events every 8-12 seconds
   useEffect(() => {
+    const timerRef = { current: undefined as ReturnType<typeof setTimeout> | undefined };
     const scheduleNext = () => {
       const delay = Math.floor(randRange(8000, 12000));
-      return setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         const gen = GENERATORS[generatorIndex.current % GENERATORS.length];
         generatorIndex.current++;
         const evt = gen();
@@ -367,8 +371,8 @@ export default function ActivityFeed() {
         scheduleNext();
       }, delay);
     };
-    const timer = scheduleNext();
-    return () => clearTimeout(timer);
+    scheduleNext();
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, []);
 
   // Update relative time every 10s

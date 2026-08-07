@@ -172,7 +172,9 @@ function NotificationToast({ notifications, removeNotification }: {
 }
 
 function ErrorLogsView() {
-  const { errorLogs, resolveErrorLog, clearResolvedLogs } = useTradingStore();
+  const errorLogs = useTradingStore((s) => s.errorLogs);
+  const resolveErrorLog = useTradingStore((s) => s.resolveErrorLog);
+  const clearResolvedLogs = useTradingStore((s) => s.clearResolvedLogs);
   const unresolvedCount = errorLogs.filter(e => !e.resolved).length;
   return (
     <div className="p-4 pt-5 space-y-4">

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
+import { useShallow } from 'zustand/react/shallow';
 import { SYMBOLS, SYMBOL_INFO, BROKER_CONFIG, type TradeDirection } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
@@ -24,10 +25,19 @@ import TradeHistoryTable from './TradeHistoryTable';
 
 export default function TradingView() {
   const {
-    selectedSymbol, setSelectedSymbol, prices, priceHistory,
-    openTrades, closedTrades, addTrade, closeTrade, updateTrade,
-    isConnected, riskSettings, addNotification,
-  } = useTradingStore();
+    selectedSymbol, prices, priceHistory,
+    openTrades, closedTrades, isConnected, riskSettings,
+  } = useTradingStore(
+    useShallow((s) => ({
+      selectedSymbol: s.selectedSymbol, prices: s.prices, priceHistory: s.priceHistory,
+      openTrades: s.openTrades, closedTrades: s.closedTrades, isConnected: s.isConnected, riskSettings: s.riskSettings,
+    }))
+  );
+  const setSelectedSymbol = useTradingStore((s) => s.setSelectedSymbol);
+  const addTrade = useTradingStore((s) => s.addTrade);
+  const closeTrade = useTradingStore((s) => s.closeTrade);
+  const updateTrade = useTradingStore((s) => s.updateTrade);
+  const addNotification = useTradingStore((s) => s.addNotification);
 
   const [lotSize, setLotSize] = useState('0.01');
   const [stopLoss, setStopLoss] = useState(riskSettings.stopLossPips.toString());

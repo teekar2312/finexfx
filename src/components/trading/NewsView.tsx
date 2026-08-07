@@ -151,7 +151,7 @@ function SourceCircle({ source }: { source: string }) {
 }
 
 export default function NewsView() {
-  const { newsItems } = useTradingStore();
+  const newsItems = useTradingStore((s) => s.newsItems);
   const allNews = newsItems.length > 0 ? newsItems : MOCK_NEWS;
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
   const [impactFilter, setImpactFilter] = useState<string>('all');

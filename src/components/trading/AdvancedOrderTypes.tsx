@@ -2,6 +2,7 @@
 
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { useTradingStore } from '@/store/trading-store';
+import { useShallow } from 'zustand/react/shallow';
 import { SYMBOL_INFO, type Symbol as TSymbol, type Trade } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -319,14 +320,13 @@ function TrailingVisual({
 
 export default function AdvancedOrderTypes() {
   const {
-    prices,
-    selectedSymbol,
-    openTrades,
-    addTrade,
-    updateTrade,
-    isConnected,
-    addNotification,
-  } = useTradingStore();
+    prices, selectedSymbol, openTrades, isConnected,
+  } = useTradingStore(
+    useShallow((s) => ({ prices: s.prices, selectedSymbol: s.selectedSymbol, openTrades: s.openTrades, isConnected: s.isConnected }))
+  );
+  const addTrade = useTradingStore((s) => s.addTrade);
+  const updateTrade = useTradingStore((s) => s.updateTrade);
+  const addNotification = useTradingStore((s) => s.addNotification);
 
   const [activeTab, setActiveTab] = useState<TabId>('oco');
   const ocoPairRef = useRef<string | null>(null);

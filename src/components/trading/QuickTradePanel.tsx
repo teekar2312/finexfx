@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTradingStore } from '@/store/trading-store';
+import { useShallow } from 'zustand/react/shallow';
 import { SYMBOLS, SYMBOL_INFO, BROKER_CONFIG, type Symbol as TSymbol, type TradeDirection } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,17 +12,17 @@ import { Zap, X, ArrowUpRight, ArrowDownRight, ChevronRight } from 'lucide-react
 
 export default function QuickTradePanel() {
   const {
-    selectedSymbol,
-    setSelectedSymbol,
-    prices,
-    addTrade,
-    openTrades,
-    closeTrade,
-    isConnected,
-    riskSettings,
-    addNotification,
-    setActiveTab,
-  } = useTradingStore();
+    selectedSymbol, prices, openTrades, isConnected, riskSettings,
+  } = useTradingStore(
+    useShallow((s) => ({
+      selectedSymbol: s.selectedSymbol, prices: s.prices, openTrades: s.openTrades, isConnected: s.isConnected, riskSettings: s.riskSettings,
+    }))
+  );
+  const setSelectedSymbol = useTradingStore((s) => s.setSelectedSymbol);
+  const addTrade = useTradingStore((s) => s.addTrade);
+  const closeTrade = useTradingStore((s) => s.closeTrade);
+  const addNotification = useTradingStore((s) => s.addNotification);
+  const setActiveTab = useTradingStore((s) => s.setActiveTab);
 
   const [isOpen, setIsOpen] = useState(false);
   const [lotSize, setLotSize] = useState('0.01');
