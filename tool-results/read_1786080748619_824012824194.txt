@@ -1,0 +1,748 @@
+     1→'use client';
+     2→
+     3→import { useMemo, useCallback } from 'react';
+     4→import { motion } from 'framer-motion';
+     5→import {
+     6→  Dialog,
+     7→  DialogContent,
+     8→  DialogHeader,
+     9→  DialogTitle,
+    10→  DialogDescription,
+    11→} from '@/components/ui/dialog';
+    12→import { Badge } from '@/components/ui/badge';
+    13→import { Button } from '@/components/ui/button';
+    14→import { Separator } from '@/components/ui/separator';
+    15→import { ScrollArea } from '@/components/ui/scroll-area';
+    16→import {
+    17→  ArrowUpRight,
+    18→  ArrowDownRight,
+    19→  Activity,
+    20→  Copy,
+    21→  Bell,
+    22→  Zap,
+    23→  Target,
+    24→  TrendingUp,
+    25→  TrendingDown,
+    26→  Minus,
+    27→  Check,
+    28→  X,
+    29→  Clock,
+    30→  BarChart3,
+    31→  Award,
+    32→} from 'lucide-react';
+    33→import { useTradingStore } from '@/store/trading-store';
+    34→import { useShallow } from 'zustand/react/shallow';
+    35→import {
+    36→  SYMBOL_INFO,
+    37→  STRATEGIES,
+    38→  BROKER_CONFIG,
+    39→  type TradingSignal,
+    40→  type StrategyName,
+    41→  type TradeDirection,
+    42→} from '@/lib/types';
+    43→
+    44→interface SignalDetailModalProps {
+    45→  signal: TradingSignal | null;
+    46→  open: boolean;
+    47→  onOpenChange: (open: boolean) => void;
+    48→}
+    49→
+    50→// --- Animated Ring Gauge ---
+    51→function ConfidenceRing({ confidence, size = 72 }: { confidence: number; size?: number }) {
+    52→  const strokeWidth = 5;
+    53→  const radius = (size - strokeWidth) / 2;
+    54→  const circumference = 2 * Math.PI * radius;
+    55→  const progress = (confidence / 100) * circumference;
+    56→  const color = confidence >= 80 ? '#10b981' : confidence >= 60 ? '#f59e0b' : '#ef4444';
+    57→  const center = size / 2;
+    58→
+    59→  return (
+    60→    <div className="relative" style={{ width: size, height: size }}>
+    61→      <svg width={size} height={size} className="-rotate-90">
+    62→        <circle
+    63→          cx={center}
+    64→          cy={center}
+    65→          r={radius}
+    66→          fill="none"
+    67→          stroke="currentColor"
+    68→          strokeWidth={strokeWidth}
+    69→          className="text-muted/30"
+    70→        />
+    71→        <motion.circle
+    72→          cx={center}
+    73→          cy={center}
+    74→          r={radius}
+    75→          fill="none"
+    76→          stroke={color}
+    77→          strokeWidth={strokeWidth}
+    78→          strokeLinecap="round"
+    79→          strokeDasharray={circumference}
+    80→          initial={{ strokeDashoffset: circumference }}
+    81→          animate={{ strokeDashoffset: circumference - progress }}
+    82→          transition={{ duration: 0.8, ease: 'easeOut' }}
+    83→        />
+    84→      </svg>
+    85→      <div className="absolute inset-0 flex items-center justify-center">
+    86→        <span className="text-lg font-bold tabular-nums" style={{ color }}>
+    87→          {confidence}%
+    88→        </span>
+    89→      </div>
+    90→    </div>
+    91→  );
+    92→}
+    93→
+    94→// --- Strategy signal generation (deterministic for consistency) ---
+    95→function getStrategySignalForSymbol(
+    96→  strategy: StrategyName,
+    97→  symbol: string,
+    98→  mainDirection: TradeDirection | 'HOLD'
+    99→): 'bullish' | 'bearish' | 'neutral' {
+   100→  const seed = (strategy.length * 7 + symbol.length * 13) % 100;
+   101→  if (seed < 55) return mainDirection === 'BUY' ? 'bullish' : mainDirection === 'SELL' ? 'bearish' : 'neutral';
+   102→  if (seed < 75) return mainDirection === 'BUY' ? 'bearish' : mainDirection === 'SELL' ? 'bullish' : 'neutral';
+   103→  return 'neutral';
+   104→}
+   105→
+   106→function getStrategyConfidence(strategy: StrategyName, symbol: string): number {
+   107→  const seed = (strategy.length * 11 + symbol.length * 17) % 100;
+   108→  return 40 + seed * 0.5;
+   109→}
+   110→
+   111→// --- Indicator data generation (deterministic) ---
+   112→function generateIndicatorsForSignal(signal: TradingSignal) {
+   113→  const allIndicators = [
+   114→    { name: 'RSI(14)', value: 62.4, signal: 'bullish' as const },
+   115→    { name: 'MACD(12,26,9)', value: 0.0032, signal: 'bullish' as const },
+   116→    { name: 'EMA(9)', value: 1.0845, signal: 'bullish' as const },
+   117→    { name: 'EMA(21)', value: 1.0838, signal: 'bullish' as const },
+   118→    { name: 'ATR(14)', value: 0.0045, signal: 'neutral' as const },
+   119→    { name: 'Bollinger Bands', value: 1.0850, signal: 'neutral' as const },
+   120→    { name: 'Stochastic(14,3)', value: 71.2, signal: 'bullish' as const },
+   121→    { name: 'SuperTrend(10,3)', value: 1.0830, signal: 'bearish' as const },
+   122→    { name: 'Volume', value: 1523, signal: 'bullish' as const },
+   123→    { name: 'CCI(20)', value: 85.3, signal: 'bullish' as const },
+   124→  ];
+   125→
+   126→  const seed = (signal.id.charCodeAt(0) * 3 + signal.symbol.length * 7) % allIndicators.length;
+   127→  const rotated = [...allIndicators.slice(seed), ...allIndicators.slice(0, seed)];
+   128→
+   129→  return rotated.slice(0, 8).map((ind) => {
+   130→    const isBuy = signal.direction === 'BUY';
+   131→    const s = (ind.name.length * 5 + signal.symbol.length * 11) % 10;
+   132→    let sig = ind.signal;
+   133→    if (s < 2) sig = isBuy ? 'bearish' : 'bullish';
+   134→    else if (s < 4) sig = 'neutral';
+   135→    return { ...ind, signal: sig };
+   136→  });
+   137→}
+   138→
+   139→// --- Historical accuracy simulation ---
+   140→function generateHistoricalAccuracy(signal: TradingSignal) {
+   141→  const seed = (signal.symbol.length * 13 + signal.strategy.length * 7) % 100;
+   142→  const winRate = 55 + (seed % 25);
+   143→  const lastSignals = Array.from({ length: 10 }, (_, i) => {
+   144→    const s = (seed + i * 17) % 10;
+   145→    return s < winRate / 10 ? 'win' : 'loss';
+   146→  });
+   147→  const avgPnl = (winRate - 50) * 1.8 + (seed % 5) - 2;
+   148→  const bestTrade = 20 + seed % 60;
+   149→  const worstTrade = -(10 + seed % 25);
+   150→  return { winRate, lastSignals, avgPnl, bestTrade, worstTrade };
+   151→}
+   152→
+   153→export default function SignalDetailModal({ signal, open, onOpenChange }: SignalDetailModalProps) {
+   154→  const { prices, riskSettings } = useTradingStore(
+   155→    useShallow((s) => ({ prices: s.prices, riskSettings: s.riskSettings }))
+   156→  );
+   157→  const addTrade = useTradingStore((s) => s.addTrade);
+   158→  const addPriceAlert = useTradingStore((s) => s.addPriceAlert);
+   159→  const addNotification = useTradingStore((s) => s.addNotification);
+   160→
+   161→  const isBuy = signal?.direction === 'BUY';
+   162→  const isSell = signal?.direction === 'SELL';
+   163→  const isHold = signal?.direction === 'HOLD';
+   164→
+   165→  const strategyInfo = signal ? STRATEGIES[signal.strategy] : null;
+   166→  const symbolInfo = signal ? SYMBOL_INFO[signal.symbol] : null;
+   167→
+   168→  const strategyAnalysis = useMemo(() => {
+   169→    if (!signal) return [];
+   170→    return (Object.keys(STRATEGIES) as StrategyName[]).map((strat) => {
+   171→      const stratSignal = getStrategySignalForSymbol(strat, signal.symbol, signal.direction);
+   172→      const stratConfidence = getStrategyConfidence(strat, signal.symbol);
+   173→      const agrees =
+   174→        (signal.direction === 'BUY' && stratSignal === 'bullish') ||
+   175→        (signal.direction === 'SELL' && stratSignal === 'bearish') ||
+   176→        signal.direction === 'HOLD';
+   177→      return {
+   178→        name: STRATEGIES[strat].label,
+   179→        key: strat,
+   180→        signal: stratSignal,
+   181→        confidence: stratConfidence,
+   182→        agrees,
+   183→        isMain: strat === signal.strategy,
+   184→      };
+   185→    });
+   186→  }, [signal]);
+   187→
+   188→  const indicators = useMemo(() => {
+   189→    if (!signal) return [];
+   190→    return generateIndicatorsForSignal(signal);
+   191→  }, [signal]);
+   192→
+   193→  const agreeCount = useMemo(
+   194→    () => indicators.filter((ind) => {
+   195→      if (isBuy) return ind.signal === 'bullish';
+   196→      if (isSell) return ind.signal === 'bearish';
+   197→      return true;
+   198→    }).length,
+   199→    [indicators, isBuy, isSell]
+   200→  );
+   201→
+   202→  const historical = useMemo(() => {
+   203→    if (!signal) return null;
+   204→    return generateHistoricalAccuracy(signal);
+   205→  }, [signal]);
+   206→
+   207→  const handleExecuteTrade = useCallback(() => {
+   208→    if (!signal || isHold) return;
+   209→    const currentPrice = prices[signal.symbol];
+   210→    const entryPrice = currentPrice
+   211→      ? isBuy ? currentPrice.ask : currentPrice.bid
+   212→      : signal.entryPrice;
+   213→
+   214→    const sl = signal.stopLoss ?? entryPrice - (isBuy ? 1 : -1) * riskSettings.stopLossPips * symbolInfo!.pipSize;
+   215→    const tp = signal.takeProfit ?? entryPrice + (isBuy ? 1 : -1) * riskSettings.takeProfitPips * symbolInfo!.pipSize;
+   216→
+   217→    addTrade({
+   218→      id: `trade-${Date.now()}`,
+   219→      symbol: signal.symbol,
+   220→      direction: signal.direction as TradeDirection,
+   221→      lotSize: riskSettings.riskPerTrade > 0
+   222→        ? Math.max(BROKER_CONFIG.minLotSize, Math.min(BROKER_CONFIG.maxLotSize, 0.01))
+   223→        : 0.01,
+   224→      entryPrice,
+   225→      currentPrice: entryPrice,
+   226→      stopLoss: sl,
+   227→      takeProfit: tp,
+   228→      trailingStop: undefined,
+   229→      isTrailingStop: false,
+   230→      pips: 0,
+   231→      profit: 0,
+   232→      commission: BROKER_CONFIG.commission,
+   233→      spread: currentPrice?.spread ?? 0,
+   234→      swap: 0,
+   235→      status: 'open',
+   236→      strategy: STRATEGIES[signal.strategy]?.label,
+   237→      aiConfidence: signal.confidence,
+   238→      marketCondition: signal.marketCondition,
+   239→      openedAt: new Date().toISOString(),
+   240→    });
+   241→    addNotification({
+   242→      type: 'success',
+   243→      title: 'Trade Executed',
+   244→      message: `${signal.direction} ${SYMBOL_INFO[signal.symbol].name} @ ${entryPrice.toFixed(symbolInfo?.digits ?? 5)}`,
+   245→    });
+   246→    onOpenChange(false);
+   247→  }, [signal, prices, riskSettings, isHold, isBuy, symbolInfo, addTrade, addNotification, onOpenChange]);
+   248→
+   249→  const handleCopySignal = useCallback(() => {
+   250→    if (!signal) return;
+   251→    const text = [
+   252→      `📊 ${SYMBOL_INFO[signal.symbol].name} - ${signal.direction}`,
+   253→      `Strategy: ${STRATEGIES[signal.strategy]?.label}`,
+   254→      `Confidence: ${signal.confidence}%`,
+   255→      `Entry: ${signal.entryPrice.toFixed(symbolInfo?.digits ?? 5)}`,
+   256→      signal.stopLoss ? `SL: ${signal.stopLoss.toFixed(symbolInfo?.digits ?? 5)}` : null,
+   257→      signal.takeProfit ? `TP: ${signal.takeProfit.toFixed(symbolInfo?.digits ?? 5)}` : null,
+   258→      signal.riskReward ? `R:R: 1:${signal.riskReward.toFixed(1)}` : null,
+   259→      `Market: ${signal.marketCondition}`,
+   260→    ].filter(Boolean).join('\n');
+   261→    navigator.clipboard.writeText(text).then(() => {
+   262→      addNotification({ type: 'info', title: 'Copied', message: 'Signal details copied to clipboard' });
+   263→    });
+   264→  }, [signal, symbolInfo, addNotification]);
+   265→
+   266→  const handleSetAlert = useCallback(() => {
+   267→    if (!signal) return;
+   268→    addPriceAlert({
+   269→      symbol: signal.symbol,
+   270→      condition: isBuy ? 'above' : 'below',
+   271→      price: signal.entryPrice,
+   272→      isActive: true,
+   273→      message: `${signal.direction} ${SYMBOL_INFO[signal.symbol].name} @ ${signal.entryPrice.toFixed(symbolInfo?.digits ?? 5)} (${STRATEGIES[signal.strategy]?.label})`,
+   274→    });
+   275→    addNotification({ type: 'success', title: 'Alert Set', message: `Price alert created at ${signal.entryPrice.toFixed(symbolInfo?.digits ?? 5)}` });
+   276→  }, [signal, isBuy, symbolInfo, addPriceAlert, addNotification]);
+   277→
+   278→  if (!signal || !strategyInfo || !symbolInfo) {
+   279→    return (
+   280→      <Dialog open={open} onOpenChange={onOpenChange}>
+   281→        <DialogContent className="max-w-[520px] p-0 overflow-hidden">
+   282→          <div className="p-6 text-center text-muted-foreground">No signal selected</div>
+   283→        </DialogContent>
+   284→      </Dialog>
+   285→    );
+   286→  }
+   287→
+   288→  const rrRatio = signal.riskReward ?? (signal.stopLoss && signal.takeProfit
+   289→    ? Math.abs(signal.takeProfit - signal.entryPrice) / Math.abs(signal.entryPrice - signal.stopLoss)
+   290→    : riskSettings.riskRewardRatio);
+   291→
+   292→  return (
+   293→    <Dialog open={open} onOpenChange={onOpenChange}>
+   294→      <DialogContent className="max-w-[520px] p-0 overflow-hidden gap-0" showCloseButton={false}>
+   295→        <motion.div
+   296→          initial={{ opacity: 0, y: 20, scale: 0.97 }}
+   297→          animate={{ opacity: 1, y: 0, scale: 1 }}
+   298→          transition={{ duration: 0.3, ease: 'easeOut' }}
+   299→          className="glass-card rounded-lg overflow-hidden"
+   300→        >
+   301→          {/* Gradient Header Bar */}
+   302→          <div
+   303→            className={`h-1.5 ${
+   304→              isBuy
+   305→                ? 'bg-gradient-to-r from-emerald-500 to-cyan-500'
+   306→                : isSell
+   307→                  ? 'bg-gradient-to-r from-red-500 to-orange-500'
+   308→                  : 'bg-gradient-to-r from-slate-500 to-slate-400'
+   309→            }`}
+   310→          />
+   311→
+   312→          <ScrollArea className="max-h-[85vh]">
+   313→            <div className="p-5 space-y-5">
+   314→              {/* Dialog Header */}
+   315→              <DialogHeader className="space-y-2 text-left p-0">
+   316→                <div className="flex items-center justify-between pr-6">
+   317→                  <DialogTitle className="text-base font-bold flex items-center gap-2">
+   318→                    Signal Detail
+   319→                  </DialogTitle>
+   320→                </div>
+   321→                <DialogDescription className="sr-only">
+   322→                  Detailed breakdown of the trading signal for {SYMBOL_INFO[signal.symbol].name}
+   323→                </DialogDescription>
+   324→              </DialogHeader>
+   325→
+   326→              {/* ===== 1. SIGNAL BREAKDOWN PANEL ===== */}
+   327→              <section className="space-y-3">
+   328→                <div className="flex items-center gap-3">
+   329→                  {/* Symbol Badge + Direction + Confidence Ring */}
+   330→                  <ConfidenceRing confidence={signal.confidence} size={72} />
+   331→                  <div className="flex-1 min-w-0">
+   332→                    <div className="flex items-center gap-2 mb-1">
+   333→                      <Badge
+   334→                        variant="outline"
+   335→                        className={`font-bold text-xs px-2.5 py-0.5 ${
+   336→                          isBuy
+   337→                            ? 'border-emerald-500/50 text-emerald-500 badge-pulse'
+   338→                            : isSell
+   339→                              ? 'border-red-500/50 text-red-500 badge-pulse'
+   340→                              : 'border-slate-500/50 text-slate-400'
+   341→                        }`}
+   342→                      >
+   343→                        {SYMBOL_INFO[signal.symbol].name}
+   344→                      </Badge>
+   345→                      <Badge
+   346→                        className={`text-xs font-bold px-2.5 py-0.5 ${
+   347→                          isBuy
+   348→                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+   349→                            : isSell
+   350→                              ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+   351→                              : 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
+   352→                        }`}
+   353→                        variant="secondary"
+   354→                      >
+   355→                        {isBuy && <ArrowUpRight className="h-3 w-3 mr-0.5" />}
+   356→                        {isSell && <ArrowDownRight className="h-3 w-3 mr-0.5" />}
+   357→                        {!isBuy && !isSell && <Activity className="h-3 w-3 mr-0.5" />}
+   358→                        {signal.direction}
+   359→                      </Badge>
+   360→                    </div>
+   361→                    {/* Strategy name + description */}
+   362→                    <div className="text-sm font-semibold">{strategyInfo.label}</div>
+   363→                    <div className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
+   364→                      {strategyInfo.description}
+   365→                    </div>
+   366→                  </div>
+   367→                </div>
+   368→
+   369→                {/* Entry / SL / TP with R:R visualization */}
+   370→                <div className="rounded-lg bg-accent/50 border border-border p-3 space-y-2">
+   371→                  <div className="grid grid-cols-3 gap-2 text-center">
+   372→                    <div>
+   373→                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Entry</div>
+   374→                      <div className="text-sm font-bold tabular-nums">{signal.entryPrice.toFixed(symbolInfo.digits)}</div>
+   375→                    </div>
+   376→                    <div>
+   377→                      <div className="text-[10px] uppercase tracking-wider text-red-400 mb-0.5">Stop Loss</div>
+   378→                      <div className="text-sm font-bold tabular-nums text-red-400">
+   379→                        {signal.stopLoss ? signal.stopLoss.toFixed(symbolInfo.digits) : '—'}
+   380→                      </div>
+   381→                    </div>
+   382→                    <div>
+   383→                      <div className="text-[10px] uppercase tracking-wider text-emerald-400 mb-0.5">Take Profit</div>
+   384→                      <div className="text-sm font-bold tabular-nums text-emerald-400">
+   385→                        {signal.takeProfit ? signal.takeProfit.toFixed(symbolInfo.digits) : '—'}
+   386→                      </div>
+   387→                    </div>
+   388→                  </div>
+   389→
+   390→                  {/* R:R Ratio Bar */}
+   391→                  <div className="space-y-1">
+   392→                    <div className="flex items-center justify-between text-[10px]">
+   393→                      <span className="text-muted-foreground">Risk : Reward</span>
+   394→                      <span className={`font-bold tabular-nums ${rrRatio >= 1.5 ? 'text-emerald-400' : rrRatio >= 1 ? 'text-amber-400' : 'text-red-400'}`}>
+   395→                        1 : {rrRatio.toFixed(1)}
+   396→                      </span>
+   397→                    </div>
+   398→                    <div className="relative h-2 bg-accent rounded-full overflow-hidden">
+   399→                      <div
+   400→                        className="absolute left-0 top-0 h-full bg-red-500/60 rounded-l-full"
+   401→                        style={{ width: `${(1 / (1 + rrRatio)) * 100}%` }}
+   402→                      />
+   403→                      <div
+   404→                        className={`absolute top-0 h-full rounded-r-full ${rrRatio >= 1.5 ? 'bg-emerald-500' : rrRatio >= 1 ? 'bg-emerald-500/70' : 'bg-emerald-500/50'}`}
+   405→                        style={{ left: `${(1 / (1 + rrRatio)) * 100}%`, width: `${(rrRatio / (1 + rrRatio)) * 100}%` }}
+   406→                      />
+   407→                    </div>
+   408→                    <div className="flex justify-between text-[9px] text-muted-foreground">
+   409→                      <span>SL</span>
+   410→                      <span>Entry</span>
+   411→                      <span>TP</span>
+   412→                    </div>
+   413→                  </div>
+   414→
+   415→                  {/* Timeframe + Expiration */}
+   416→                  <div className="flex items-center justify-between">
+   417→                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+   418→                      <Clock className="h-3 w-3" />
+   419→                      <span>Timeframe: {strategyInfo.timeframe}</span>
+   420→                    </div>
+   421→                    <div className="text-[11px] text-muted-foreground">
+   422→                      {new Date(signal.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+   423→                    </div>
+   424→                  </div>
+   425→                </div>
+   426→              </section>
+   427→
+   428→              <Separator className="opacity-50" />
+   429→
+   430→              {/* ===== 2. STRATEGY ANALYSIS SECTION ===== */}
+   431→              <section className="space-y-2">
+   432→                <div className="flex items-center gap-2">
+   433→                  <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+   434→                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+   435→                    Strategy Analysis
+   436→                  </h3>
+   437→                  <div className="flex-1" />
+   438→                  <Badge variant="outline" className="text-[10px]">
+   439→                    {strategyAnalysis.filter((s) => s.agrees).length}/{strategyAnalysis.length} agree
+   440→                  </Badge>
+   441→                </div>
+   442→
+   443→                <div className="space-y-1">
+   444→                  {strategyAnalysis.map((strat) => {
+   445→                    const signalColor =
+   446→                      strat.signal === 'bullish'
+   447→                        ? 'text-emerald-400'
+   448→                        : strat.signal === 'bearish'
+   449→                          ? 'text-red-400'
+   450→                          : 'text-slate-400';
+   451→                    const SignalIcon =
+   452→                      strat.signal === 'bullish'
+   453→                        ? TrendingUp
+   454→                        : strat.signal === 'bearish'
+   455→                          ? TrendingDown
+   456→                          : Minus;
+   457→                    return (
+   458→                      <div
+   459→                        key={strat.key}
+   460→                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] transition-colors ${
+   461→                          strat.isMain
+   462→                            ? isBuy
+   463→                              ? 'bg-emerald-500/10 border border-emerald-500/20'
+   464→                              : isSell
+   465→                                ? 'bg-red-500/10 border border-red-500/20'
+   466→                                : 'bg-accent border border-border'
+   467→                            : strat.agrees
+   468→                              ? 'hover:bg-emerald-500/5'
+   469→                              : 'hover:bg-red-500/5'
+   470→                        }`}
+   471→                      >
+   472→                        <SignalIcon className={`h-3 w-3 flex-shrink-0 ${signalColor}`} />
+   473→                        <span className={`flex-1 truncate ${strat.isMain ? 'font-semibold' : 'font-medium'}`}>
+   474→                          {strat.name}
+   475→                        </span>
+   476→                        {/* Mini confidence bar */}
+   477→                        <div className="w-16 h-1.5 bg-accent rounded-full overflow-hidden flex-shrink-0">
+   478→                          <div
+   479→                            className={`h-full rounded-full transition-all ${
+   480→                              strat.signal === 'bullish'
+   481→                                ? 'bg-emerald-500'
+   482→                                : strat.signal === 'bearish'
+   483→                                  ? 'bg-red-500'
+   484→                                  : 'bg-slate-500'
+   485→                            }`}
+   486→                            style={{ width: `${strat.confidence}%` }}
+   487→                          />
+   488→                        </div>
+   489→                        {/* Agree/Disagree indicator */}
+   490→                        {strat.agrees ? (
+   491→                          <Check className={`h-3.5 w-3.5 flex-shrink-0 ${strat.signal === 'neutral' ? 'text-slate-400' : 'text-emerald-400'}`} />
+   492→                        ) : (
+   493→                          <X className="h-3.5 w-3.5 flex-shrink-0 text-red-400" />
+   494→                        )}
+   495→                        {strat.isMain && (
+   496→                          <Badge variant="outline" className="text-[8px] px-1 py-0 border-primary/30 text-primary">
+   497→                            ACTIVE
+   498→                          </Badge>
+   499→                        )}
+   500→                      </div>
+   501→                    );
+   502→                  })}
+   503→                </div>
+   504→              </section>
+   505→
+   506→              <Separator className="opacity-50" />
+   507→
+   508→              {/* ===== 3. INDICATOR ALIGNMENT ===== */}
+   509→              <section className="space-y-2">
+   510→                <div className="flex items-center gap-2">
+   511→                  <Zap className="h-3.5 w-3.5 text-muted-foreground" />
+   512→                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+   513→                    Indicator Alignment
+   514→                  </h3>
+   515→                </div>
+   516→
+   517→                {/* Summary bar */}
+   518→                <div className="flex items-center gap-2 px-2.5">
+   519→                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+   520→                    {agreeCount} of {indicators.length} indicators agree
+   521→                  </span>
+   522→                  <div className="flex-1 h-1.5 bg-accent rounded-full overflow-hidden">
+   523→                    <div
+   524→                      className={`h-full rounded-full animate-progress ${
+   525→                        agreeCount / indicators.length >= 0.6
+   526→                          ? 'bg-emerald-500'
+   527→                          : agreeCount / indicators.length >= 0.4
+   528→                            ? 'bg-amber-500'
+   529→                            : 'bg-red-500'
+   530→                      }`}
+   531→                      style={{ width: `${(agreeCount / indicators.length) * 100}%` }}
+   532→                    />
+   533→                  </div>
+   534→                  <span className="text-[10px] font-medium tabular-nums">
+   535→                    {Math.round((agreeCount / indicators.length) * 100)}%
+   536→                  </span>
+   537→                </div>
+   538→
+   539→                {/* Indicator list */}
+   540→                <div className="space-y-0.5">
+   541→                  {indicators.map((ind) => {
+   542→                    const indAgrees =
+   543→                      (isBuy && ind.signal === 'bullish') ||
+   544→                      (isSell && ind.signal === 'bearish');
+   545→                    return (
+   546→                      <div
+   547→                        key={ind.name}
+   548→                        className={`flex items-center gap-2 px-2.5 py-1 rounded text-[11px] ${
+   549→                          indAgrees
+   550→                            ? isBuy
+   551→                              ? 'bg-emerald-500/5'
+   552→                              : 'bg-red-500/5'
+   553→                            : ''
+   554→                        }`}
+   555→                      >
+   556→                        <span className="w-28 truncate text-muted-foreground">{ind.name}</span>
+   557→                        <span className="flex-1 tabular-nums font-medium">
+   558→                          {typeof ind.value === 'number' && ind.value < 1
+   559→                            ? ind.value.toFixed(4)
+   560→                            : typeof ind.value === 'number' && ind.value < 100
+   561→                              ? ind.value.toFixed(2)
+   562→                              : typeof ind.value === 'number'
+   563→                                ? ind.value.toFixed(0)
+   564→                                : String(ind.value)}
+   565→                        </span>
+   566→                        {/* Mini bar */}
+   567→                        <div className="w-12 h-1 bg-accent rounded-full overflow-hidden">
+   568→                          <div
+   569→                            className={`h-full rounded-full ${
+   570→                              ind.signal === 'bullish'
+   571→                                ? 'bg-emerald-500'
+   572→                                : ind.signal === 'bearish'
+   573→                                  ? 'bg-red-500'
+   574→                                  : 'bg-slate-500'
+   575→                            }`}
+   576→                            style={{
+   577→                              width: ind.signal === 'neutral' ? '30%' : '80%',
+   578→                            }}
+   579→                          />
+   580→                        </div>
+   581→                        <Badge
+   582→                          variant="outline"
+   583→                          className={`text-[9px] px-1.5 py-0 min-w-[40px] justify-center ${
+   584→                            ind.signal === 'bullish'
+   585→                              ? 'border-emerald-500/30 text-emerald-400'
+   586→                              : ind.signal === 'bearish'
+   587→                                ? 'border-red-500/30 text-red-400'
+   588→                                : 'border-slate-500/30 text-slate-400'
+   589→                          }`}
+   590→                        >
+   591→                          {ind.signal === 'bullish'
+   592→                            ? 'BUY'
+   593→                            : ind.signal === 'bearish'
+   594→                              ? 'SELL'
+   595→                              : 'NEUT'}
+   596→                        </Badge>
+   597→                      </div>
+   598→                    );
+   599→                  })}
+   600→                </div>
+   601→              </section>
+   602→
+   603→              <Separator className="opacity-50" />
+   604→
+   605→              {/* ===== 4. HISTORICAL ACCURACY WIDGET ===== */}
+   606→              {historical && (
+   607→                <section className="space-y-3">
+   608→                  <div className="flex items-center gap-2">
+   609→                    <Award className="h-3.5 w-3.5 text-muted-foreground" />
+   610→                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+   611→                      Historical Accuracy
+   612→                    </h3>
+   613→                    <div className="flex-1" />
+   614→                    <span className={`text-xs font-bold tabular-nums ${
+   615→                      historical.winRate >= 70
+   616→                        ? 'text-emerald-400'
+   617→                        : historical.winRate >= 55
+   618→                          ? 'text-amber-400'
+   619→                          : 'text-red-400'
+   620→                    }`}>
+   621→                      {historical.winRate}%
+   622→                    </span>
+   623→                  </div>
+   624→
+   625→                  <div className="rounded-lg bg-accent/50 border border-border p-3 space-y-3">
+   626→                    {/* Win Rate bar */}
+   627→                    <div className="space-y-1">
+   628→                      <div className="flex items-center justify-between text-[10px]">
+   629→                        <span className="text-muted-foreground">Win Rate ({strategyInfo.label} × {SYMBOL_INFO[signal.symbol].name})</span>
+   630→                      </div>
+   631→                      <div className="h-2 bg-accent rounded-full overflow-hidden">
+   632→                        <div
+   633→                          className={`h-full rounded-full animate-progress ${
+   634→                            historical.winRate >= 70
+   635→                              ? 'bg-emerald-500'
+   636→                              : historical.winRate >= 55
+   637→                                ? 'bg-amber-500'
+   638→                                : 'bg-red-500'
+   639→                          }`}
+   640→                          style={{ width: `${historical.winRate}%` }}
+   641→                        />
+   642→                      </div>
+   643→                    </div>
+   644→
+   645→                    {/* Last 10 signals dots */}
+   646→                    <div className="space-y-1">
+   647→                      <div className="text-[10px] text-muted-foreground">Last 10 Signals</div>
+   648→                      <div className="flex items-center gap-1.5">
+   649→                        {historical.lastSignals.map((result, i) => (
+   650→                          <div
+   651→                            key={i}
+   652→                            className={`w-4 h-4 rounded-full flex items-center justify-center ${
+   653→                              result === 'win'
+   654→                                ? 'bg-emerald-500/20 border border-emerald-500/40'
+   655→                                : 'bg-red-500/20 border border-red-500/40'
+   656→                            }`}
+   657→                          >
+   658→                            <div
+   659→                              className={`w-1.5 h-1.5 rounded-full ${
+   660→                                result === 'win' ? 'bg-emerald-400' : 'bg-red-400'
+   661→                              }`}
+   662→                            />
+   663→                          </div>
+   664→                        ))}
+   665→                      </div>
+   666→                    </div>
+   667→
+   668→                    {/* Stats row */}
+   669→                    <div className="grid grid-cols-3 gap-2">
+   670→                      <div className="text-center">
+   671→                        <div className="text-[10px] text-muted-foreground mb-0.5">Avg P&L / Signal</div>
+   672→                        <div
+   673→                          className={`text-xs font-bold tabular-nums ${
+   674→                            historical.avgPnl >= 0 ? 'text-emerald-400' : 'text-red-400'
+   675→                          }`}
+   676→                        >
+   677→                          {historical.avgPnl >= 0 ? '+' : ''}${historical.avgPnl.toFixed(2)}
+   678→                        </div>
+   679→                      </div>
+   680→                      <div className="text-center">
+   681→                        <div className="text-[10px] text-muted-foreground mb-0.5">Best Trade</div>
+   682→                        <div className="text-xs font-bold tabular-nums text-emerald-400">
+   683→                          +${historical.bestTrade.toFixed(2)}
+   684→                        </div>
+   685→                      </div>
+   686→                      <div className="text-center">
+   687→                        <div className="text-[10px] text-muted-foreground mb-0.5">Worst Trade</div>
+   688→                        <div className="text-xs font-bold tabular-nums text-red-400">
+   689→                          {historical.worstTrade.toFixed(2)}
+   690→                        </div>
+   691→                      </div>
+   692→                    </div>
+   693→                  </div>
+   694→                </section>
+   695→              )}
+   696→
+   697→              <Separator className="opacity-50" />
+   698→
+   699→              {/* ===== 5. ACTION BUTTONS ===== */}
+   700→              <section className="space-y-2">
+   701→                {!isHold ? (
+   702→                  <Button
+   703→                    onClick={handleExecuteTrade}
+   704→                    className={`w-full scale-click font-semibold ${
+   705→                      isBuy
+   706→                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+   707→                        : 'bg-red-600 hover:bg-red-700 text-white'
+   708→                    }`}
+   709→                  >
+   710→                    <Target className="h-4 w-4" />
+   711→                    Execute {signal.direction} Trade
+   712→                  </Button>
+   713→                ) : (
+   714→                  <Button className="w-full" variant="secondary" disabled>
+   715→                    <Activity className="h-4 w-4" />
+   716→                    HOLD — No Action
+   717→                  </Button>
+   718→                )}
+   719→
+   720→                <div className="grid grid-cols-2 gap-2">
+   721→                  <Button
+   722→                    variant="outline"
+   723→                    size="sm"
+   724→                    onClick={handleCopySignal}
+   725→                    className="scale-click"
+   726→                  >
+   727→                    <Copy className="h-3.5 w-3.5" />
+   728→                    Copy Signal
+   729→                  </Button>
+   730→                  <Button
+   731→                    variant="outline"
+   732→                    size="sm"
+   733→                    onClick={handleSetAlert}
+   734→                    className="scale-click"
+   735→                  >
+   736→                    <Bell className="h-3.5 w-3.5" />
+   737→                    Set Alert
+   738→                  </Button>
+   739→                </div>
+   740→              </section>
+   741→            </div>
+   742→          </ScrollArea>
+   743→        </motion.div>
+   744→      </DialogContent>
+   745→    </Dialog>
+   746→  );
+   747→}
+   748→
