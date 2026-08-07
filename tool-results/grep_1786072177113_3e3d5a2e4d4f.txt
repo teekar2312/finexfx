@@ -1,0 +1,252 @@
+/home/z/my-project/src/components/trading/KeyboardShortcutsHelp.tsx:78:              <button
+/home/z/my-project/src/components/trading/KeyboardShortcutsHelp.tsx:79:                onClick={onClose}
+/home/z/my-project/src/components/trading/KeyboardShortcutsHelp.tsx:80:                className="p-1.5 rounded-md hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
+/home/z/my-project/src/components/trading/KeyboardShortcutsHelp.tsx:81:                aria-label="Close keyboard shortcuts"
+/home/z/my-project/src/components/trading/KeyboardShortcutsHelp.tsx:82:              >
+/home/z/my-project/src/components/trading/KeyboardShortcutsHelp.tsx:83:                <X className="w-4 h-4" />
+/home/z/my-project/src/components/trading/TradingView.tsx:170:              <button
+/home/z/my-project/src/components/trading/TradingView.tsx:171:                key={sym}
+/home/z/my-project/src/components/trading/TradingView.tsx:172:                onClick={() => setSelectedSymbol(sym)}
+/home/z/my-project/src/components/trading/TradingView.tsx:173:                className={`flex-shrink-0 py-2.5 px-3 rounded-full text-sm font-medium transition-all min-w-[120px] card-hover scale-click flex items-center gap-2.5 border ${
+/home/z/my-project/src/components/trading/TradingView.tsx:174:                  isActive
+/home/z/my-project/src/components/trading/TradingView.tsx:175:                    ? 'text-emerald-400 border-emerald-500/30 pill-active-glow symbol-pill-active inset-highlight'
+/home/z/my-project/src/components/trading/TradingView.tsx:176:                    : 'bg-card/80 border-border/60 text-muted-foreground hover:text-foreground hover:border-border'
+/home/z/my-project/src/components/trading/TradingView.tsx:177:                }`}
+/home/z/my-project/src/components/trading/TradingView.tsx:178:              >
+/home/z/my-project/src/components/trading/TradingView.tsx:179:                <div className="flex flex-col items-start gap-0.5">
+/home/z/my-project/src/components/trading/TradingView.tsx:180:                  <div className="flex items-center gap-1.5">
+/home/z/my-project/src/components/trading/TradingView.tsx:181:                    {p && <div className={`direction-dot ${p.change >= 0 ? 'direction-dot-up' : 'direction-dot-down'}`} />}
+/home/z/my-project/src/components/trading/TradingView.tsx:182:                    <span className="text-xs font-bold tracking-tight">{SYMBOL_INFO[sym].name}</span>
+/home/z/my-project/src/components/trading/TradingView.tsx:183:                    {p && (
+/home/z/my-project/src/components/trading/TradingView.tsx:184:                      <span className="text-[9px] text-muted-foreground font-normal tabular-nums">
+/home/z/my-project/src/components/trading/TradingView.tsx:185:                        {p.spread.toFixed(1)}p
+/home/z/my-project/src/components/trading/TradingView.tsx:186:                      </span>
+/home/z/my-project/src/components/trading/TradingView.tsx:187:                    )}
+/home/z/my-project/src/components/trading/TradingView.tsx:188:                  </div>
+/home/z/my-project/src/components/trading/TradingView.tsx:189:                  {p && (
+/home/z/my-project/src/components/trading/TradingView.tsx:190:                    <div className={`text-[11px] tabular-nums font-medium ${p.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+/home/z/my-project/src/components/trading/TradingView.tsx:191:                      {p.bid.toFixed(SYMBOL_INFO[sym].digits)}
+/home/z/my-project/src/components/trading/TradingView.tsx:192:                    </div>
+/home/z/my-project/src/components/trading/TradingView.tsx:193:                  )}
+/home/z/my-project/src/components/trading/TradingView.tsx:194:                </div>
+/home/z/my-project/src/components/trading/TradingView.tsx:195:                {sparkline && (
+/home/z/my-project/src/components/trading/TradingView.tsx:196:                  <svg viewBox="0 0 36 20" className="w-9 h-5 flex-shrink-0" preserveAspectRatio="none">
+/home/z/my-project/src/components/trading/TradingView.tsx:197:                    <polyline
+/home/z/my-project/src/components/trading/TradingView.tsx:198:                      points={sparkline}
+/home/z/my-project/src/components/trading/TradingView.tsx:199:                      fill="none"
+/home/z/my-project/src/components/trading/TradingView.tsx:200:                      stroke={p && p.change >= 0 ? '#10b981' : '#ef4444'}
+/home/z/my-project/src/components/trading/TradingView.tsx:201:                      strokeWidth="1.5"
+/home/z/my-project/src/components/trading/TradingView.tsx:202:                      strokeLinecap="round"
+/home/z/my-project/src/components/trading/TradingView.tsx:203:                      strokeLinejoin="round"
+/home/z/my-project/src/components/trading/TradingView.tsx:204:                      opacity={isActive ? 1 : 0.6}
+/home/z/my-project/src/components/trading/TradingView.tsx:205:                    />
+/home/z/my-project/src/components/trading/TradingView.tsx:206:                  </svg>
+/home/z/my-project/src/components/trading/TradingView.tsx:207:                )}
+/home/z/my-project/src/components/trading/TradingView.tsx:208:              </button>
+/home/z/my-project/src/components/trading/TradingView.tsx:209:            );
+/home/z/my-project/src/components/trading/TradingView.tsx:210:          })}
+/home/z/my-project/src/components/trading/TradingView.tsx:211:        </div>
+/home/z/my-project/src/components/trading/TradingView.tsx:212:
+/home/z/my-project/src/components/trading/TradingView.tsx:213:        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+/home/z/my-project/src/components/trading/TradingView.tsx:214:          {/* Chart */}
+/home/z/my-project/src/components/trading/TradingView.tsx:215:          <div className="lg:col-span-3 space-y-4">
+/home/z/my-project/src/components/trading/TradingView.tsx:216:            <div className="chart-glow rounded-xl">
+/home/z/my-project/src/components/trading/TradingView.tsx:217:              <div className="glass-card-premium rounded-xl card-hover-lift border-border/40 chart-inner-glow">
+/home/z/my-project/src/components/trading/TradingView.tsx:218:                <div className="p-0">
+/home/z/my-project/src/components/trading/TradingView.tsx:219:                  <PriceChart
+/home/z/my-project/src/components/trading/TradingView.tsx:220:                    data={chartData}
+/home/z/my-project/src/components/trading/TradingView.tsx:221:                    symbol={selectedSymbol}
+/home/z/my-project/src/components/trading/TradingView.tsx:222:                    bid={price?.bid}
+/home/z/my-project/src/components/trading/TradingView.tsx:223:                    ask={price?.ask}
+/home/z/my-project/src/components/trading/TradingView.tsx:224:                    height={300}
+/home/z/my-project/src/components/trading/TradingView.tsx:225:                  />
+/home/z/my-project/src/components/trading/TradingView.tsx:226:                </div>
+/home/z/my-project/src/components/trading/TradingView.tsx:227:              </div>
+/home/z/my-project/src/components/trading/TradingView.tsx:228:            </div>
+/home/z/my-project/src/components/trading/TradingView.tsx:229:
+/home/z/my-project/src/components/trading/TradingView.tsx:230:            {/* (a) Tabbed Positions / History */}
+/home/z/my-project/src/components/trading/TradingView.tsx:231:            <div className="glass-card-premium rounded-xl card-hover-lift">
+/home/z/my-project/src/components/trading/TradingView.tsx:232:              <Tabs defaultValue="open" className="w-full">
+/home/z/my-project/src/components/trading/TradingView.tsx:233:                <div className="flex items-center gap-2 mb-3 pb-0 pt-3 px-4">
+/home/z/my-project/src/components/trading/TradingView.tsx:234:                  <div className="flex items-center justify-between gap-2">
+/home/z/my-project/src/components/trading/TradingView.tsx:235:                    <TabsList className="h-8 glass-card-premium border-0 shadow-none gap-0.5 p-1">
+/home/z/my-project/src/components/trading/TradingView.tsx:236:                      <TabsTrigger value="open" className="text-xs h-6 rounded-lg data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_12px_rgba(16,185,129,0.2),inset_0_1px_0_rgba(16,185,129,0.1)]">
+/home/z/my-project/src/components/trading/TradingView.tsx:237:                        Open ({openTrades.length})
+/home/z/my-project/src/components/trading/TradingView.tsx:238:                      </TabsTrigger>
+/home/z/my-project/src/components/trading/TradingView.tsx:239:                      <TabsTrigger value="history" className="text-xs h-6 rounded-lg data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_12px_rgba(16,185,129,0.2),inset_0_1px_0_rgba(16,185,129,0.1)]">
+/home/z/my-project/src/components/trading/TradingView.tsx:240:                        History ({closedTrades.length})
+/home/z/my-project/src/components/trading/TradingView.tsx:241:                      </TabsTrigger>
+/home/z/my-project/src/components/trading/TradingView.tsx:242:                      <TabsTrigger value="advanced" className="text-xs h-6 rounded-lg data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-400 data-[state=active]:shadow-[0_0_12px_rgba(245,158,11,0.2),inset_0_1px_0_rgba(245,158,11,0.1)]">
+/home/z/my-project/src/components/trading/TradingView.tsx:243:                        Advanced
+/home/z/my-project/src/components/trading/TradingView.tsx:244:                      </TabsTrigger>
+/home/z/my-project/src/components/trading/TradingView.tsx:245:                    </TabsList>
+/home/z/my-project/src/components/trading/TradingView.tsx:246:                    <TradeExportButton />
+/home/z/my-project/src/components/trading/TradingView.tsx:247:                  </div>
+/home/z/my-project/src/components/trading/TradingView.tsx:248:                </div>
+/home/z/my-project/src/components/trading/TradingView.tsx:249:
+/home/z/my-project/src/components/trading/TradingView.tsx:250:                <TabsContent value="open" className="mt-0">
+/home/z/my-project/src/components/trading/TradingView.tsx:251:                  <div className="px-4 pb-3">
+/home/z/my-project/src/components/trading/TradingView.tsx:252:                    {openTrades.length === 0 ? (
+/home/z/my-project/src/components/trading/TradingView.tsx:253:                      <div className="text-center py-6 text-muted-foreground text-sm">
+/home/z/my-project/src/components/trading/TradingView.tsx:254:                        No open positions. Use the panel to place a trade.
+/home/z/my-project/src/components/trading/TradingView.tsx:255:                      </div>
+/home/z/my-project/src/components/trading/TradingView.tsx:256:                    ) : (
+/home/z/my-project/src/components/trading/TradingView.tsx:257:                      <div className="overflow-x-auto">
+/home/z/my-project/src/components/trading/TradingView.tsx:258:                        <Table>
+/home/z/my-project/src/components/trading/TradingView.tsx:259:                          <TableHeader>
+/home/z/my-project/src/components/trading/TradingView.tsx:260:                            <TableRow className="border-border hover:bg-transparent">
+/home/z/my-project/src/components/trading/TradingView.tsx:261:                              <TableHead className="text-[10px] h-8">Symbol</TableHead>
+/home/z/my-project/src/components/trading/TradingView.tsx:262:                              <TableHead className="text-[10px] h-8">Dir</TableHead>
+/home/z/my-project/src/components/trading/TradingView.tsx:263:                              <TableHead className="text-[10px] h-8 text-right">Lots</TableHead>
+/home/z/my-project/src/components/trading/TradingView.tsx:264:                              <TableHead className="text-[10px] h-8 text-right">Entry</TableHead>
+/home/z/my-project/src/components/trading/TradingView.tsx:265:                              <TableHead className="text-[10px] h-8 text-right">SL</TableHead>
+/home/z/my-project/src/components/trading/TradingView.tsx:266:                              <TableHead className="text-[10px] h-8 text-right">TP</TableHead>
+/home/z/my-project/src/components/trading/TradingView.tsx:267:                              <TableHead className="text-[10px] h-8 text-right">Pips</TableHead>
+/home/z/my-project/src/components/trading/TradingView.tsx:268:                              <TableHead className="text-[10px] h-8 text-right">P&L</TableHead>
+/home/z/my-project/src/components/trading/TradingView.tsx:269:                              <TableHead className="text-[10px] h-8">Time</TableHead>
+/home/z/my-project/src/components/trading/TradingView.tsx:270:                              <TableHead className="text-[10px] h-8 text-center">Trail</TableHead>
+/home/z/my-project/src/components/trading/TradingView.tsx:271:                              <TableHead className="text-[10px] h-8 text-center">Action</TableHead>
+/home/z/my-project/src/components/trading/TradingView.tsx:272:                            </TableRow>
+/home/z/my-project/src/components/trading/TradingView.tsx:273:                          </TableHeader>
+/home/z/my-project/src/components/trading/TradingView.tsx:274:                          <TableBody>
+/home/z/my-project/src/components/trading/TradingView.tsx:275:                            {openTrades.map((trade) => {
+/home/z/my-project/src/components/trading/TradingView.tsx:276:                              const maxProfit = Math.max(...openTrades.map(t => Math.abs(t.profit)), 1);
+/home/z/my-project/src/components/trading/TradingView.tsx:277:                              return (
+/home/z/my-project/src/components/trading/TradingView.tsx:278:                              <TableRow key={trade.id} className={`border-border compact-row table-row-hover ${trade.direction === 'BUY' ? 'trade-row-buy' : 'trade-row-sell'}`}>
+/home/z/my-project/src/components/trading/TradingView.tsx:279:                                <TableCell className="text-xs font-medium">{trade.symbol}</TableCell>
+/home/z/my-project/src/components/trading/TradingView.tsx:280:                                <TableCell>
+/home/z/my-project/src/components/trading/TradingView.tsx:281:                                  <div className={`flex items-center gap-1 text-xs font-bold ${trade.direction === 'BUY' ? 'text-emerald-500' : 'text-red-500'}`}>
+/home/z/my-project/src/components/trading/TradingView.tsx:282:                                    {trade.direction === 'BUY' ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+/home/z/my-project/src/components/trading/TradingView.tsx:283:                                    {trade.direction}
+/home/z/my-project/src/components/trading/TradingView.tsx:284:                                  </div>
+/home/z/my-project/src/components/trading/TradingView.tsx:285:                                </TableCell>
+/home/z/my-project/src/components/trading/TradingView.tsx:286:                                <TableCell className="text-xs text-right tabular-nums">{trade.lotSize}</TableCell>
+/home/z/my-project/src/components/trading/TradingView.tsx:287:                                <TableCell className="text-xs text-right tabular-nums">{trade.entryPrice.toFixed(SYMBOL_INFO[trade.symbol].digits)}</TableCell>
+/home/z/my-project/src/components/trading/TradingView.tsx:288:                                <TableCell className="text-xs text-right tabular-nums text-red-400">
+/home/z/my-project/src/components/trading/TradingView.tsx:289:                                  {trade.stopLoss?.toFixed(SYMBOL_INFO[trade.symbol].digits) || '—'}
+/home/z/my-project/src/components/trading/TradingView.tsx:290:                                </TableCell>
+/home/z/my-project/src/components/trading/TradingView.tsx:291:                                <TableCell className="text-xs text-right tabular-nums text-emerald-400">
+/home/z/my-project/src/components/trading/TradingView.tsx:292:                                  {trade.takeProfit?.toFixed(SYMBOL_INFO[trade.symbol].digits) || '—'}
+/home/z/my-project/src/components/trading/TradingView.tsx:293:                                </TableCell>
+/home/z/my-project/src/components/trading/TradingView.tsx:294:                                <TableCell className={`text-xs text-right tabular-nums font-semibold ${trade.pips >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+/home/z/my-project/src/components/trading/TradingView.tsx:295:                                  {trade.pips >= 0 ? '+' : ''}{trade.pips.toFixed(1)}
+/home/z/my-project/src/components/trading/TradingView.tsx:296:                                </TableCell>
+/home/z/my-project/src/components/trading/TradingView.tsx:297:                                <TableCell className="text-right">
+/home/z/my-project/src/components/trading/TradingView.tsx:298:                                  <div className={`text-sm font-bold tabular-nums ${trade.profit >= 0 ? 'gradient-text-profit' : 'gradient-text-loss'}`}>
+/home/z/my-project/src/components/trading/TradingView.tsx:299:                                    {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
+/home/z/my-project/src/components/trading/TradingView.tsx:300:                                  </div>
+/home/z/my-project/src/components/trading/TradingView.tsx:301:                                  <div className="pnl-bar-track mt-0.5">
+/home/z/my-project/src/components/trading/TradingView.tsx:302:                                    <div
+/home/z/my-project/src/components/trading/TradingView.tsx:303:                                      className={`pnl-bar-fill-premium ${trade.profit >= 0 ? 'profit' : 'loss'}`}
+/home/z/my-project/src/components/trading/TradingView.tsx:304:                                      style={{ width: `${Math.min((Math.abs(trade.profit) / maxProfit) * 100, 100)}%` }}
+/home/z/my-project/src/components/trading/TradingView.tsx:305:                                    />
+/home/z/my-project/src/components/trading/TradingView.tsx:306:                                  </div>
+/home/z/my-project/src/components/trading/TradingView.tsx:307:                                </TableCell>
+/home/z/my-project/src/components/trading/TradingView.tsx:308:                                <TableCell className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+/home/z/my-project/src/components/trading/TradingView.tsx:309:                                  <div className="flex items-center gap-1">
+/home/z/my-project/src/components/trading/TradingView.tsx:310:                                    <Timer className="h-2.5 w-2.5 opacity-50" />
+/home/z/my-project/src/components/trading/TradingView.tsx:311:                                    {formatDuration(trade.openedAt)}
+/home/z/my-project/src/components/trading/TradingView.tsx:312:                                  </div>
+/home/z/my-project/src/components/trading/TradingView.tsx:313:                                </TableCell>
+/home/z/my-project/src/components/trading/TradingView.tsx:314:                                <TableCell className="text-center">
+/home/z/my-project/src/components/trading/TradingView.tsx:315:                                  {trade.isTrailingStop ? (
+/home/z/my-project/src/components/trading/TradingView.tsx:316:                                    <Tooltip>
+/home/z/my-project/src/components/trading/TradingView.tsx:317:                                      <TooltipTrigger>
+/home/z/my-project/src/components/trading/TradingView.tsx:318:                                        <div className="trail-animate inline-flex">
+/home/z/my-project/src/components/trading/TradingView.tsx:319:                                          <Activity className="h-3.5 w-3.5 text-emerald-500" />
+/home/z/my-project/src/components/trading/TradingView.tsx:320:                                        </div>
+/home/z/my-project/src/components/trading/TradingView.tsx:321:                                      </TooltipTrigger>
+/home/z/my-project/src/components/trading/TradingView.tsx:322:                                      <TooltipContent className="text-[10px]">Trailing {trade.trailingStop} pips</TooltipContent>
+/home/z/my-project/src/components/trading/TradingView.tsx:323:                                    </Tooltip>
+/home/z/my-project/src/components/trading/TradingView.tsx:324:                                  ) : (
+/home/z/my-project/src/components/trading/TradingView.tsx:325:                                    <Switch
+/home/z/my-project/src/components/trading/TradingView.tsx:326:                                      checked={trade.isTrailingStop}
+/home/z/my-project/src/components/trading/TradingView.tsx:327:                                      onCheckedChange={(checked) => handleToggleTrailing(trade.id, checked)}
+/home/z/my-project/src/components/trading/TradingView.tsx:328:                                      className="scale-75 data-[state=checked]:bg-emerald-600"
+/home/z/my-project/src/components/trading/TradingView.tsx:329:                                    />
+/home/z/my-project/src/components/trading/TradingView.tsx:330:                                  )}
+/home/z/my-project/src/components/trading/TradingView.tsx:331:                                </TableCell>
+/home/z/my-project/src/components/trading/TradingView.tsx:332:                                <TableCell className="text-center">
+/home/z/my-project/src/components/trading/TradingView.tsx:333:                                  <AnimatePresence>
+/home/z/my-project/src/components/trading/TradingView.tsx:334:                                    {confirmClose === trade.id ? (
+/home/z/my-project/src/components/trading/TradingView.tsx:335:                                      <motion.div
+/home/z/my-project/src/components/trading/TradingView.tsx:336:                                        initial={{ opacity: 0, scale: 0.8 }}
+/home/z/my-project/src/components/trading/TradingView.tsx:337:                                        animate={{ opacity: 1, scale: 1 }}
+/home/z/my-project/src/components/trading/TradingView.tsx:338:                                        exit={{ opacity: 0, scale: 0.8 }}
+/home/z/my-project/src/components/trading/TradingView.tsx:339:                                        className="flex items-center gap-1"
+/home/z/my-project/src/components/trading/TradingView.tsx:340:                                      >
+/home/z/my-project/src/components/trading/TradingView.tsx:341:                                        <Button
+/home/z/my-project/src/components/trading/TradingView.tsx:342:                                          size="sm"
+/home/z/my-project/src/components/trading/TradingView.tsx:343:                                          variant="destructive"
+/home/z/my-project/src/components/trading/TradingView.tsx:344:                                          className="h-6 px-2 text-[10px]"
+/home/z/my-project/src/components/trading/TradingView.tsx:345:                                          onClick={() => { closeTrade(trade.id); setConfirmClose(null); }}
+/home/z/my-project/src/components/trading/TradingView.tsx:346:                                        >
+/home/z/my-project/src/components/trading/TradingView.tsx:347:                                          Confirm
+/home/z/my-project/src/components/trading/TradingView.tsx:348:                                        </Button>
+/home/z/my-project/src/components/trading/TradingView.tsx:349:                                        <Button
+/home/z/my-project/src/components/trading/TradingView.tsx:350:                                          size="sm"
+/home/z/my-project/src/components/trading/TradingView.tsx:351:                                          variant="ghost"
+/home/z/my-project/src/components/trading/TradingView.tsx:352:                                          className="h-6 px-2 text-[10px]"
+/home/z/my-project/src/components/trading/TradingView.tsx:353:                                          onClick={() => setConfirmClose(null)}
+/home/z/my-project/src/components/trading/TradingView.tsx:354:                                        >
+/home/z/my-project/src/components/trading/TradingView.tsx:355:                                          <X className="h-3 w-3" />
+/home/z/my-project/src/components/trading/PriceChart.tsx:256:          <button
+/home/z/my-project/src/components/trading/PriceChart.tsx:257:            onClick={() => setChartMode('area')}
+/home/z/my-project/src/components/trading/PriceChart.tsx:258:            className={`chart-toggle-btn ${chartMode === 'area' ? 'chart-toggle-btn-active' : ''}`}
+/home/z/my-project/src/components/trading/PriceChart.tsx:259:            title="Area Chart"
+/home/z/my-project/src/components/trading/PriceChart.tsx:260:          >
+/home/z/my-project/src/components/trading/PriceChart.tsx:261:            <BarChart3 className="h-3.5 w-3.5" />
+/home/z/my-project/src/components/trading/PriceChart.tsx:262:          </button>
+/home/z/my-project/src/components/trading/PriceChart.tsx:263:          <button
+/home/z/my-project/src/components/trading/PriceChart.tsx:264:            onClick={() => setChartMode('candlestick')}
+/home/z/my-project/src/components/trading/PriceChart.tsx:265:            className={`chart-toggle-btn ${chartMode === 'candlestick' ? 'chart-toggle-btn-active' : ''}`}
+/home/z/my-project/src/components/trading/PriceChart.tsx:266:            title="Candlestick Chart"
+/home/z/my-project/src/components/trading/PriceChart.tsx:267:          >
+/home/z/my-project/src/components/trading/PriceChart.tsx:268:            <CandlestickChart className="h-3.5 w-3.5" />
+/home/z/my-project/src/components/trading/PriceChart.tsx:269:          </button>
+/home/z/my-project/src/components/trading/PriceChart.tsx:270:        </div>
+/home/z/my-project/src/components/trading/PriceChart.tsx:271:      </div>
+/home/z/my-project/src/components/trading/PriceChart.tsx:272:
+/home/z/my-project/src/components/trading/PriceChart.tsx:273:      <ResponsiveContainer width="100%" height="100%">
+/home/z/my-project/src/components/trading/PriceChart.tsx:274:        {chartMode === 'area' ? (
+/home/z/my-project/src/components/trading/PriceChart.tsx:275:          <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+/home/z/my-project/src/components/trading/PriceChart.tsx:276:            <defs>
+/home/z/my-project/src/components/trading/PriceChart.tsx:277:              <linearGradient id={`gradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
+/home/z/my-project/src/components/trading/PriceChart.tsx:278:                <stop offset="5%" stopColor={gradientColor} stopOpacity={0.3} />
+/home/z/my-project/src/components/trading/PriceChart.tsx:279:                <stop offset="95%" stopColor={gradientColor} stopOpacity={0} />
+/home/z/my-project/src/components/trading/PriceChart.tsx:280:              </linearGradient>
+/home/z/my-project/src/components/trading/PriceChart.tsx:281:            </defs>
+/home/z/my-project/src/components/trading/PriceChart.tsx:282:            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+/home/z/my-project/src/components/trading/PriceChart.tsx:283:            <XAxis
+/home/z/my-project/src/components/trading/PriceChart.tsx:284:              dataKey="time"
+/home/z/my-project/src/components/trading/PriceChart.tsx:285:              tickFormatter={formatTime}
+/home/z/my-project/src/components/trading/PriceChart.tsx:286:              tick={{ fontSize: 10, fill: '#64748b' }}
+/home/z/my-project/src/components/trading/PriceChart.tsx:287:              axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
+/home/z/my-project/src/components/trading/PriceChart.tsx:288:              tickLine={false}
+/home/z/my-project/src/components/trading/PriceChart.tsx:289:              minTickGap={40}
+/home/z/my-project/src/components/trading/PriceChart.tsx:290:            />
+/home/z/my-project/src/components/trading/PriceChart.tsx:291:            <YAxis
+/home/z/my-project/src/components/trading/PriceChart.tsx:292:              yAxisId="price"
+/home/z/my-project/src/components/trading/PriceChart.tsx:293:              domain={[minPrice, maxPrice]}
+/home/z/my-project/src/components/trading/PriceChart.tsx:294:              tickFormatter={formatPrice}
+/home/z/my-project/src/components/trading/PriceChart.tsx:295:              tick={{ fontSize: 10, fill: '#64748b' }}
+/home/z/my-project/src/components/trading/PriceChart.tsx:296:              axisLine={false}
+/home/z/my-project/src/components/trading/PriceChart.tsx:297:              tickLine={false}
+/home/z/my-project/src/components/trading/PriceChart.tsx:298:              width={75}
+/home/z/my-project/src/components/trading/PriceChart.tsx:299:            />
+/home/z/my-project/src/components/trading/PriceChart.tsx:300:            <YAxis
+/home/z/my-project/src/components/trading/PriceChart.tsx:301:              yAxisId="volume"
+/home/z/my-project/src/components/trading/PriceChart.tsx:302:              domain={[0, maxVolume]}
+/home/z/my-project/src/components/trading/PriceChart.tsx:303:              hide
+/home/z/my-project/src/components/trading/PriceChart.tsx:304:              orientation="right"
+/home/z/my-project/src/components/trading/PriceChart.tsx:305:            />
+/home/z/my-project/src/components/trading/PriceChart.tsx:306:            <RechartsTooltip content={tooltipContent} cursor={<CrosshairCursor />} />
+/home/z/my-project/src/components/trading/PriceChart.tsx:307:            {roundGridLines}
+/home/z/my-project/src/components/trading/PriceChart.tsx:308:            {/* Current price line: dashed, colored emerald for up / red for down */}
+/home/z/my-project/src/components/trading/PriceChart.tsx:309:            <ReferenceLine
+/home/z/my-project/src/components/trading/PriceChart.tsx:310:              yAxisId="price"
+/home/z/my-project/src/components/trading/PriceChart.tsx:311:              y={latestClose}
+/home/z/my-project/src/components/trading/PriceChart.tsx:312:              stroke={currentPriceColor}
+/home/z/my-project/src/components/trading/PriceChart.tsx:313:              strokeDasharray="5 5"
+
+[Showing results with pagination = limit: 250]

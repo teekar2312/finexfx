@@ -1,0 +1,619 @@
+   145→function getCorrelationColor(r: number): string {
+   146→  if (r > 0.5) return 'bg-emerald-500/20 text-emerald-400';
+   147→  if (r > 0.2) return 'bg-emerald-500/10 text-emerald-500/70';
+   148→  if (r < -0.5) return 'bg-red-500/20 text-red-400';
+   149→  if (r < -0.2) return 'bg-red-500/10 text-red-500/70';
+   150→  return 'bg-slate-500/10 text-slate-400';
+   151→}
+   152→
+   153→function CorrelationGrid({ priceHistory }: { priceHistory: Record<Symbol, any[]> }) {
+   154→  const matrix = useMemo(() => {
+   155→    const closePrices: Record<string, number[]> = {};
+   156→    SYMBOLS.forEach((sym) => {
+   157→      const history = priceHistory[sym as Symbol];
+   158→      if (history && history.length >= 10) {
+   159→        closePrices[sym] = history.slice(-50).map((c: any) => c.close);
+   160→      } else {
+   161→        closePrices[sym] = [];
+   162→      }
+   163→    });
+   164→
+   165→    const grid: number[][] = [];
+   166→    for (let i = 0; i < SYMBOLS.length; i++) {
+   167→      const row: number[] = [];
+   168→      for (let j = 0; j < SYMBOLS.length; j++) {
+   169→        if (i === j) {
+   170→          row.push(1);
+   171→        } else {
+   172→          const p1 = closePrices[SYMBOLS[i]];
+   173→          const p2 = closePrices[SYMBOLS[j]];
+   174→          if (p1.length >= 10 && p2.length >= 10) {
+   175→            const len = Math.min(p1.length, p2.length);
+   176→            row.push(calculateCorrelation(p1.slice(-len), p2.slice(-len)));
+   177→          } else {
+   178→            row.push(0);
+   179→          }
+   180→        }
+   181→      }
+   182→      grid.push(row);
+   183→    }
+   184→    return grid;
+   185→  }, [priceHistory]);
+   186→
+   187→  return (
+   188→    <div className="flex flex-col items-center gap-1">
+   189→      {/* Column headers */}
+   190→      <div className="flex items-center gap-1 pl-16">
+   191→        {SYMBOLS.map((sym) => (
+   192→          <div key={sym} className="w-16 h-6 flex items-center justify-center">
+   193→            <span className="text-[10px] font-medium text-muted-foreground">{sym}</span>
+   194→          </div>
+   195→        ))}
+   196→      </div>
+   197→      {/* Rows */}
+   198→      {SYMBOLS.map((sym, i) => (
+   199→        <div key={sym} className="flex items-center gap-1">
+   200→          <div className="w-16 h-12 flex items-center justify-end pr-2">
+   201→            <span className="text-[10px] font-medium text-muted-foreground">{sym}</span>
+   202→          </div>
+   203→          {SYMBOLS.map((_, j) => {
+   204→            const r = matrix[i]?.[j] ?? 0;
+   205→            const isDiag = i === j;
+   206→            return (
+   207→              <div
+   208→                key={`${i}-${j}`}
+   209→                className={`w-16 h-12 rounded-md flex items-center justify-center ${
+   210→                  isDiag ? 'bg-slate-700/50 text-foreground font-semibold' : getCorrelationColor(r)
+   211→                }`}
+   212→              >
+   213→                <span className="text-[10px] tabular-nums">{r.toFixed(2)}</span>
+   214→              </div>
+   215→            );
+   216→          })}
+   217→        </div>
+   218→      ))}
+   219→    </div>
+   220→  );
+   221→}
+   222→
+   223→export default function AnalysisView() {
+   224→  const { signals, marketConditions } = useTradingStore();
+   225→  const [expandedAnalysis, setExpandedAnalysis] = useState(false);
+   226→  const [copiedId, setCopiedId] = useState<string | null>(null);
+   227→  const [selectedSignal, setSelectedSignal] = useState<TradingSignal | null>(null);
+   228→  const [signalModalOpen, setSignalModalOpen] = useState(false);
+   229→
+   230→  const unexecutedSignals = signals.filter(s => !s.isExecuted);
+   231→
+   232→  const latestSignalsBySymbol = SYMBOLS.map(sym => {
+   233→    const sig = signals.find(s => s.symbol === sym);
+   234→    return { symbol: sym, signal: sig };
+   235→  });
+   236→
+   237→  const highestConfidenceSignal = signals.length > 0
+   238→    ? signals.reduce((best, s) => (s.confidence > best.confidence ? s : best), signals[0])
+   239→    : null;
+   240→
+   241→  const handleCopy = useCallback((text: string, id: string) => {
+   242→    navigator.clipboard.writeText(text).then(() => {
+   243→      setCopiedId(id);
+   244→      setTimeout(() => setCopiedId(null), 2000);
+   245→    });
+   246→  }, []);
+   247→
+   248→  const sourceTags = useMemo(() => [
+   249→    { label: 'Central Bank', color: 'bg-red-500/20 text-red-400 border-red-500/30' },
+   250→    { label: 'NFP', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+   251→    { label: 'CPI', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+   252→    { label: 'Technical', color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' },
+   253→    { label: 'Sentiment', color: 'bg-violet-500/20 text-violet-400 border-violet-500/30' },
+   254→  ], []);
+   255→
+   256→  return (
+   257→    <TooltipProvider delayDuration={200}>
+   258→    <div className="p-4 space-y-4 scrollbar-thin">
+   259→      {/* Candlestick Pattern Recognition */}
+   260→      <CandlestickPatternRecognition />
+   261→
+   262→      {/* Currency Correlation Matrix - Enhanced */}
+   263→      <CorrelationMatrix />
+   264→
+   265→      {/* Market Conditions Grid */}
+   266→      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+   267→        {SYMBOLS.map((sym) => {
+   268→          const condition = marketConditions[sym] || 'low_volatility';
+   269→          const config = MARKET_CONDITION_CONFIG[condition];
+   270→          const sig = signals.find(s => s.symbol === sym);
+   271→          const strength = getStrengthForCondition(condition);
+   272→          return (
+   273→            <motion.div
+   274→              key={sym}
+   275→              initial={{ opacity: 0, y: 10 }}
+   276→              animate={{ opacity: 1, y: 0 }}
+   277→              transition={{ delay: SYMBOLS.indexOf(sym) * 0.05 }}
+   278→            >
+   279→              <div className={`glass-card-premium rounded-xl card-hover-lift${sig && highestConfidenceSignal && sig.id === highestConfidenceSignal.id ? ' shimmer-border' : ''}`}>
+   280→                <div className="p-4">
+   281→                  <div className="flex items-center justify-between mb-3">
+   282→                    <div className="flex items-center gap-2">
+   283→                      {getTrendArrow(condition)}
+   284→                      <div className="text-sm font-bold">{SYMBOL_INFO[sym].name}</div>
+   285→                    </div>
+   286→                    <Badge variant="outline" className={`text-[10px] px-2 ${config.color}`}>
+   287→                      {config.label}
+   288→                    </Badge>
+   289→                  </div>
+   290→
+   291→                  {/* Larger colored icon + description */}
+   292→                  <div className="flex items-center gap-3 mb-3">
+   293→                    {getConditionIconLarge(condition)}
+   294→                    <div className="flex-1 min-w-0">
+   295→                      <div className="text-[11px] text-muted-foreground">Market State</div>
+   296→                      <div className="text-xs font-medium">{config.description}</div>
+   297→                    </div>
+   298→                  </div>
+   299→
+   300→                  {/* Strength indicator */}
+   301→                  <div className="mb-3">
+   302→                    <div className="flex items-center justify-between mb-1">
+   303→                      <span className="text-[10px] text-muted-foreground">Strength</span>
+   304→                      <span className="text-[10px] tabular-nums font-medium text-foreground">{strength}%</span>
+   305→                    </div>
+   306→                    <div className="h-1.5 bg-accent rounded-full overflow-hidden">
+   307→                      <div
+   308→                        className={`h-full rounded-full transition-all duration-700 ${
+   309→                          condition === 'trending' ? 'bg-emerald-500' :
+   310→                          condition === 'range_bound' ? 'bg-amber-500' :
+   311→                          condition === 'high_volatility' ? 'bg-red-500' :
+   312→                          'bg-slate-500'
+   313→                        }`}
+   314→                        style={{ width: `${strength}%` }}
+   315→                      />
+   316→                    </div>
+   317→                  </div>
+   318→
+   319→                  {/* Characteristics as pill badges */}
+   320→                  {config.characteristics.length > 0 && (
+   321→                    <div className="flex flex-wrap gap-1 mb-3">
+   322→                      {config.characteristics.map((ch, i) => (
+   323→                        <span key={i} className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent/60 text-muted-foreground border border-border">
+   324→                          {ch}
+   325→                        </span>
+   326→                      ))}
+   327→                    </div>
+   328→                  )}
+   329→
+   330→                  {/* Recommended strategies as clickable chips with tooltip */}
+   331→                  {config.bestStrategies.length > 0 && (
+   332→                    <div>
+   333→                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Best Strategies</div>
+   334→                      <div className="flex flex-wrap gap-1">
+   335→                        {config.bestStrategies.map((strat) => (
+   336→                          <Tooltip key={strat}>
+   337→                            <TooltipTrigger asChild>
+   338→                              <Badge
+   339→                                variant="secondary"
+   340→                                className="text-[10px] px-1.5 py-0 cursor-pointer hover:bg-primary/20 transition-colors"
+   341→                              >
+   342→                                <Zap className="h-2.5 w-2.5 mr-0.5" />
+   343→                                {STRATEGIES[strat].label}
+   344→                              </Badge>
+   345→                            </TooltipTrigger>
+   346→                            <TooltipContent side="bottom" className="max-w-[220px]">
+   347→                              <div className="text-[11px] font-medium">{STRATEGIES[strat].label}</div>
+   348→                              <div className="text-[10px] text-muted-foreground mt-0.5">{STRATEGIES[strat].description}</div>
+   349→                              <div className="text-[10px] mt-1">Timeframe: {STRATEGIES[strat].timeframe}</div>
+   350→                            </TooltipContent>
+   351→                          </Tooltip>
+   352→                        ))}
+   353→                      </div>
+   354→                    </div>
+   355→                  )}
+   356→
+   357→                  {sig && (
+   358→                    <>
+   359→                      <Separator className="my-3 opacity-50" />
+   360→                      <div className={`flex items-center justify-between p-2 rounded-lg border-l-4 ${
+   361→                        sig.direction === 'BUY' ? 'bg-emerald-500/5 border-l-emerald-500 border border-emerald-500/20 glow-border-emerald' :
+   362→                        sig.direction === 'SELL' ? 'bg-red-500/5 border-l-red-500 border border-red-500/20 glow-border-amber' :
+   363→                        'bg-slate-500/5 border-l-slate-500 border border-slate-500/20'
+   364→                      }`}>
+   365→                        <div className="flex items-center gap-2">
+   366→                          {sig.direction === 'BUY' ? <ArrowUpRight className="h-4 w-4 text-emerald-500" /> :
+   367→                           sig.direction === 'SELL' ? <ArrowDownRight className="h-4 w-4 text-red-500" /> :
+   368→                           <Activity className="h-4 w-4 text-slate-500" />}
+   369→                          <div>
+   370→                            <div className="text-xs font-semibold">{sig.direction}</div>
+   371→                            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+   372→                              <Zap className="h-2.5 w-2.5" />{STRATEGIES[sig.strategy]?.label || sig.strategy}
+   373→                            </div>
+   374→                          </div>
+   375→                        </div>
+   376→                        <div className="text-right">
+   377→                          <div className={`text-sm font-bold tabular-nums ${getConfidenceColor(sig.confidence)}${sig.confidence >= 70 ? (sig.direction === 'BUY' ? ' gradient-text-profit' : sig.direction === 'SELL' ? ' gradient-text-loss' : '') : ''}`}>
+   378→                            {sig.confidence}%
+   379→                          </div>
+   380→                          <div className="text-[10px] text-muted-foreground">confidence</div>
+   381→                        </div>
+   382→                      </div>
+   383→                    </>
+   384→                  )}
+   385→                </div>
+   386→              </div>
+   387→            </motion.div>
+   388→          );
+   389→        })}
+   390→      </div>
+   391→
+   392→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   393→        {/* AI Analysis */}
+   394→        <div className="glass-card-premium rounded-xl card-hover-lift lg:col-span-2">
+   395→          <div className="flex items-center gap-2 mb-3 pb-2 pt-3 px-4">
+   396→            <div className="flex items-center justify-between">
+   397→              <div className="flex items-center gap-2">
+   398→                <Brain className="h-4 w-4 text-primary" />
+   399→                <span className="text-sm font-semibold section-title-accent">AI Market Analysis</span>
+   400→                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+   401→              </div>
+   402→              {/* Confidence score gauge */}
+   403→              <div className="flex items-center gap-2">
+   404→                <div className="relative">
+   405→                  <ConfidenceGauge confidence={76} size={40} />
+   406→                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-[10px] font-bold tabular-nums text-emerald-500">76%</div>
+   407→                </div>
+   408→                <div className="text-[10px] text-muted-foreground">Overall<br/>Confidence</div>
+   409→              </div>
+   410→            </div>
+   411→          </div>
+   412→          <div className="px-4 pb-4">
+   413→            <div className="space-y-4">
+   414→              {/* Source Tags */}
+   415→              <div className="flex flex-wrap gap-1.5">
+   416→                {sourceTags.map((tag) => (
+   417→                  <span key={tag.label} className={`text-[9px] px-2 py-0.5 rounded-full border ${tag.color}`}>
+   418→                    {tag.label}
+   419→                  </span>
+   420→                ))}
+   421→              </div>
+   422→
+   423→              {/* Summary line */}
+   424→              <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/20">
+   425→                <div className="flex items-start gap-2">
+   426→                  <Sparkles className="h-3.5 w-3.5 text-primary mt-0.5 flex-shrink-0" />
+   427→                  <div className="text-[11px] text-foreground/90 leading-relaxed">
+   428→                    Markets show mixed signals today. EUR/USD in a clear uptrend with 82% confidence. USD/JPY experiencing range-bound conditions. Gold (XAU/USD) showing high volatility due to geopolitical tensions. Key catalyst: ECB meeting and NFP data release.
+   429→                  </div>
+   430→                </div>
+   431→              </div>
+   432→
+   433→              {/* Key Factors */}
+   434→              <div>
+   435→                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Key Market Factors</div>
+   436→                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+   437→                  {[
+   438→                    { label: 'Central Bank', status: 'ECB meeting this week', impact: 'high' as const },
+   439→                    { label: 'NFP Data', status: 'Expected: 180K', impact: 'high' as const },
+   440→                    { label: 'CPI Report', status: 'In line with forecast', impact: 'medium' as const },
+   441→                    { label: 'GDP Growth', status: 'Q3: 2.1%', impact: 'medium' as const },
+   442→                    { label: 'Geopolitical', status: 'Stable', impact: 'low' as const },
+   443→                    { label: 'Market Sentiment', status: 'Risk-on', impact: 'medium' as const },
+   444→                  ].map((factor) => (
+   445→                    <div key={factor.label} className="p-2 rounded-lg bg-accent/50 border border-border">
+   446→                      <div className="flex items-center justify-between mb-0.5">
+   447→                        <span className="text-[11px] font-medium">{factor.label}</span>
+   448→                        <Badge
+   449→                          variant="outline"
+   450→                          className={`text-[9px] px-1 py-0 ${
+   451→                            factor.impact === 'high' ? 'border-red-500/50 text-red-500' :
+   452→                            factor.impact === 'medium' ? 'border-amber-500/50 text-amber-500' :
+   453→                            'border-slate-500/50 text-slate-500'
+   454→                          }`}
+   455→                        >
+   456→                          {factor.impact}
+   457→                        </Badge>
+   458→                      </div>
+   459→                      <div className="text-[10px] text-muted-foreground">{factor.status}</div>
+   460→                    </div>
+   461→                  ))}
+   462→                </div>
+   463→              </div>
+   464→
+   465→              {/* Expandable Full Analysis */}
+   466→              <div className="rounded-lg border border-border overflow-hidden">
+   467→                <button
+   468→                  onClick={() => setExpandedAnalysis(!expandedAnalysis)}
+   469→                  className="w-full flex items-center justify-between p-2.5 bg-accent/30 hover:bg-accent/50 transition-colors"
+   470→                >
+   471→                  <div className="flex items-center gap-2">
+   472→                    <BookOpen className="h-3.5 w-3.5 text-primary" />
+   473→                    <span className="text-xs font-medium">View Full Analysis</span>
+   474→                  </div>
+   475→                  {expandedAnalysis ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+   476→                </button>
+   477→                <AnimatePresence>
+   478→                  {expandedAnalysis && (
+   479→                    <motion.div
+   480→                      initial={{ height: 0, opacity: 0 }}
+   481→                      animate={{ height: 'auto', opacity: 1 }}
+   482→                      exit={{ height: 0, opacity: 0 }}
+   483→                      transition={{ duration: 0.3 }}
+   484→                      className="overflow-hidden"
+   485→                    >
+   486→                      <div className="p-3 space-y-3 text-[11px] text-muted-foreground leading-relaxed">
+   487→                        <p><span className="text-foreground font-medium">EUR/USD:</span> The pair is showing strong bullish momentum on the 5-minute timeframe. The EMA crossover strategy has triggered a buy signal with 82% confidence. Key support at 1.0850, resistance at 1.0920. MACD histogram is expanding positively, confirming the uptrend. RSI at 64, still below overbought territory.</p>
+   488→                        <p><span className="text-foreground font-medium">USD/JPY:</span> Range-bound conditions between 154.20 and 154.80. Pivot Points strategy is active. Stochastic oscillator at 45, suggesting neutral momentum. Watch for a breakout above 154.80 for potential long entry.</p>
+   489→                        <p><span className="text-foreground font-medium">GBP/USD:</span> Cable has broken above the 1.2700 resistance level with increased volume. The MA Ribbon shows all three moving averages aligned bullishly. However, be cautious of potential pullback to the 1.2680 support zone.</p>
+   490→                        <p><span className="text-foreground font-medium">XAU/USD:</span> Gold is experiencing elevated volatility due to Middle East tensions. The ATR has expanded to 18.5, well above its 20-period average. Momentum Scalping strategy is active but with reduced position sizes recommended. Key levels: Support $2,640, Resistance $2,690.</p>
+   491→                        <p><span className="text-foreground font-medium">Risk Assessment:</span> Today&apos;s risk profile is elevated due to the ECB meeting and NFP data release. Recommended to reduce position sizes by 25-30% and avoid holding positions through major news events. The correlation between EUR and USD pairs suggests potential for whipsaw movements.</p>
+   492→                      </div>
+   493→                    </motion.div>
+   494→                  )}
+   495→                </AnimatePresence>
+   496→              </div>
+   497→
+   498→              <Separator className="opacity-50" />
+   499→
+   500→              {/* Risk Considerations */}
+   501→              <div>
+   502→                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Risk Considerations</div>
+   503→                <div className="space-y-1.5">
+   504→                  {SYMBOLS.map((sym) => {
+   505→                    const condition = marketConditions[sym] || 'low_volatility';
+   506→                    const config = MARKET_CONDITION_CONFIG[condition];
+   507→                    return (
+   508→                      <div key={sym} className="flex items-start gap-2">
+   509→                        <ShieldAlert className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+   510→                        <div>
+   511→                          <span className="text-[11px] font-medium">{SYMBOL_INFO[sym].name}: </span>
+   512→                          <span className="text-[11px] text-muted-foreground">{config.riskConsiderations[0]}</span>
+   513→                        </div>
+   514→                      </div>
+   515→                    );
+   516→                  })}
+   517→                </div>
+   518→              </div>
+   519→
+   520→              <Separator className="opacity-50" />
+   521→
+   522→              {/* Strategy Recommendations */}
+   523→              <div>
+   524→                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Strategy Recommendations</div>
+   525→                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+   526→                  {SYMBOLS.map((sym) => {
+   527→                    const condition = marketConditions[sym] || 'low_volatility';
+   528→                    const config = MARKET_CONDITION_CONFIG[condition];
+   529→                    if (config.bestStrategies.length === 0) {
+   530→                      return (
+   531→                        <div key={sym} className="p-2 rounded-lg bg-slate-500/10 border border-slate-500/20">
+   532→                          <div className="text-[11px] font-medium text-slate-400">{SYMBOL_INFO[sym].name}</div>
+   533→                          <div className="text-[10px] text-slate-500">No recommended strategies - avoid trading</div>
+   534→                        </div>
+   535→                      );
+   536→                    }
+   537→                    return config.bestStrategies.map((strat) => (
+   538→                      <div key={`${sym}-${strat}`} className="p-2 rounded-lg bg-primary/5 border border-primary/20">
+   539→                        <div className="flex items-center justify-between">
+   540→                          <span className="text-[11px] font-medium">{SYMBOL_INFO[sym].name}</span>
+   541→                          <Badge variant="outline" className="text-[9px] px-1 py-0 border-primary/30 text-primary">
+   542→                            {STRATEGIES[strat].timeframe}
+   543→                          </Badge>
+   544→                        </div>
+   545→                        <div className="text-[11px] font-medium text-primary mt-0.5">{STRATEGIES[strat].label}</div>
+   546→                        <div className="text-[10px] text-muted-foreground">{STRATEGIES[strat].description}</div>
+   547→                      </div>
+   548→                    ));
+   549→                  })}
+   550→                </div>
+   551→              </div>
+   552→            </div>
+   553→          </div>
+   554→        </div>
+   555→
+   556→        {/* Signal History - Enhanced with confidence gauge, prices, R:R, copy, time ago */}
+   557→        <div className="glass-card-premium rounded-xl card-hover-lift">
+   558→          <div className="flex items-center gap-2 mb-3 pb-2 pt-3 px-4">
+   559→            <div className="flex items-center justify-between">
+   560→              <span className="text-sm font-semibold section-title-accent">Signal History</span>
+   561→              <Badge variant="outline" className="text-[10px]">{signals.length} total</Badge>
+   562→            </div>
+   563→          </div>
+   564→          <div className="px-4 pb-3">
+   565→            {signals.length === 0 ? (
+   566→              <div className="text-center py-8 text-muted-foreground text-sm">
+   567→                No signals generated yet
+   568→              </div>
+   569→            ) : (
+   570→              <ScrollArea className="h-[500px]">
+   571→                <div className="space-y-2">
+   572→                  {signals.map((signal) => (
+   573→                    <motion.div
+   574→                      key={signal.id}
+   575→                      initial={{ opacity: 0, x: 20 }}
+   576→                      animate={{ opacity: 1, x: 0 }}
+   577→                      className={`rounded-lg border border-l-4 ${
+   578→                        signal.direction === 'BUY' ? 'border-l-emerald-500 border-emerald-500/20 bg-emerald-500/5' :
+   579→                        signal.direction === 'SELL' ? 'border-l-red-500 border-red-500/20 bg-red-500/5' :
+   580→                        'border-l-slate-500 border-border bg-accent/30'
+   581→                      }`}
+   582→                    >
+   583→                      <div className="p-2.5">
+   584→                        <div className="flex items-center justify-between mb-1.5">
+   585→                          <div className="flex items-center gap-2">
+   586→                            {signal.direction === 'BUY' ? <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" /> :
+   587→                             signal.direction === 'SELL' ? <ArrowDownRight className="h-3.5 w-3.5 text-red-500" /> :
+   588→                             <Activity className="h-3.5 w-3.5 text-muted-foreground" />}
+   589→                            <span className="text-xs font-semibold">{signal.symbol}</span>
+   590→                            <Badge
+   591→                              className={`text-[9px] px-1.5 py-0 font-semibold ${
+   592→                                signal.direction === 'BUY' ? 'badge-glow-emerald bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+   593→                                signal.direction === 'SELL' ? 'badge-glow-red bg-red-500/20 text-red-400 border border-red-500/30' :
+   594→                                'bg-slate-500/20 text-slate-400 border border-slate-500/30'
+   595→                              }`}
+   596→                            >
+   597→                              {signal.direction}
+   598→                            </Badge>
+   599→                            {/* Strategy name badge with icon */}
+   600→                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-primary/30 text-primary">
+   601→                              <Zap className="h-2 w-2 mr-0.5" />
+   602→                              {STRATEGIES[signal.strategy]?.label || signal.strategy}
+   603→                            </Badge>
+   604→                          </div>
+   605→                          <div className="flex items-center gap-1.5">
+   606→                            {/* Confidence gauge */}
+   607→                            <div className="flex items-center gap-1">
+   608→                              <ConfidenceGauge confidence={signal.confidence} size={32} />
+   609→                              <div className={`text-xs font-bold tabular-nums ${getConfidenceColor(signal.confidence)}`}>
+   610→                                {signal.confidence}%
+   611→                              </div>
+   612→                            </div>
+   613→                            {signal.isExecuted && (
+   614→                              <Badge className="text-[8px] px-1 py-0 bg-primary/20 text-primary">EXEC</Badge>
+   615→                            )}
+   616→                          </div>
+   617→                        </div>
+   618→
+   619→                        {/* Entry / SL / TP prices */}
+   620→                        <div className="flex items-center gap-3 mb-1.5 text-[10px]">
+   621→                          <div className="flex items-center gap-1">
+   622→                            <Target className="h-2.5 w-2.5 text-muted-foreground" />
+   623→                            <span className="text-muted-foreground">Entry:</span>
+   624→                            <span className="tabular-nums font-medium">{signal.entryPrice.toFixed(SYMBOL_INFO[signal.symbol]?.digits || 5)}</span>
+   625→                          </div>
+   626→                          {signal.stopLoss && (
+   627→                            <div className="flex items-center gap-1">
+   628→                              <span className="text-muted-foreground">SL:</span>
+   629→                              <span className="tabular-nums font-medium text-red-400">{signal.stopLoss.toFixed(SYMBOL_INFO[signal.symbol]?.digits || 5)}</span>
+   630→                            </div>
+   631→                          )}
+   632→                          {signal.takeProfit && (
+   633→                            <div className="flex items-center gap-1">
+   634→                              <span className="text-muted-foreground">TP:</span>
+   635→                              <span className="tabular-nums font-medium text-emerald-400">{signal.takeProfit.toFixed(SYMBOL_INFO[signal.symbol]?.digits || 5)}</span>
+   636→                            </div>
+   637→                          )}
+   638→                          {signal.riskReward && (
+   639→                            <Badge variant="outline" className="text-[9px] px-1 py-0 border-amber-500/30 text-amber-400">
+   640→                              R:R {signal.riskReward.toFixed(1)}
+   641→                            </Badge>
+   642→                          )}
+   643→                        </div>
+   644→
+   645→                        <div className="flex items-center justify-between">
+   646→                          <span className="text-[10px] text-muted-foreground">{signal.strategy} • {MARKET_CONDITION_CONFIG[signal.marketCondition].label}</span>
+   647→                          <div className="flex items-center gap-2">
+   648→                            {/* Time ago with clock icon */}
+   649→                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+   650→                              <Clock className="h-2.5 w-2.5" />
+   651→                              {timeAgo(signal.createdAt)}
+   652→                            </div>
+   653→                            {/* Detail button */}
+   654→                            <Tooltip>
+   655→                              <TooltipTrigger asChild>
+   656→                                <button
+   657→                                  onClick={() => { setSelectedSignal(signal); setSignalModalOpen(true); }}
+   658→                                  className="p-0.5 rounded hover:bg-accent transition-colors"
+   659→                                >
+   660→                                  <Eye className="h-3 w-3 text-muted-foreground hover:text-primary" />
+   661→                                </button>
+   662→                              </TooltipTrigger>
+   663→                              <TooltipContent side="left">
+   664→                                <span className="text-[10px]">View Details</span>
+   665→                              </TooltipContent>
+   666→                            </Tooltip>
+   667→                            {/* Copy analysis button */}
+   668→                            {signal.aiAnalysis && (
+   669→                              <Tooltip>
+   670→                                <TooltipTrigger asChild>
+   671→                                  <button
+   672→                                    onClick={() => handleCopy(signal.aiAnalysis!, signal.id)}
+   673→                                    className="p-0.5 rounded hover:bg-accent transition-colors"
+   674→                                  >
+   675→                                    {copiedId === signal.id ? (
+   676→                                      <svg className="h-3 w-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+   677→                                    ) : (
+   678→                                      <Copy className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+   679→                                    )}
+   680→                                  </button>
+   681→                                </TooltipTrigger>
+   682→                                <TooltipContent side="left">
+   683→                                  <span className="text-[10px]">{copiedId === signal.id ? 'Copied!' : 'Copy Analysis'}</span>
+   684→                                </TooltipContent>
+   685→                              </Tooltip>
+   686→                            )}
+   687→                          </div>
+   688→                        </div>
+   689→                        {signal.aiAnalysis && (
+   690→                          <div className="mt-1.5 text-[10px] text-muted-foreground line-clamp-2">
+   691→                            {signal.aiAnalysis}
+   692→                          </div>
+   693→                        )}
+   694→                      </div>
+   695→                    </motion.div>
+   696→                  ))}
+   697→                </div>
+   698→              </ScrollArea>
+   699→            )}
+   700→          </div>
+   701→        </div>
+   702→      </div>
+   703→
+   704→      {/* Multi-Timeframe Analysis */}
+   705→      <MultiTimeframePanel />
+   706→
+   707→      {/* Strategy Reference Grid */}
+   708→      <div className="glass-card-premium rounded-xl card-hover-lift">
+   709→        <div className="flex items-center gap-2 mb-3 pb-2 pt-3 px-4">
+   710→          <div className="flex items-center gap-2">
+   711→            <Award className="h-4 w-4 text-primary" />
+   712→            <span className="text-sm font-semibold section-title-accent">Strategy Reference</span>
+   713→          </div>
+   714→        </div>
+   715→        <div className="px-4 pb-4">
+   716→          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+   717→            {(Object.keys(STRATEGIES) as StrategyName[]).map((strat, idx) => {
+   718→              const s = STRATEGIES[strat];
+   719→              const cat = strategyCategories[strat];
+   720→              return (
+   721→                <motion.div
+   722→                  key={strat}
+   723→                  initial={{ opacity: 0, y: 10 }}
+   724→                  animate={{ opacity: 1, y: 0 }}
+   725→                  transition={{ delay: idx * 0.03 }}
+   726→                >
+   727→                  <div className={`p-3 rounded-lg border ${cat.color}`}>
+   728→                    <div className="flex items-center justify-between mb-1.5">
+   729→                      <span className="text-xs font-semibold">{s.label}</span>
+   730→                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-border text-muted-foreground">
+   731→                        {s.timeframe}
+   732→                      </Badge>
+   733→                    </div>
+   734→                    <p className="text-[10px] text-muted-foreground mb-2 line-clamp-2">{s.description}</p>
+   735→                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Best Conditions</div>
+   736→                    <div className="flex flex-wrap gap-1">
+   737→                      {s.bestMarketCondition.map((mc) => (
+   738→                        <Badge key={mc} variant="secondary" className="text-[9px] px-1.5 py-0">
+   739→                          {MARKET_CONDITION_CONFIG[mc].label}
+   740→                        </Badge>
+   741→                      ))}
+   742→                    </div>
+   743→                    <div className="mt-2 text-[9px] text-muted-foreground">
+   744→                      <span className="text-foreground/70">Indicators:</span>{' '}
+   745→                      <span className="line-clamp-1">{s.indicators.join(', ')}</span>
+   746→                    </div>
+   747→                  </div>
+   748→                </motion.div>
+   749→              );
+   750→            })}
+   751→          </div>
+   752→        </div>
+   753→      </div>
+   754→
+   755→      {/* Signal Detail Modal */}
+   756→      <SignalDetailModal
+   757→        signal={selectedSignal}
+   758→        open={signalModalOpen}
+   759→        onOpenChange={setSignalModalOpen}
+   760→      />
+   761→    </div>
+   762→    </TooltipProvider>);
+   763→}

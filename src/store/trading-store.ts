@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { PriceTick, Trade, TradingSignal, NewsItem, EconomicEvent, RiskSettings, BacktestResult, Symbol, MarketCondition, IndicatorConfig } from '@/lib/types';
-import { SYMBOLS } from '@/lib/types';
+import { SYMBOLS, SYMBOL_INFO } from '@/lib/types';
 import { playSound } from '@/lib/sounds';
 
 // Trade Journal types
@@ -194,7 +194,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       get().addNotification({ type: 'warning', title: 'Position Limit', message: `Maximum ${riskSettings.maxSimultaneousPositions} simultaneous positions reached.` });
       return;
     }
-    set({ openTrades: [...openTrades, trade] });
+    set({ openTrades: [...openTrades, trade], todayTradeCount: get().todayTradeCount + 1 });
     playSound('trade_open');
     get().addNotification({ type: 'success', title: 'Trade Opened', message: `${trade.direction} ${trade.symbol} @ ${trade.entryPrice}` });
   },
@@ -206,12 +206,17 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   closeTrade: (id) => {
     const trade = get().openTrades.find(t => t.id === id);
     if (trade) {
+      const profit = trade.profit || 0;
       set({
         openTrades: get().openTrades.filter(t => t.id !== id),
         closedTrades: [{ ...trade, status: 'closed' as const, closedAt: new Date().toISOString() }, ...get().closedTrades],
       });
+      // Update balance, equity, totalPnl, and risk tracking
+      get().updateAccountPnl(profit);
+      const riskUsed = Math.abs(profit) > 0 ? Math.max(0, get().riskSettings.riskPerTrade * get().balance / 100) : 0;
+      set({ todayRiskUsed: get().todayRiskUsed + riskUsed });
       playSound('trade_close');
-      get().addNotification({ type: 'info', title: 'Trade Closed', message: `${trade.symbol} ${trade.direction} closed at ${trade.currentPrice} (P&L: $${trade.profit.toFixed(2)})` });
+      get().addNotification({ type: profit >= 0 ? 'success' : 'warning', title: profit >= 0 ? 'Trade Closed (Profit)' : 'Trade Closed (Loss)', message: `${trade.symbol} ${trade.direction} closed at ${trade.currentPrice?.toFixed(SYMBOL_INFO[trade.symbol as keyof typeof SYMBOL_INFO]?.digits ?? 4)} (P&L: $${profit.toFixed(2)})` });
     }
   },
 

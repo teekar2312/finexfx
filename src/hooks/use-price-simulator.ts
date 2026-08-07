@@ -346,6 +346,7 @@ export function usePriceSimulator() {
       const allPrices = s.prices;
       const trades = s.openTrades;
 
+      const tradesToClose: string[] = [];
       const updatedTrades = trades.map((trade) => {
         const price = allPrices[trade.symbol];
         if (!price) return trade;
@@ -356,12 +357,29 @@ export function usePriceSimulator() {
         const pips = trade.direction === 'BUY'
           ? (currentPrice - trade.entryPrice) / pipSize
           : (trade.entryPrice - currentPrice) / pipSize;
-        const profit = pips * trade.lotSize * pipMultiplier / pipSize * pipSize;
+        const profit = pips * trade.lotSize * pipMultiplier * pipSize;
+
+        // SL/TP auto-close check
+        const hitSL = trade.direction === 'BUY'
+          ? currentPrice <= trade.stopLoss
+          : currentPrice >= trade.stopLoss;
+        const hitTP = trade.direction === 'BUY'
+          ? currentPrice >= trade.takeProfit
+          : currentPrice <= trade.takeProfit;
+
+        if (hitSL || hitTP) {
+          tradesToClose.push(trade.id);
+        }
 
         return { ...trade, currentPrice, pips, profit };
       });
 
       s.setOpenTrades(updatedTrades);
+
+      // Auto-close trades that hit SL/TP
+      for (const id of tradesToClose) {
+        s.closeTrade(id);
+      }
     }, 500);
 
     return () => {
