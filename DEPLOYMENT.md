@@ -261,7 +261,7 @@ Create `.vscode/settings.json` in the project root:
   },
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "typescript.tsdk": "node_modules/typescript/lib",
-  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
   "tailwindCSS.classAttributes": [
     "className",
     "class"
