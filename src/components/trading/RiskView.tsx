@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Shield, Calculator, DollarSign, Target, Zap, CheckCircle, ArrowRight } from 'lucide-react';
+import PositionSizeCalculator from './PositionSizeCalculator';
 import { SYMBOLS } from '@/lib/types';
 import { motion } from 'framer-motion';
 
@@ -518,8 +519,11 @@ export default function RiskView() {
                 </Badge>
               </motion.div>
             ))}
-          </div>
+        </div>
       </div>
+
+      {/* Position Size Calculator & Tools */}
+      <PositionSizeCalculator />
     </div>
   );
 }

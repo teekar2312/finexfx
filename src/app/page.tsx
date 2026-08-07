@@ -17,6 +17,7 @@ import PerformanceAnalyticsView from '@/components/trading/PerformanceAnalyticsV
 import SettingsView from '@/components/trading/SettingsView';
 import QuickTradePanel from '@/components/trading/QuickTradePanel';
 import KeyboardShortcutsHelp from '@/components/trading/KeyboardShortcutsHelp';
+import OnboardingTour from '@/components/trading/OnboardingTour';
 import Footer from '@/components/trading/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
@@ -332,6 +333,9 @@ export default function TradingDashboard() {
 
       {/* Keyboard Shortcuts Help Overlay */}
       <KeyboardShortcutsHelp isOpen={showShortcutsHelp} onClose={() => setShowShortcutsHelp(false)} />
+
+      {/* Onboarding Tour */}
+      <OnboardingTour />
     </div>
   );
 }

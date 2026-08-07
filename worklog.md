@@ -3037,3 +3037,142 @@ Stage Summary:
 - **7 API route `any` types eliminated**
 - **6 CSS duplicate keyframes removed**
 - **Total: 13 files modified, 84 insertions, 67 deletions**
+
+---
+Task ID: 9-a
+Agent: full-stack-developer (subagent)
+Task: Create Position Size Calculator + Pip Calculator + R:R Visualizer + Swap Calculator
+
+Work Log:
+- Read worklog.md, types.ts, and trading-store.ts to understand project context and existing type/store structure
+- Created /src/components/trading/PositionSizeCalculator.tsx as standalone 'use client' component with 4 tabs
+- **Tab 1 (Position Size)**: Calculates recommended lot size from account balance, risk %, SL pips, and currency pair. Shows lot size, risk amount, pip value per lot, margin required, and R:R ratio when TP pips entered. Uses SYMBOL_INFO.pipSize, BROKER_CONFIG.leverage, and contract sizes for accurate calculations.
+- **Tab 2 (Pip Value)**: Input pair, lot size, and pip movement. Outputs pip value in USD per lot and total P&L for the movement. Handles EURUSD/GBPUSD (USD quote), USDJPY (approx JPY conversion), and XAUUSD (metal) correctly.
+- **Tab 3 (Risk/Reward)**: Horizontal bar visualization with red SL zone and green TP zone, animated entry point marker using framer-motion. Shows dollar amounts for risk/reward, R:R ratio in large font, and minimum break-even win rate.
+- **Tab 4 (Swap)**: Displays all 4 pairs' long/short swap rates in a table. Calculates estimated daily/weekly/monthly swap cost based on lot size and days held. Shows separate long and short position cards with breakdown.
+- Added quick risk presets (1%, 2%, 3%, 5%) as clickable chips in Position Size tab
+- All numeric inputs clamped to safe ranges with `parseNum`/`clamp` utility functions
+- Uses shadcn/ui Tabs, Select, Input, Label, Button, Card, Separator components
+- Uses framer-motion for all tab transitions, result animations, and the R:R bar chart
+- Uses Lucide icons: Calculator, Target, DollarSign, ArrowRight, Percent, TrendingUp, TrendingDown, Info, Clock, AlertTriangle, Zap
+- Styled with glass-card-premium class, font-mono for numbers, text-xs/text-muted-foreground for labels
+- ESLint passes with zero errors
+
+Stage Summary:
+- Created single file: /src/components/trading/PositionSizeCalculator.tsx (~630 lines)
+- Component exports as default, 'use client' directive, properly typed
+- 4-tab layout: Position Size | Pip Value | Risk/Reward | Swap
+- All calculations use SYMBOL_INFO.pipSize, BROKER_CONFIG.leverage from @/lib/types
+- Zero lint errors confirmed
+
+---
+Task ID: 9-b
+Agent: full-stack-developer (subagent)
+Task: Create Drawdown Chart + Equity Curve wired to live store data
+
+Work Log:
+- Read worklog.md, types.ts, and trading-store.ts to understand project context and existing type/store structure
+- Created /src/components/trading/DrawdownChart.tsx as standalone 'use client' component
+- **Equity Curve Chart**: Recharts AreaChart wired to real `closedTrades` from Zustand store via individual selector. Builds equity curve from initial balance ($10,000) adding each trade's profit sequentially. Includes starting point. X-axis uses formatted closedAt date strings. Peak equity shown as dashed stepAfter line. Emerald-to-red vertical gradient fill (green above ~midpoint, red below).
+- **Drawdown Chart**: Separate AreaChart below equity curve. Calculates drawdown = (peak - equity) / peak * 100. Y-axis domain reversed ([max, 0]) so 0% at top. Red gradient fill (transparent at 0%, deeper red at max). Reference lines at -5% (amber), -10% (orange), -20% (red) conditionally rendered based on domain.
+- **Key Metrics Cards**: 5-card grid (2-col mobile, 5-col desktop): Max Drawdown ($), Max Drawdown (%), Current Drawdown, Recovery Factor (total profit / max drawdown $), Longest DD Streak (consecutive losing trades). All calculated from real closedTrades.
+- **Timeframe Filter**: Today / This Week / This Month / All Time buttons filtering closedTrades by closedAt date range. Monday-start week calculation.
+- **Empty State**: Styled empty state with TrendingDown icon and exact message 'No closed trades yet. Complete trades to see your equity curve.' when no closed trades exist.
+- **Sub-components memoized**: MetricCard, EquityTooltip, DrawdownTooltip, TimeframeButton all wrapped with React.memo.
+- **Performance**: useMemo for filteredTrades, equityData, drawdownData, equityDomain, drawdownDomain, and metrics. Individual Zustand selector `useTradingStore((s) => s.closedTrades)`.
+- **Styling**: glass-card-premium class, framer-motion staggered entry (container/item variants), Lucide icons (TrendingDown, Activity, DollarSign, Clock, ArrowRight), font-mono for numbers, text-xs labels, custom tooltips with glass-card-premium style.
+- ESLint passes with zero errors.
+
+Stage Summary:
+- Created single file: /src/components/trading/DrawdownChart.tsx (~290 lines)
+- Component exports as default, 'use client' directive, fully typed
+- Two charts: Equity Curve (AreaChart with gradient) + Drawdown (AreaChart with red gradient, reversed Y-axis)
+- 5 key metric cards calculated from live store data
+- Timeframe filtering (Today/Week/Month/All)
+- Empty state with icon and descriptive message
+- Zero lint errors confirmed
+
+---
+Task ID: 9-c
+Agent: full-stack-developer (subagent)
+Task: Create Enhanced Alert Panel with creation/management UI
+
+Work Log:
+- Read /src/lib/types.ts to understand Symbol, SYMBOL_INFO, PriceTick types
+- Read /src/store/trading-store.ts to understand priceAlerts array type, addPriceAlert/removePriceAlert action signatures
+- Confirmed store alert type: { id: string; symbol: Symbol; condition: string; price: number; isActive: boolean; message?: string }
+- Created /src/components/trading/EnhancedAlertPanel.tsx with all 6 required features:
+  1. Create Alert Form: Symbol selector (4 pairs), Condition type (4 options), Target price input with current price display, Optional note field
+  2. Active Alerts List: Reads priceAlerts from store via individual selector, shows pair/condition/target/current/distance in pips/created time, color-coded distance (green/amber/red), pulsing dot within 5 pips
+  3. Quick Alert Buttons: 7 pre-configured quick-set buttons with realistic price levels (EURUSD, USDJPY, GBPUSD, XAUUSD)
+  4. Alert History: Local state TriggeredAlert[] with triggered timestamp and price, shown in amber-tinted cards
+  5. Delete Alert: Trash2 button on each alert card calling store removePriceAlert
+  6. Styling: glass-card-premium class, framer-motion AnimatePresence for list animations, Lucide icons (Bell, BellRing, Plus, Trash2, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Clock), shadcn/ui components, text-xs/text-muted-foreground/font-mono, color-coded condition badges
+- Used Zustand subscribe() pattern for alert triggering to satisfy react-hooks/set-state-in-effect lint rule
+- Fixed multiple lint iterations: unused imports, unused eslint-disable directive, setState-in-effect, ref-during-render
+- Final lint: 0 errors, 0 warnings
+
+Stage Summary:
+- Created single file: /src/components/trading/EnhancedAlertPanel.tsx (~590 lines)
+- Component exports as default, 'use client' directive, fully typed
+- Alert creation form with symbol/condition/price/note inputs
+- Active alerts list with distance-to-target calculation, color coding, and pulsing proximity indicator
+- 7 quick-set alert buttons for common scenarios
+- Triggered alert history with local state management
+- Individual alert deletion via store action
+- Zero lint errors confirmed
+
+---
+Task ID: 9-d
+Agent: full-stack-developer (subagent)
+Task: Create Onboarding Tour for first-time users
+
+Work Log:
+- Created `/src/components/trading/OnboardingTour.tsx` as standalone 'use client' component
+- Implemented 7-step guided tour: Welcome, Dashboard, Trading, Analysis, Risk Management, Quick Trade Panel, Complete
+- Each step has a dedicated Lucide icon (PartyPopper, LayoutDashboard, CandlestickChart, LineChart, Shield, Zap, HelpCircle) in emerald 56x56 container
+- Full-screen overlay with `bg-black/70 backdrop-blur-sm` and `glass-card-premium` card styling
+- Navigation: Next/Back/Skip using shadcn/ui Button; last step shows "Get Started"
+- Animated progress bar at top of card using framer-motion
+- Step indicator dots and "Step X of 7" counter
+- Card entrance/exit with spring-physics scale+fade; direction-aware step slide transitions
+- localStorage persistence via key `finex-onboarding-complete`
+- Floating "Tour" button (bottom-right) appears after completion for re-access
+- Exported `useOnboardingTour` hook: `{ showTour, setShowTour, isTourComplete, resetTour }`
+- Default export: `OnboardingTour` component
+- Zero lint errors confirmed
+
+Stage Summary:
+- Multi-step onboarding tour with framer-motion animations, glass-morphism card, emerald accent, and localStorage persistence
+- Shared state pattern keeps hook and component in sync without prop drilling
+- Floating re-tour button and `resetTour` function allow easy re-access from parent components
+
+---
+Task ID: 9-e
+Agent: full-stack-developer (subagent)
+Task: Create Trade Replay / Simulation Mode
+
+Work Log:
+- Read /src/lib/types.ts and /src/store/trading-store.ts to understand PriceHistory type, Symbol type, SYMBOL_INFO, and Zustand store structure
+- Read existing components (PriceChart.tsx, select.tsx, slider.tsx, badge.tsx) to follow project patterns
+- Created /src/components/trading/TradeReplay.tsx as a standalone `use client` component with:
+  - Pair selector (EURUSD/USDJPY/GBPUSD/XAUUSD) using shadcn Select
+  - Full controls bar: Play/Pause (animated icon swap), Step Forward, Step Backward, Speed selector (0.5x-10x), progress Slider, Reset button — all using Lucide icons (Play, Pause, SkipForward, SkipBack, RotateCcw, Gauge)
+  - Recharts LineChart showing price history up to current replay position with emerald/red coloring, gradient fill, and active dot highlighting
+  - Glass-card tooltip showing OHLC values on hover
+  - ReferenceLine showing entry price when a practice trade is active
+  - Practice trading: Buy/Sell buttons to open hypothetical trades, live P&L + pips display, Close Trade button to record results
+  - Statistics panel: Total trades, Win rate, Total P&L, Best/Worst trade, Average hold time — all in font-mono with emerald/red color coding
+  - Practice trade history list with animated entries showing direction, entry/exit prices, P&L, pips, and hold duration
+  - End-of-replay warning banner
+  - "Wait for price data to accumulate" empty state with rotating BarChart3 icon
+- Used individual Zustand selector for priceHistory (not full store) via useCallback selector
+- Used useRef for replay timer, isPlaying, speed, and currentIndex to avoid re-render issues
+- Used useCallback for all handlers (play/pause, step, slider, reset, speed, symbol change, open/close trade)
+- Fixed lint errors: removed conditional useMemo call (moved before early return), moved symbol-change reset from useEffect to handleSymbolChange callback
+- Zero lint errors confirmed
+
+Stage Summary:
+- Created TradeReplay.tsx at /src/components/trading/TradeReplay.tsx
+- Standalone `use client` component with default export
+- All 9 requirements met: replay mode, controls bar, price chart, practice mode, statistics panel, pair selector, glass-card-premium styling, performance optimizations, zero lint errors

@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { TrendingUp, Calendar, Clock, DollarSign, Target, Award, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import PerformanceScorecard from './PerformanceScorecard';
+import DrawdownChart from './DrawdownChart';
 
 type Timeframe = 'today' | 'week' | 'month' | 'all';
 
@@ -774,6 +775,9 @@ export default function PerformanceAnalyticsView() {
           </div>
         </motion.div>
       </div>
+
+      {/* Live Drawdown Chart */}
+      <DrawdownChart />
 
       {/* Key Metrics Table */}
       <motion.div variants={item} className="glass-card card-hover rounded-lg p-4">

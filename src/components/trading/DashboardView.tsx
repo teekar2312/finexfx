@@ -16,6 +16,7 @@ import ActivityFeed from './ActivityFeed';
 import SessionOverlapScanner from './SessionOverlapScanner';
 import MarketHeatmap from './MarketHeatmap';
 import TradingPsychologyPanel from './TradingPsychologyPanel';
+import EnhancedAlertPanel from './EnhancedAlertPanel';
 
 // Deterministic pseudo-random number generator (stable across renders)
 function seededRandom(seed: number) {
@@ -970,6 +971,9 @@ export default function DashboardView() {
           </div>
         </div>
       </div>
+
+      {/* Price Alerts & Notifications */}
+      <EnhancedAlertPanel />
     </div>
   );
 }

@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, RefreshCw, LineChart as LineChartIcon, TrendingUp, TrendingDown, DollarSign, Activity, Zap, Target, Shield, BarChart3, Clock, ArrowUpRight, ArrowDownRight, History } from 'lucide-react';
+import TradeReplay from './TradeReplay';
 
 // Stagger animation variants
 const containerVariants = {
@@ -648,6 +649,9 @@ export default function BacktestingView() {
           </div>
         </div>
       )}
+
+      {/* Trade Replay Mode */}
+      <TradeReplay />
     </div>
   );
 }
