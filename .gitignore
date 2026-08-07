@@ -44,11 +44,21 @@ local-*
 .claude
 .z-ai-config
 *.log
-dev.log
-dev.out.log
-test
-prompt
 
-server.log
+# Agent tool output & temp files
+tool-results/
+agent-ctx/
+download/
+
+# QA screenshots (generated during development)
+qa*.png
+qa2*.png
+qa3*.png
+screenshot*.png
+
+# Examples & test scripts
+examples/
+tests/
+
 # Skills directory
 /skills/
