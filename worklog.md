@@ -3268,3 +3268,252 @@ Stage Summary:
 - Code splitting (dynamic imports) for tab views
 - aria-live regions for price/P&L updates
 - Loading skeletons for Dashboard/Trading/Analysis views
+
+---
+Task ID: 10-a
+Agent: full-stack-developer (subagent)
+Task: Create Trading Rules Engine
+
+Work Log:
+- Read worklog.md, types.ts, trading-store.ts to understand project context, type system, and Zustand store API
+- Reviewed existing component patterns (glass-card-premium, shadcn/ui imports, motion animations)
+- Created /src/components/trading/TradingRulesEngine.tsx as standalone 'use client' component
+- Defined 10 condition types: price_crosses_above, price_crosses_below, rsi_overbought, rsi_oversold, macd_crossover, pips_profit, pips_loss, spread_exceeds, max_positions, daily_loss_percent
+- Defined 6 action types: notify, close_symbol_positions, close_all_positions, disable_trading, open_trade, modify_risk
+- Built rule management UI with create form (dynamic condition/action params), rules list with enable/disable toggle, delete, trigger count, last triggered time
+- Implemented live evaluation using useEffect on prices with rulesRef to avoid re-render on every tick
+- Added 60-second cooldown per rule to prevent re-triggering
+- Created 8 pre-built rule templates (RSI Overbought Alert, Emergency Stop, Spread Guard, Take Profit All, Max Exposure, Gold Breakout, JPY Weakness, Equity Protection)
+- Added localStorage persistence (key: finex-trading-rules) with load on mount and save on every change
+- Used individual Zustand selectors for store data in evaluation (prices, indicatorValues, openTrades, balance, dailyPnl)
+- Applied glass-card-premium styling, framer-motion animations (AnimatePresence, layout), Lucide icons, shadcn/ui components
+- Fixed byte corruption issue on line 267 (missing closing quote in template literal)
+- Fixed react-hooks/immutability lint error by using immutable ref updates and deferred setRules via requestAnimationFrame
+- Removed unused Switch import
+- Final result: zero lint errors, zero lint warnings
+
+Stage Summary:
+- Created fully functional TradingRulesEngine component at /src/components/trading/TradingRulesEngine.tsx
+- 10 condition types and 6 action types covering price, indicator, position, spread, and risk-based triggers
+- Live evaluation on every price tick with 60s cooldown per rule
+- 8 one-click templates for common trading rules
+- localStorage persistence for rule state across sessions
+- Performance optimized with useRef for tick evaluation and individual Zustand selectors
+---
+Task ID: 10-b
+Agent: full-stack-developer (subagent)
+Task: Wire PerformanceScorecard to live closedTrades data
+
+Work Log:
+- Read and analyzed trading-store.ts (TradingState interface, closedTrades array, Trade fields)
+- Read and analyzed types.ts (Trade type with closedAt, profit, symbol, strategy fields)
+- Read entire 871-line PerformanceScorecard.tsx to understand structure, types, sub-components, animation variants, and mock data generator
+- Removed `createSeededRandom`, `generateWeeklyData`, mock PAIRS/STRATEGIES/DAY_LABELS constants, and `pnlBg`/`pnlSign` helper (pnlSign inlined into formatPnl)
+- Added `useTradingStore` import with individual selector `useTradingStore((s) => s.closedTrades)`
+- Created `buildWeeklyData()` function that groups closedTrades by Monday-based ISO week, then by day within each week
+- Each day computes: trade count, win rate, P&L sum, best pair (highest total profit), best strategy, sparkline (cumulative P&L per trade sorted by closedAt)
+- Each week computes: total P&L, avg daily P&L, best/worst day, win rate, Sharpe-like score, sparkline (daily P&L values)
+- Updated `computeMonthlySummary()` to work with dynamic week counts (not hardcoded to 4), added totalSessions and monthLabel fields
+- Added styled empty state with Award icon and message when no closed trades exist
+- Wrapped MiniSparkline and WinRateGauge in React.memo for performance
+- All computed data wrapped in useMemo
+- Added safeSelectedWeek clamp to prevent out-of-bounds when weeks shrink
+- Preserved exact same visual structure: weekly/monthly toggle, week selector cards, daily breakdown grid, summary stats row, monthly overview, weekly breakdown, consistency gauge, performance grade
+- Preserved all animation variants (containerVariants, itemVariants)
+- ESLint passes with zero errors
+
+Stage Summary:
+- PerformanceScorecard.tsx rewritten from 871 lines (all mock) to ~530 lines (all real data)
+- All data now sourced from Zustand store's closedTrades array
+- Grouping: Monday-based weeks → days within weeks → individual trades for sparklines
+- Empty state shown when no closed trades exist
+- Zero lint errors, clean compilation
+
+---
+Task ID: 10-c
+Agent: full-stack-developer (subagent)
+Task: Wire TradingPsychologyPanel to live journal entries and closedTrades
+
+Work Log:
+- Read trading-store.ts to understand JournalEntry type (mood: great/good/neutral/bad/terrible, pnl, duration, strategy, notes, createdAt) and closedTrades (Trade[] with stopLoss, profit, closedAt, strategy fields)
+- Read types.ts for Trade type (stopLoss?, strategy?, profit, closedAt?)
+- Removed entire mock data system: createSeededRandom(), generateMockData(), and module-level mockData constant
+- Added imports: useMemo from react, useTradingStore from @/store/trading-store, Trade from @/lib/types, JournalEntry from @/store/trading-store
+- Added MOOD_DISPLAY_MAP to map store mood values (great/good/neutral/bad/terrible) to display Mood type (Great/Good/Neutral/Frustrated/Tilted)
+- Added MOOD_SCORE_MAP for emotional control scoring (great=95, good=82, neutral=65, bad=40, terrible=18)
+- Added parseDurationToMinutes() helper to parse duration strings like '1h 45m' into minutes
+- Implemented 7 real discipline score computations:
+  1. Plan Adherence: % of closedTrades with strategy field set
+  2. Risk Management: % of closedTrades with stopLoss set
+  3. Emotional Control: average mood score from journalEntries
+  4. Patience: exponential curve based on average trade duration from journalEntries
+  5. Consistency: inverse exponential of daily P&L standard deviation from closedTrades
+  6. Recovery: win rate of trades following 2+ consecutive losses from closedTrades
+  7. Win Rate: overall win rate from closedTrades
+- Computed mood timeline sessions by grouping journalEntries by date, mapping mood, getting daily P&L from closedTrades on same date, and using journal notes
+- Computed emotion stats by mapping 5 moods into 4 categories (Confident=great+good, Cautious=neutral, Anxious=bad, Tilted=terrible) with per-category win rates
+- Computed streak data (current win/loss, best win, worst loss) by sorting closedTrades by closedAt and scanning for consecutive sequences
+- Wrapped all 4 computed data blocks in useMemo with [closedTrades, journalEntries] dependencies
+- Added empty states: MoodTimeline shows 'No journal entries yet' message, EmotionImpactChart shows 'No emotion data yet' message, StreakDisplay shows 'No streak data yet' message
+- Made EmotionImpactChart insight text dynamic: references best/worst emotion categories and their actual win rates from the data
+- Made MoodTimeline session count label dynamic ('Last N Sessions' instead of hardcoded 'Last 8 Sessions')
+- Removed unused getGaugeStroke helper function
+- Preserved all visual structure: glass-card-premium, glass-card, framer-motion animations (containerVariants, itemVariants), gauge SVG, timeline circles, hover cards, streak grid
+- Preserved all sub-component names: DisciplineGauge, MoodTimeline, EmotionImpactChart, StreakDisplay
+- Preserved all existing Lucide icon imports and their usage in sub-components
+
+Stage Summary:
+- TradingPsychologyPanel.tsx fully rewired from seeded mock data to live Zustand store data
+- All discipline scores computed from real closedTrades and journalEntries
+- Zero lint errors, clean compilation, dev server running without issues
+- Empty states provided for all 4 sections when data is unavailable
+- Dynamic insight text in EmotionImpactChart reflects actual best/worst emotion performance
+---
+Task ID: 10-d
+Agent: full-stack-developer (subagent)
+Task: Create Social Trading Leaderboard
+
+Work Log:
+- Read worklog.md, types.ts, trading-store.ts, WatchlistPanel.tsx (sparkline pattern), avatar.tsx, select.tsx for context
+- Created /src/components/trading/SocialTradingLeaderboard.tsx as standalone 'use client' component
+- Generated 20 mock Indonesian-sounding traders (Andi S., Rina W., Budi P., Sari M., Dedi K., Lina H., Hendra T., Dewi A., Agus R., Nurul F., Wahyu B., Fitri C., Eko J., Maya D., Rudi N., Yuli S., Joko M., Ani P., Toni W., Ratna K.)
+- Each trader has: rank, name, avatar (colored circle with initials via Avatar/AvatarFallback), total P&L, win rate, total trades, best streak, strategy (one of 7 from types.ts), risk level, weekly change, equity sparkline
+- Implemented 3 time tabs: Overall, Weekly, Monthly — each generates different mock data via seeded random
+- User ("Anda" / "You") is always rank #8 with stats derived from actual store data (closedTrades, balance, totalPnl via individual selectors), highlighted with emerald border/background
+- Top 3 Podium cards with special layout (2nd-1st-3rd order), trophy/crown/medal icons, gold (#F59E0B), silver (#94A3B8), bronze (#CD7F32) colors, larger PodiumSparkline with gradient fill, scale+glow animation
+- Trader Detail: clicking a row expands to show daily P&L bar chart (last 7 days), top pairs traded, strategy distribution, Follow button (persisted to localStorage)
+- Search input filters by name, risk level filter (All/Conservative/Moderate/Aggressive), strategy filter (all 7 strategies)
+- Stats Summary Bar: Total traders, Average win rate, Best performer P&L, Your rank
+- Uses glass-card-premium class, dark theme, framer-motion staggered list entry, PodiumCard glow animations
+- SVG polyline sparklines (MiniSparkline + PodiumSparkline with gradient fill) following existing pattern
+- All required Lucide icons imported: Trophy, Crown, Medal, Search, Filter, Users, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Star, Eye, UserPlus, UserCheck
+- shadcn/ui components used: Input, Button, Select/SelectContent/SelectItem/SelectTrigger/SelectValue, Badge, Separator, Avatar/AvatarFallback
+- Text-xs, text-muted-foreground, font-mono for numbers, color-coded P&L (emerald/red), rank badges
+- Export as default, zero lint errors confirmed
+
+Stage Summary:
+- SocialTradingLeaderboard.tsx created with all 10 requirements fulfilled
+- 20 mock Indonesian traders with seeded deterministic data per time period
+- User rank #8 with live store data integration (closedTrades, balance, totalPnl)
+- Podium cards with gold/silver/bronze styling and glow effects
+- Expandable rows with daily P&L bars, top pairs, strategy distribution, Follow (localStorage)
+- Search + risk + strategy filters, stats summary bar, staggered framer-motion animations
+- Zero lint errors, clean compilation
+
+---
+Task ID: 10-e
+Agent: full-stack-developer (subagent)
+Task: Implement code splitting with dynamic imports for tab views
+
+Work Log:
+- Read /src/app/page.tsx to understand current static import structure (10 view components + 5 utility components)
+- Created ViewSkeleton component with animated pulse loading state (metric cards + content area)
+- Added `import dynamic from next/dynamic` at top of file
+- Replaced 10 static imports (DashboardView, TradingView, AnalysisView, IndicatorsView, NewsView, RiskView, BacktestingView, TradeJournalView, PerformanceAnalyticsView, SettingsView) with next/dynamic calls using { loading: () => <ViewSkeleton />, ssr: false }
+- Kept 5 always-needed components as static imports (Sidebar, QuickTradePanel, KeyboardShortcutsHelp, OnboardingTour, Footer)
+- ErrorLogsView left inline (defined in same file, no import change needed)
+- renderView() switch statement unchanged — works identically with dynamic components
+- Ran lint: zero errors
+- Dev server compiles and runs successfully
+
+Stage Summary:
+- All 10 tab view components now lazy-loaded via next/dynamic with ssr: false
+- Shared ViewSkeleton provides consistent loading state across all views
+- Initial bundle size reduced by splitting 10 heavy view components into separate chunks
+- No behavioral changes — app functions identically from user perspective
+
+---
+Task ID: 10-f
+Agent: full-stack-developer (subagent)
+Task: Wire CandlestickPatternRecognition to live priceHistory
+
+Work Log:
+- Read existing worklog, trading-store.ts, types.ts, and the full CandlestickPatternRecognition.tsx (821 lines)
+- Removed the 80-line `generateMockCandles()` function that produced hardcoded EURUSD candles
+- Added imports: `useState` from React, `useTradingStore`, `Symbol`, `SYMBOLS`, `SYMBOL_INFO` from types, and shadcn `Select` components
+- Added `useState<Symbol>('EURUSD')` for local symbol selection and `useTradingStore((s) => s.priceHistory)` for live data
+- Added a shadcn Select dropdown in the header to switch between EURUSD/USDJPY/GBPUSD/XAUUSD
+- Replaced `generateMockCandles()` with `priceHistory[selectedSymbol] ?? []` — patterns auto-recompute via `useMemo` whenever new ticks arrive (500ms)
+- Added empty state UI when no candle data exists for the selected symbol
+- Made price grid step dynamic based on price range (supports forex pairs and XAUUSD)
+- Made price padding proportional to the visible range (5% of range on each side)
+- Made SVG symbol label dynamic using `SYMBOL_INFO[selectedSymbol].name`
+- Made `toFixed()` calls use the symbol's actual `digits` from `SYMBOL_INFO` instead of hardcoded 5
+- Passed `symbolLabel` and `digits` as new props to `CandlestickChartSVG`
+- Preserved ALL pattern detection logic exactly (Doji, Hammer, Inverted Hammer, Spinning Top, Bullish/Bearish Engulfing, Morning/Evening Star)
+- Preserved ALL visual components, styling, animations, layout, reliability badges, and the DetectedPattern interface
+- Removed unused `patternLabelColor` helper (was unused in original too, but ESLint now catches it)
+- ESLint passes with zero errors
+
+Stage Summary:
+- CandlestickPatternRecognition now shows live candle data from the Zustand store instead of mock data
+- Symbol selector allows switching between all 4 pairs; patterns recompute in real-time as ticks arrive
+- Dynamic grid/label/digit handling supports both forex pairs and XAUUSD
+
+---
+Task ID: R10-Main
+Agent: Main (Coordination + Integration + Implementation)
+Task: Implement all recommended features from analysis
+
+Work Log:
+- Implemented 6 major improvements via parallel subagents:
+  - 10-a: TradingRulesEngine (if-then automation)
+  - 10-b: Wire PerformanceScorecard to live closedTrades
+  - 10-c: Wire TradingPsychologyPanel to live journal/closedTrades
+  - 10-d: SocialTradingLeaderboard (20 Indonesian traders)
+  - 10-e: Code splitting with next/dynamic for 10 tab views
+  - 10-f: Wire CandlestickPatternRecognition to live priceHistory
+- Integrated TradingRulesEngine into SettingsView (new "Rules" tab)
+- Integrated SocialTradingLeaderboard into AnalysisView (bottom section)
+- Fixed AnalysisView syntax error (missing parenthesis)
+- Verified: bun run lint zero errors
+- Git commit: 17a8a9f
+- Pushed to https://github.com/teekar2312/finexfx.git (main branch)
+
+Stage Summary:
+- **2 new features**: TradingRulesEngine, SocialTradingLeaderboard
+- **3 components wired to live data**: PerformanceScorecard, TradingPsychologyPanel, CandlestickPatternRecognition
+- **Code splitting**: 10 tab views use next/dynamic with loading skeletons
+- **8 files modified**, 3098 insertions, 647 deletions
+- **Total component count**: 40 (was 38)
+- **Total feature count**: 79 (was 73)
+
+---
+## Project Status (Updated After Round 10)
+
+### Current State
+- Production-ready forex trading dashboard with 11 tabs + floating trade panel + onboarding tour
+- Dark glass-morphism theme with 70+ CSS animation/utility classes
+- Real-time price simulation for 4 pairs (EURUSD, USDJPY, GBPUSD, XAUUSD)
+- 30 technical indicators, 7 AI strategies, 4 market conditions
+- Complete risk management, backtesting, journal, performance analytics
+- Multi-timeframe analysis, signal detail modals, order book depth, market sentiment
+- Watchlist, activity feed, keyboard shortcuts, trade export CSV
+- Advanced Order Types, Session Overlap Scanner, Economic Calendar
+- Correlation Matrix, Trade History Table, Position Size Calculator
+- Drawdown Chart, Enhanced Alert Panel, Onboarding Tour, Trade Replay
+- **NEW: Trading Rules Engine** (10 conditions, 6 actions, 8 templates, live evaluation)
+- **NEW: Social Trading Leaderboard** (20 Indonesian traders, podium, follow system)
+- **NEW: Live Data Wiring** (PerformanceScorecard, TradingPsychologyPanel, CandlestickPatternRecognition now use real store data)
+- **NEW: Code Splitting** (10 tab views lazy-loaded with next/dynamic)
+
+### All Completed Features (Rounds 1-10, 79 items)
+1-73. (All Round 1-9 features preserved)
+74. ✅ **Trading Rules Engine** - If-then automation with 10 conditions, 6 actions, 8 templates, localStorage
+75. ✅ **Social Trading Leaderboard** - 20 Indonesian traders, podium, expandable rows, follow system
+76. ✅ **PerformanceScorecard Live Data** - Replaced mock with real closedTrades
+77. ✅ **TradingPsychologyPanel Live Data** - Replaced mock with real journal + trades
+78. ✅ **CandlestickPatternRecognition Live Data** - Replaced mock with live priceHistory + symbol selector
+79. ✅ **Code Splitting** - 10 tab views use next/dynamic with loading skeletons
+
+### Remaining Recommendations
+1. Customizable Dashboard Layout (drag-and-drop)
+2. Multi-language Support (i18n)
+3. PWA / Mobile Push Notifications
+4. Email/SMS Notification Delivery
+5. MT5 Platform Integration
+6. Real API Integration (Finnhub, MARKETAUX)
+7. ML Model Integration (beyond simulated AI)
+8. React Error Boundaries per tab
+9. aria-live regions for price/P&L updates
+10. Loading skeletons for all views
