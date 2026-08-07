@@ -7,8 +7,8 @@ interface SeedResponse {
   success: boolean;
   message: string;
   data: {
-    account: any;
-    riskSettings: any;
+    account: { id: number; balance: number; equity: number; accountType: string } | null;
+    riskSettings: { id: number; riskPerTrade: number; stopLossPips: number; takeProfitPips: number } | null;
     newsItems: number;
     economicEvents: number;
     indicatorConfigs: number;
@@ -329,7 +329,7 @@ function generateSampleBacktest(
 
   let equity = initialBalance;
   const equityCurve: { trade: number; equity: number }[] = [];
-  const trades: any[] = [];
+  const trades: { trade: number; symbol: Symbol; direction: string; pips: number; profit: number; equity: number; isWin: boolean }[] = [];
 
   let maxEq = initialBalance;
   for (let i = 0; i < totalTrades; i++) {
@@ -352,8 +352,8 @@ function generateSampleBacktest(
     });
   }
 
-  const totalProfit = trades.filter((t) => t.isWin).reduce((s: number, t: any) => s + t.profit, 0);
-  const totalLoss = Math.abs(trades.filter((t: any) => !t.isWin).reduce((s: number, t: any) => s + t.profit, 0));
+  const totalProfit = trades.filter((t) => t.isWin).reduce((s, t) => s + t.profit, 0);
+  const totalLoss = Math.abs(trades.filter((t) => !t.isWin).reduce((s, t) => s + t.profit, 0));
 
   return {
     name,
@@ -462,7 +462,7 @@ export async function POST() {
       data: selectedIndicators.map((ind) => ({
         name: ind.name,
         category: ind.category,
-        settings: JSON.stringify(ind.settings as unknown as Record<string, any>),
+        settings: JSON.stringify(ind.settings),
         isEnabled: true,
       })),
     });
@@ -488,7 +488,7 @@ export async function POST() {
       aiConfidence: t.aiConfidence,
       marketCondition: t.marketCondition,
       openedAt: t.openedAt,
-      closedAt: (t as any).closedAt ?? null,
+      closedAt: t.closedAt ?? null,
     }));
     const trades = await db.trade.createMany({ data: tradesData });
 

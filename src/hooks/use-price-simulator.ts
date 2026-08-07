@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useTradingStore } from '@/store/trading-store';
-import { SYMBOLS, SYMBOL_INFO, type Symbol, type MarketCondition, type StrategyName, type TradingSignal } from '@/lib/types';
+import { SYMBOLS, SYMBOL_INFO, type Symbol, type MarketCondition, type StrategyName, type TradingSignal, type PriceHistory } from '@/lib/types';
 
 interface SymbolState {
   bid: number;
@@ -161,7 +161,7 @@ function generateSignal(sym: string, state: SymbolState): TradingSignal {
 
 export function usePriceSimulator() {
   const stateRef = useRef<Record<string, SymbolState>>(JSON.parse(JSON.stringify(initialState)));
-  const candleBufferRef = useRef<Record<string, any[]>>({});
+  const candleBufferRef = useRef<Record<string, PriceHistory[]>>({});
   const signalTimerRef = useRef<ReturnType<typeof setInterval>>();
 
   useEffect(() => {
@@ -170,7 +170,7 @@ export function usePriceSimulator() {
 
     // Initialize candle buffers with historical data
     SYMBOLS.forEach((sym) => {
-      const candles = [];
+      const candles: PriceHistory[] = [];
       const s = stateRef.current[sym];
       const info = SYMBOL_INFO[sym];
       let price = s.prevClose - (Math.random() * volatilities[sym] * 50);
@@ -359,13 +359,17 @@ export function usePriceSimulator() {
           : (trade.entryPrice - currentPrice) / pipSize;
         const profit = pips * trade.lotSize * pipMultiplier * pipSize;
 
-        // SL/TP auto-close check
-        const hitSL = trade.direction === 'BUY'
-          ? currentPrice <= trade.stopLoss
-          : currentPrice >= trade.stopLoss;
-        const hitTP = trade.direction === 'BUY'
-          ? currentPrice >= trade.takeProfit
-          : currentPrice <= trade.takeProfit;
+        // SL/TP auto-close check (only if SL/TP are set)
+        const hitSL = trade.stopLoss != null && (
+          trade.direction === 'BUY'
+            ? currentPrice <= trade.stopLoss
+            : currentPrice >= trade.stopLoss
+        );
+        const hitTP = trade.takeProfit != null && (
+          trade.direction === 'BUY'
+            ? currentPrice >= trade.takeProfit
+            : currentPrice <= trade.takeProfit
+        );
 
         if (hitSL || hitTP) {
           tradesToClose.push(trade.id);
@@ -374,7 +378,11 @@ export function usePriceSimulator() {
         return { ...trade, currentPrice, pips, profit };
       });
 
-      s.setOpenTrades(updatedTrades);
+      // Filter out SL/TP-hit trades before setting open trades (avoid double mutation)
+      const remainingTrades = tradesToClose.length > 0
+        ? updatedTrades.filter(t => !tradesToClose.includes(t.id))
+        : updatedTrades;
+      s.setOpenTrades(remainingTrades);
 
       // Auto-close trades that hit SL/TP
       for (const id of tradesToClose) {

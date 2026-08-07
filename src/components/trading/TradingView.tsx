@@ -158,10 +158,10 @@ export default function TradingView() {
     const history = priceHistory[sym];
     if (!history || history.length < 2) return '';
     const pts = history.slice(-12);
-    const min = Math.min(...pts.map(p => p.bid));
-    const max = Math.max(...pts.map(p => p.bid));
+    const min = Math.min(...pts.map(p => p.close));
+    const max = Math.max(...pts.map(p => p.close));
     const range = max - min || 1;
-    return pts.map((p, i) => `${(i / 11) * 36},${20 - ((p.bid - min) / range) * 18}`).join(' ');
+    return pts.map((p, i) => `${(i / 11) * 36},${20 - ((p.close - min) / range) * 18}`).join(' ');
   }, [priceHistory]);
 
   // Quick lot sizes

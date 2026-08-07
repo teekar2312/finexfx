@@ -259,7 +259,10 @@ function ErrorLogsView() {
 
 export default function TradingDashboard() {
   const isMobile = useIsMobile();
-  const { activeTab, sidebarOpen, notifications, removeNotification } = useTradingStore();
+  const activeTab = useTradingStore((s) => s.activeTab);
+  const sidebarOpen = useTradingStore((s) => s.sidebarOpen);
+  const notifications = useTradingStore((s) => s.notifications);
+  const removeNotification = useTradingStore((s) => s.removeNotification);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
   // Initialize price simulator (replaces WebSocket)

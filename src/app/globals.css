@@ -256,11 +256,7 @@
   animation: ticker-down 0.6s ease-out;
 }
 
-/* Shimmer loading effect */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
+/* Shimmer loading effect — keyframe defined in Round 12 section */
 
 .shimmer {
   background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
@@ -295,11 +291,7 @@
   animation-play-state: paused;
 }
 
-/* Glow effect for active elements */
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.2); }
-  50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(16, 185, 129, 0.1); }
-}
+/* Glow effect — keyframe defined in Round 10 section */
 
 .glow-emerald {
   animation: glow-pulse 3s ease-in-out infinite;
@@ -309,10 +301,7 @@
   animation: glow-pulse-red 3s ease-in-out infinite;
 }
 
-@keyframes glow-pulse-red {
-  0%, 100% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.2); }
-  50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(239, 68, 68, 0.1); }
-}
+/* glow-pulse-red defined in Round 10 section */
 
 /* Gradient text */
 .gradient-text-emerald {
@@ -374,11 +363,7 @@
   pointer-events: none;
 }
 
-/* Number count-up animation */
-@keyframes count-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+/* count-up keyframe defined in Round 12 section */
 
 .count-up {
   animation: count-up 0.4s ease-out;
@@ -412,11 +397,7 @@
   transform: scale(0.97);
 }
 
-/* Status indicator pulse ring */
-@keyframes pulse-ring {
-  0% { transform: scale(1); opacity: 0.8; }
-  100% { transform: scale(2.5); opacity: 0; }
-}
+/* pulse-ring keyframe defined in Round 12 section */
 
 .pulse-ring::after {
   content: '';
@@ -427,11 +408,7 @@
   animation: pulse-ring 2s ease-out infinite;
 }
 
-/* Breathing background animation for active cards */
-@keyframes breathe {
-  0%, 100% { background-color: rgba(16, 185, 129, 0.03); }
-  50% { background-color: rgba(16, 185, 129, 0.08); }
-}
+/* breathe keyframe defined in Round 10 section */
 
 .breathe-emerald {
   animation: breathe 4s ease-in-out infinite;

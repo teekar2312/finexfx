@@ -220,7 +220,7 @@ export default function DashboardView() {
   // P&L Calendar mock data
   const calendarPnlData = useMemo(() => {
     const rand = seededRandom(SPARKLINE_SEED + 6);
-    const data = [];
+    const data: { date: Date; day: number; dayName: string; pnl: number; pnlPercent: number; isToday: boolean }[] = [];
     const today = new Date();
     for (let i = 27; i >= 0; i--) {
       const date = new Date(today);

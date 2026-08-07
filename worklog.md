@@ -2940,3 +2940,32 @@ Stage Summary:
 - Replace 22 `transition: all` with specific properties
 - React Error Boundaries per tab
 - safeFormat() utility for numeric displays
+
+---
+Task ID: 7
+Agent: SubAgent
+Task: Fix framer-motion ease type errors across 7 component files
+
+Work Log:
+- Ran tsc --noEmit to identify all variant object type errors in the 7 target files
+- Found 5 files with actual framer-motion variant type errors (string literal widening to `string`)
+- Confirmed 2 files (SessionOverlapScanner.tsx, NewsView.tsx) had no variant ease issues
+- Applied `as const` to variant objects and their ease/type literal values in 5 files
+- Verified `bun run lint` passes with zero errors
+- Verified tsc --noEmit shows zero ease-related errors in the 7 target files
+
+Files Changed (5):
+1. **BacktestingView.tsx** — `itemVariants`: added `ease: 'easeOut' as const` + `as const` on object (fixed 10 TS2322 errors)
+2. **CorrelationMatrix.tsx** — `cellVariants`: added `ease: 'easeOut' as const` + `as const` on object (fixed 1 TS2322 error)
+3. **PerformanceScorecard.tsx** — `itemVariants`: added `ease: [0.25, 0.46, 0.45, 0.94] as const` + `as const` on object (fixed 7 TS2322 errors, number[] widening)
+4. **TradingPsychologyPanel.tsx** — `itemVariants`: added `ease: 'easeOut' as const` + `as const` on object (fixed 3 TS2322 errors)
+5. **CandlestickPatternRecognition.tsx** — `containerVariants` + `itemVariants`: added `as const` on both objects, `type: 'spring' as const` (fixed 1 TS2322 error)
+
+Files Inspected, No Changes Needed (2):
+6. **SessionOverlapScanner.tsx** — `ease:` only in inline JSX `transition={{...}}` props (not variant objects); has unrelated Symbol type error
+7. **NewsView.tsx** — No `ease:` patterns; no variant objects; has unrelated union type error
+
+Stage Summary:
+- Root cause: TypeScript widens string/number literal types in plain objects (e.g., `'easeOut'` → `string`, `[0.25, 0.46, 0.45, 0.94]` → `number[]`), making them incompatible with framer-motion's `Easing` union type
+- Fix pattern: `as const` on the specific literal value + `as const` on the entire variant object narrows types to match `Easing`
+- All 22 framer-motion variant type errors resolved across 5 files; `bun run lint` clean

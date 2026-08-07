@@ -227,10 +227,10 @@ const cellVariants = {
     transition: {
       delay: i * 0.04,
       duration: 0.35,
-      ease: 'easeOut',
+      ease: 'easeOut' as const,
     },
   }),
-};
+} as const;
 
 // ─── Component ───────────────────────────────────────────────────────────────
 

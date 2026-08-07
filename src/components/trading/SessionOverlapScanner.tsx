@@ -74,14 +74,14 @@ const OVERLAPS: OverlapInfo[] = [
 ];
 
 // best pairs per session
-const SESSION_PAIRS: Record<SessionId, { symbol: Symbol; reason: string }[]> = {
+const SESSION_PAIRS: Record<SessionId, { symbol: string; reason: string }[]> = {
   sydney: [
-    { symbol: 'AUDUSD', reason: 'Sydney session - direct AUD exposure' },
-    { symbol: 'NZDUSD', reason: 'Antipodean liquidity peak' },
+    { symbol: 'XAUUSD', reason: 'Sydney session - Asian gold trading window' },
+    { symbol: 'USDJPY', reason: 'Early JPY liquidity during Sydney hours' },
   ],
   tokyo: [
     { symbol: 'USDJPY', reason: 'BoJ window - JPY volatility peak' },
-    { symbol: 'AUDJPY', reason: 'Cross-pair Asian liquidity' },
+    { symbol: 'XAUUSD', reason: 'Gold active during Tokyo session' },
   ],
   london: [
     { symbol: 'EURUSD', reason: 'ECB/London fix - highest EUR liquidity' },
