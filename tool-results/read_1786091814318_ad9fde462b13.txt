@@ -1,0 +1,521 @@
+  3000→8. page.tsx:262 — bare `useTradingStore()` re-renders root on every 500ms tick. Fixed: individual selectors
+  3001→9. API seed route: 7 `any` usages. Fixed: proper typed interfaces and casts
+  3002→10. CSS: 6 duplicate @keyframes blocks. Fixed: removed earlier definitions
+  3003→11. Store `priceHistory` initial value was `{} as any` — already fixed in prior round, verified correct
+  3004→
+  3005→### Verified Correct (no issues)
+  3006→- [x] All 25 store-importing components use correct import path
+  3007→- [x] All selectors reference existing TradingState interface properties
+  3008→- [x] All action selectors resolve with correct argument shapes
+  3009→- [x] addTrade, closeTrade, setRiskSettings called with correct types
+  3010→- [x] P&L formula correct (verified: pips * lotSize * pipMultiplier * pipSize)
+  3011→- [x] All intervals/timeouts have proper cleanup
+  3012→- [x] No stale closure issues
+  3013→- [x] No infinite loop risk in SL/TP auto-close
+  3014→- [x] All 11 tab views render correctly
+  3015→- [x] Sidebar TabId values match store type union
+  3016→- [x] All import chains valid
+  3017→
+  3018→### Remaining (non-blocking, future work)
+  3019→- BacktestingView uses mock data, not wired to live priceHistory
+  3020→- PerformanceAnalyticsView mostly mock data
+  3021→- RiskView missing avoidMajorNews toggle UI
+  3022→- NewsView impact optional type mismatch
+  3023→- IndicatorConfig.settings uses Record<string, any>
+  3024→- SoundNotificationPanel setTimeout cleanup
+  3025→- Duplicate tab-pill CSS block (later definition wins — cosmetic)
+  3026→
+  3027→Post-Fix Verification:
+  3028→- `bun run lint`: ZERO errors
+  3029→- `bun run dev`: GET / 200 in 8.9s
+  3030→- Git commit: c7b122c
+  3031→- Pushed to GitHub main branch
+  3032→
+  3033→Stage Summary:
+  3034→- **4 critical integration bugs fixed** (NaN sparklines, never[] type, wrong types, invalid symbols)
+  3035→- **22 TypeScript type errors resolved** (framer-motion ease types)
+  3036→- **3 store performance improvements** (bare store, SL/TP guards, double mutation)
+  3037→- **7 API route `any` types eliminated**
+  3038→- **6 CSS duplicate keyframes removed**
+  3039→- **Total: 13 files modified, 84 insertions, 67 deletions**
+  3040→
+  3041→---
+  3042→Task ID: 9-a
+  3043→Agent: full-stack-developer (subagent)
+  3044→Task: Create Position Size Calculator + Pip Calculator + R:R Visualizer + Swap Calculator
+  3045→
+  3046→Work Log:
+  3047→- Read worklog.md, types.ts, and trading-store.ts to understand project context and existing type/store structure
+  3048→- Created /src/components/trading/PositionSizeCalculator.tsx as standalone 'use client' component with 4 tabs
+  3049→- **Tab 1 (Position Size)**: Calculates recommended lot size from account balance, risk %, SL pips, and currency pair. Shows lot size, risk amount, pip value per lot, margin required, and R:R ratio when TP pips entered. Uses SYMBOL_INFO.pipSize, BROKER_CONFIG.leverage, and contract sizes for accurate calculations.
+  3050→- **Tab 2 (Pip Value)**: Input pair, lot size, and pip movement. Outputs pip value in USD per lot and total P&L for the movement. Handles EURUSD/GBPUSD (USD quote), USDJPY (approx JPY conversion), and XAUUSD (metal) correctly.
+  3051→- **Tab 3 (Risk/Reward)**: Horizontal bar visualization with red SL zone and green TP zone, animated entry point marker using framer-motion. Shows dollar amounts for risk/reward, R:R ratio in large font, and minimum break-even win rate.
+  3052→- **Tab 4 (Swap)**: Displays all 4 pairs' long/short swap rates in a table. Calculates estimated daily/weekly/monthly swap cost based on lot size and days held. Shows separate long and short position cards with breakdown.
+  3053→- Added quick risk presets (1%, 2%, 3%, 5%) as clickable chips in Position Size tab
+  3054→- All numeric inputs clamped to safe ranges with `parseNum`/`clamp` utility functions
+  3055→- Uses shadcn/ui Tabs, Select, Input, Label, Button, Card, Separator components
+  3056→- Uses framer-motion for all tab transitions, result animations, and the R:R bar chart
+  3057→- Uses Lucide icons: Calculator, Target, DollarSign, ArrowRight, Percent, TrendingUp, TrendingDown, Info, Clock, AlertTriangle, Zap
+  3058→- Styled with glass-card-premium class, font-mono for numbers, text-xs/text-muted-foreground for labels
+  3059→- ESLint passes with zero errors
+  3060→
+  3061→Stage Summary:
+  3062→- Created single file: /src/components/trading/PositionSizeCalculator.tsx (~630 lines)
+  3063→- Component exports as default, 'use client' directive, properly typed
+  3064→- 4-tab layout: Position Size | Pip Value | Risk/Reward | Swap
+  3065→- All calculations use SYMBOL_INFO.pipSize, BROKER_CONFIG.leverage from @/lib/types
+  3066→- Zero lint errors confirmed
+  3067→
+  3068→---
+  3069→Task ID: 9-b
+  3070→Agent: full-stack-developer (subagent)
+  3071→Task: Create Drawdown Chart + Equity Curve wired to live store data
+  3072→
+  3073→Work Log:
+  3074→- Read worklog.md, types.ts, and trading-store.ts to understand project context and existing type/store structure
+  3075→- Created /src/components/trading/DrawdownChart.tsx as standalone 'use client' component
+  3076→- **Equity Curve Chart**: Recharts AreaChart wired to real `closedTrades` from Zustand store via individual selector. Builds equity curve from initial balance ($10,000) adding each trade's profit sequentially. Includes starting point. X-axis uses formatted closedAt date strings. Peak equity shown as dashed stepAfter line. Emerald-to-red vertical gradient fill (green above ~midpoint, red below).
+  3077→- **Drawdown Chart**: Separate AreaChart below equity curve. Calculates drawdown = (peak - equity) / peak * 100. Y-axis domain reversed ([max, 0]) so 0% at top. Red gradient fill (transparent at 0%, deeper red at max). Reference lines at -5% (amber), -10% (orange), -20% (red) conditionally rendered based on domain.
+  3078→- **Key Metrics Cards**: 5-card grid (2-col mobile, 5-col desktop): Max Drawdown ($), Max Drawdown (%), Current Drawdown, Recovery Factor (total profit / max drawdown $), Longest DD Streak (consecutive losing trades). All calculated from real closedTrades.
+  3079→- **Timeframe Filter**: Today / This Week / This Month / All Time buttons filtering closedTrades by closedAt date range. Monday-start week calculation.
+  3080→- **Empty State**: Styled empty state with TrendingDown icon and exact message 'No closed trades yet. Complete trades to see your equity curve.' when no closed trades exist.
+  3081→- **Sub-components memoized**: MetricCard, EquityTooltip, DrawdownTooltip, TimeframeButton all wrapped with React.memo.
+  3082→- **Performance**: useMemo for filteredTrades, equityData, drawdownData, equityDomain, drawdownDomain, and metrics. Individual Zustand selector `useTradingStore((s) => s.closedTrades)`.
+  3083→- **Styling**: glass-card-premium class, framer-motion staggered entry (container/item variants), Lucide icons (TrendingDown, Activity, DollarSign, Clock, ArrowRight), font-mono for numbers, text-xs labels, custom tooltips with glass-card-premium style.
+  3084→- ESLint passes with zero errors.
+  3085→
+  3086→Stage Summary:
+  3087→- Created single file: /src/components/trading/DrawdownChart.tsx (~290 lines)
+  3088→- Component exports as default, 'use client' directive, fully typed
+  3089→- Two charts: Equity Curve (AreaChart with gradient) + Drawdown (AreaChart with red gradient, reversed Y-axis)
+  3090→- 5 key metric cards calculated from live store data
+  3091→- Timeframe filtering (Today/Week/Month/All)
+  3092→- Empty state with icon and descriptive message
+  3093→- Zero lint errors confirmed
+  3094→
+  3095→---
+  3096→Task ID: 9-c
+  3097→Agent: full-stack-developer (subagent)
+  3098→Task: Create Enhanced Alert Panel with creation/management UI
+  3099→
+  3100→Work Log:
+  3101→- Read /src/lib/types.ts to understand Symbol, SYMBOL_INFO, PriceTick types
+  3102→- Read /src/store/trading-store.ts to understand priceAlerts array type, addPriceAlert/removePriceAlert action signatures
+  3103→- Confirmed store alert type: { id: string; symbol: Symbol; condition: string; price: number; isActive: boolean; message?: string }
+  3104→- Created /src/components/trading/EnhancedAlertPanel.tsx with all 6 required features:
+  3105→  1. Create Alert Form: Symbol selector (4 pairs), Condition type (4 options), Target price input with current price display, Optional note field
+  3106→  2. Active Alerts List: Reads priceAlerts from store via individual selector, shows pair/condition/target/current/distance in pips/created time, color-coded distance (green/amber/red), pulsing dot within 5 pips
+  3107→  3. Quick Alert Buttons: 7 pre-configured quick-set buttons with realistic price levels (EURUSD, USDJPY, GBPUSD, XAUUSD)
+  3108→  4. Alert History: Local state TriggeredAlert[] with triggered timestamp and price, shown in amber-tinted cards
+  3109→  5. Delete Alert: Trash2 button on each alert card calling store removePriceAlert
+  3110→  6. Styling: glass-card-premium class, framer-motion AnimatePresence for list animations, Lucide icons (Bell, BellRing, Plus, Trash2, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Clock), shadcn/ui components, text-xs/text-muted-foreground/font-mono, color-coded condition badges
+  3111→- Used Zustand subscribe() pattern for alert triggering to satisfy react-hooks/set-state-in-effect lint rule
+  3112→- Fixed multiple lint iterations: unused imports, unused eslint-disable directive, setState-in-effect, ref-during-render
+  3113→- Final lint: 0 errors, 0 warnings
+  3114→
+  3115→Stage Summary:
+  3116→- Created single file: /src/components/trading/EnhancedAlertPanel.tsx (~590 lines)
+  3117→- Component exports as default, 'use client' directive, fully typed
+  3118→- Alert creation form with symbol/condition/price/note inputs
+  3119→- Active alerts list with distance-to-target calculation, color coding, and pulsing proximity indicator
+  3120→- 7 quick-set alert buttons for common scenarios
+  3121→- Triggered alert history with local state management
+  3122→- Individual alert deletion via store action
+  3123→- Zero lint errors confirmed
+  3124→
+  3125→---
+  3126→Task ID: 9-d
+  3127→Agent: full-stack-developer (subagent)
+  3128→Task: Create Onboarding Tour for first-time users
+  3129→
+  3130→Work Log:
+  3131→- Created `/src/components/trading/OnboardingTour.tsx` as standalone 'use client' component
+  3132→- Implemented 7-step guided tour: Welcome, Dashboard, Trading, Analysis, Risk Management, Quick Trade Panel, Complete
+  3133→- Each step has a dedicated Lucide icon (PartyPopper, LayoutDashboard, CandlestickChart, LineChart, Shield, Zap, HelpCircle) in emerald 56x56 container
+  3134→- Full-screen overlay with `bg-black/70 backdrop-blur-sm` and `glass-card-premium` card styling
+  3135→- Navigation: Next/Back/Skip using shadcn/ui Button; last step shows "Get Started"
+  3136→- Animated progress bar at top of card using framer-motion
+  3137→- Step indicator dots and "Step X of 7" counter
+  3138→- Card entrance/exit with spring-physics scale+fade; direction-aware step slide transitions
+  3139→- localStorage persistence via key `finex-onboarding-complete`
+  3140→- Floating "Tour" button (bottom-right) appears after completion for re-access
+  3141→- Exported `useOnboardingTour` hook: `{ showTour, setShowTour, isTourComplete, resetTour }`
+  3142→- Default export: `OnboardingTour` component
+  3143→- Zero lint errors confirmed
+  3144→
+  3145→Stage Summary:
+  3146→- Multi-step onboarding tour with framer-motion animations, glass-morphism card, emerald accent, and localStorage persistence
+  3147→- Shared state pattern keeps hook and component in sync without prop drilling
+  3148→- Floating re-tour button and `resetTour` function allow easy re-access from parent components
+  3149→
+  3150→---
+  3151→Task ID: 9-e
+  3152→Agent: full-stack-developer (subagent)
+  3153→Task: Create Trade Replay / Simulation Mode
+  3154→
+  3155→Work Log:
+  3156→- Read /src/lib/types.ts and /src/store/trading-store.ts to understand PriceHistory type, Symbol type, SYMBOL_INFO, and Zustand store structure
+  3157→- Read existing components (PriceChart.tsx, select.tsx, slider.tsx, badge.tsx) to follow project patterns
+  3158→- Created /src/components/trading/TradeReplay.tsx as a standalone `use client` component with:
+  3159→  - Pair selector (EURUSD/USDJPY/GBPUSD/XAUUSD) using shadcn Select
+  3160→  - Full controls bar: Play/Pause (animated icon swap), Step Forward, Step Backward, Speed selector (0.5x-10x), progress Slider, Reset button — all using Lucide icons (Play, Pause, SkipForward, SkipBack, RotateCcw, Gauge)
+  3161→  - Recharts LineChart showing price history up to current replay position with emerald/red coloring, gradient fill, and active dot highlighting
+  3162→  - Glass-card tooltip showing OHLC values on hover
+  3163→  - ReferenceLine showing entry price when a practice trade is active
+  3164→  - Practice trading: Buy/Sell buttons to open hypothetical trades, live P&L + pips display, Close Trade button to record results
+  3165→  - Statistics panel: Total trades, Win rate, Total P&L, Best/Worst trade, Average hold time — all in font-mono with emerald/red color coding
+  3166→  - Practice trade history list with animated entries showing direction, entry/exit prices, P&L, pips, and hold duration
+  3167→  - End-of-replay warning banner
+  3168→  - "Wait for price data to accumulate" empty state with rotating BarChart3 icon
+  3169→- Used individual Zustand selector for priceHistory (not full store) via useCallback selector
+  3170→- Used useRef for replay timer, isPlaying, speed, and currentIndex to avoid re-render issues
+  3171→- Used useCallback for all handlers (play/pause, step, slider, reset, speed, symbol change, open/close trade)
+  3172→- Fixed lint errors: removed conditional useMemo call (moved before early return), moved symbol-change reset from useEffect to handleSymbolChange callback
+  3173→- Zero lint errors confirmed
+  3174→
+  3175→Stage Summary:
+  3176→- Created TradeReplay.tsx at /src/components/trading/TradeReplay.tsx
+  3177→- Standalone `use client` component with default export
+  3178→- All 9 requirements met: replay mode, controls bar, price chart, practice mode, statistics panel, pair selector, glass-card-premium styling, performance optimizations, zero lint errors
+  3179→
+  3180→---
+  3181→Task ID: R9-Main
+  3182→Agent: Main (Coordination + Integration + Feature Analysis)
+  3183→Task: Feature analysis, 5 new feature implementations, integration, GitHub push
+  3184→
+  3185→Work Log:
+  3186→- User asked: "What features are important to include in this project?"
+  3187→- Conducted comprehensive analysis of 33 existing components, 11 tabs, 4 pairs, 30 indicators
+  3188→- Identified feature gaps across 6 categories (Critical, High, Medium)
+  3189→- Implemented 5 new features in parallel via subagents:
+  3190→  - 9-a: PositionSizeCalculator (4 tabs: Position Size, Pip Value, R:R Visualizer, Swap Calculator)
+  3191→  - 9-b: DrawdownChart (live equity curve + drawdown chart wired to closedTrades)
+  3192→  - 9-c: EnhancedAlertPanel (alert creation/management with live distance tracking)
+  3193→  - 9-d: OnboardingTour (7-step guided tour with localStorage persistence)
+  3194→  - 9-e: TradeReplay (tick-by-tick price replay with practice trading)
+  3195→- Integrated all 5 components into existing views:
+  3196→  - PositionSizeCalculator → RiskView
+  3197→  - DrawdownChart → PerformanceAnalyticsView
+  3198→  - EnhancedAlertPanel → DashboardView
+  3199→  - OnboardingTour → page.tsx (root overlay)
+  3200→  - TradeReplay → BacktestingView
+  3201→- Fixed RiskView parsing error (missing closing div)
+  3202→- Verified: `bun run lint` zero errors
+  3203→- Verified: page compiles HTTP 200
+  3204→- Git commit: e0e9b13
+  3205→- Pushed to https://github.com/teekar2312/finexfx.git (main branch)
+  3206→
+  3207→Stage Summary:
+  3208→- **5 new features** implemented and integrated
+  3209→- **5 new component files**: PositionSizeCalculator, DrawdownChart, EnhancedAlertPanel, OnboardingTour, TradeReplay
+  3210→- **5 existing files modified** for integration: RiskView, PerformanceAnalyticsView, DashboardView, BacktestingView, page.tsx
+  3211→- **Total component count**: 38 (was 33)
+  3212→- **3,402 lines added** across 11 files
+  3213→- Zero lint errors, page compiles successfully
+  3214→
+  3215→---
+  3216→## Project Status (Updated After Round 9)
+  3217→
+  3218→### Current State
+  3219→- Production-ready forex trading dashboard with 11 tabs + floating trade panel
+  3220→- Dark glass-morphism theme with 70+ CSS animation/utility classes
+  3221→- Real-time price simulation for 4 pairs (EURUSD, USDJPY, GBPUSD, XAUUSD)
+  3222→- 30 technical indicators, 7 AI strategies, 4 market conditions
+  3223→- Complete risk management, backtesting, journal, performance analytics
+  3224→- Multi-timeframe analysis, signal detail modals, order book depth, market sentiment
+  3225→- Watchlist, activity feed, keyboard shortcuts, trade export CSV
+  3226→- Advanced Order Types (OCO, Break-Even Stop, Trailing Limit)
+  3227→- Session Overlap Scanner, Economic Calendar, Correlation Matrix, Trade History Table
+  3228→- **NEW: Position Size Calculator** (4 tabs: Position Size, Pip Value, Risk/Reward Visualizer, Swap Calculator)
+  3229→- **NEW: Drawdown Chart** (live equity curve + drawdown chart wired to real closedTrades)
+  3230→- **NEW: Enhanced Alert Panel** (price alert creation/management with live distance tracking, quick presets, alert history)
+  3231→- **NEW: Onboarding Tour** (7-step guided tour with localStorage persistence, re-access button)
+  3232→- **NEW: Trade Replay Mode** (tick-by-tick price replay with practice trading and statistics)
+  3233→
+  3234→### All Completed Features (Rounds 1-9, 73 items)
+  3235→1-68. (All Round 1-8 features preserved)
+  3236→69. ✅ **Position Size Calculator** - 4-tab widget with lot size calc, pip value, R:R visualizer, swap calculator
+  3237→70. ✅ **Drawdown Chart** - Live equity curve + drawdown chart from real closed trades
+  3238→71. ✅ **Enhanced Alert Panel** - Create/manage price alerts with distance tracking and quick presets
+  3239→72. ✅ **Onboarding Tour** - 7-step guided walkthrough with localStorage persistence
+  3240→73. ✅ **Trade Replay Mode** - Tick-by-tick price replay with practice trading and session stats
+  3241→
+  3242→### Feature Integration Map
+  3243→| Component | Integrated Into |
+  3244→|---|---|
+  3245→| PositionSizeCalculator | RiskView (bottom section) |
+  3246→| DrawdownChart | PerformanceAnalyticsView (before Key Metrics) |
+  3247→| EnhancedAlertPanel | DashboardView (bottom section) |
+  3248→| OnboardingTour | page.tsx (root-level overlay) |
+  3249→| TradeReplay | BacktestingView (bottom section) |
+  3250→
+  3251→### Recommended Next Features (Not Yet Implemented)
+  3252→1. Trading Rules Engine (if-then automation)
+  3253→2. Customizable Dashboard Layout (drag-and-drop)
+  3254→3. Social Trading / Leaderboard
+  3255→4. Multi-language Support (i18n)
+  3256→5. PWA / Mobile Push Notifications
+  3257→6. Email/SMS Notification Delivery
+  3258→7. MT5 Platform Integration
+  3259→8. Real API Integration (Finnhub, MARKETAUX)
+  3260→9. ML Model Integration (beyond simulated AI)
+  3261→10. Candlestick Pattern Recognition wired to live price data
+  3262→
+  3263→### Remaining Technical Debt
+  3264→- PerformanceAnalyticsView/BacktestingView still use mock data for some charts
+  3265→- PerformanceScorecard/TradingPsychologyPanel not wired to live store data
+  3266→- 22 `transition: all` CSS rules need specific property replacement
+  3267→- React Error Boundaries per tab
+  3268→- Code splitting (dynamic imports) for tab views
+  3269→- aria-live regions for price/P&L updates
+  3270→- Loading skeletons for Dashboard/Trading/Analysis views
+  3271→
+  3272→---
+  3273→Task ID: 10-a
+  3274→Agent: full-stack-developer (subagent)
+  3275→Task: Create Trading Rules Engine
+  3276→
+  3277→Work Log:
+  3278→- Read worklog.md, types.ts, trading-store.ts to understand project context, type system, and Zustand store API
+  3279→- Reviewed existing component patterns (glass-card-premium, shadcn/ui imports, motion animations)
+  3280→- Created /src/components/trading/TradingRulesEngine.tsx as standalone 'use client' component
+  3281→- Defined 10 condition types: price_crosses_above, price_crosses_below, rsi_overbought, rsi_oversold, macd_crossover, pips_profit, pips_loss, spread_exceeds, max_positions, daily_loss_percent
+  3282→- Defined 6 action types: notify, close_symbol_positions, close_all_positions, disable_trading, open_trade, modify_risk
+  3283→- Built rule management UI with create form (dynamic condition/action params), rules list with enable/disable toggle, delete, trigger count, last triggered time
+  3284→- Implemented live evaluation using useEffect on prices with rulesRef to avoid re-render on every tick
+  3285→- Added 60-second cooldown per rule to prevent re-triggering
+  3286→- Created 8 pre-built rule templates (RSI Overbought Alert, Emergency Stop, Spread Guard, Take Profit All, Max Exposure, Gold Breakout, JPY Weakness, Equity Protection)
+  3287→- Added localStorage persistence (key: finex-trading-rules) with load on mount and save on every change
+  3288→- Used individual Zustand selectors for store data in evaluation (prices, indicatorValues, openTrades, balance, dailyPnl)
+  3289→- Applied glass-card-premium styling, framer-motion animations (AnimatePresence, layout), Lucide icons, shadcn/ui components
+  3290→- Fixed byte corruption issue on line 267 (missing closing quote in template literal)
+  3291→- Fixed react-hooks/immutability lint error by using immutable ref updates and deferred setRules via requestAnimationFrame
+  3292→- Removed unused Switch import
+  3293→- Final result: zero lint errors, zero lint warnings
+  3294→
+  3295→Stage Summary:
+  3296→- Created fully functional TradingRulesEngine component at /src/components/trading/TradingRulesEngine.tsx
+  3297→- 10 condition types and 6 action types covering price, indicator, position, spread, and risk-based triggers
+  3298→- Live evaluation on every price tick with 60s cooldown per rule
+  3299→- 8 one-click templates for common trading rules
+  3300→- localStorage persistence for rule state across sessions
+  3301→- Performance optimized with useRef for tick evaluation and individual Zustand selectors
+  3302→---
+  3303→Task ID: 10-b
+  3304→Agent: full-stack-developer (subagent)
+  3305→Task: Wire PerformanceScorecard to live closedTrades data
+  3306→
+  3307→Work Log:
+  3308→- Read and analyzed trading-store.ts (TradingState interface, closedTrades array, Trade fields)
+  3309→- Read and analyzed types.ts (Trade type with closedAt, profit, symbol, strategy fields)
+  3310→- Read entire 871-line PerformanceScorecard.tsx to understand structure, types, sub-components, animation variants, and mock data generator
+  3311→- Removed `createSeededRandom`, `generateWeeklyData`, mock PAIRS/STRATEGIES/DAY_LABELS constants, and `pnlBg`/`pnlSign` helper (pnlSign inlined into formatPnl)
+  3312→- Added `useTradingStore` import with individual selector `useTradingStore((s) => s.closedTrades)`
+  3313→- Created `buildWeeklyData()` function that groups closedTrades by Monday-based ISO week, then by day within each week
+  3314→- Each day computes: trade count, win rate, P&L sum, best pair (highest total profit), best strategy, sparkline (cumulative P&L per trade sorted by closedAt)
+  3315→- Each week computes: total P&L, avg daily P&L, best/worst day, win rate, Sharpe-like score, sparkline (daily P&L values)
+  3316→- Updated `computeMonthlySummary()` to work with dynamic week counts (not hardcoded to 4), added totalSessions and monthLabel fields
+  3317→- Added styled empty state with Award icon and message when no closed trades exist
+  3318→- Wrapped MiniSparkline and WinRateGauge in React.memo for performance
+  3319→- All computed data wrapped in useMemo
+  3320→- Added safeSelectedWeek clamp to prevent out-of-bounds when weeks shrink
+  3321→- Preserved exact same visual structure: weekly/monthly toggle, week selector cards, daily breakdown grid, summary stats row, monthly overview, weekly breakdown, consistency gauge, performance grade
+  3322→- Preserved all animation variants (containerVariants, itemVariants)
+  3323→- ESLint passes with zero errors
+  3324→
+  3325→Stage Summary:
+  3326→- PerformanceScorecard.tsx rewritten from 871 lines (all mock) to ~530 lines (all real data)
+  3327→- All data now sourced from Zustand store's closedTrades array
+  3328→- Grouping: Monday-based weeks → days within weeks → individual trades for sparklines
+  3329→- Empty state shown when no closed trades exist
+  3330→- Zero lint errors, clean compilation
+  3331→
+  3332→---
+  3333→Task ID: 10-c
+  3334→Agent: full-stack-developer (subagent)
+  3335→Task: Wire TradingPsychologyPanel to live journal entries and closedTrades
+  3336→
+  3337→Work Log:
+  3338→- Read trading-store.ts to understand JournalEntry type (mood: great/good/neutral/bad/terrible, pnl, duration, strategy, notes, createdAt) and closedTrades (Trade[] with stopLoss, profit, closedAt, strategy fields)
+  3339→- Read types.ts for Trade type (stopLoss?, strategy?, profit, closedAt?)
+  3340→- Removed entire mock data system: createSeededRandom(), generateMockData(), and module-level mockData constant
+  3341→- Added imports: useMemo from react, useTradingStore from @/store/trading-store, Trade from @/lib/types, JournalEntry from @/store/trading-store
+  3342→- Added MOOD_DISPLAY_MAP to map store mood values (great/good/neutral/bad/terrible) to display Mood type (Great/Good/Neutral/Frustrated/Tilted)
+  3343→- Added MOOD_SCORE_MAP for emotional control scoring (great=95, good=82, neutral=65, bad=40, terrible=18)
+  3344→- Added parseDurationToMinutes() helper to parse duration strings like '1h 45m' into minutes
+  3345→- Implemented 7 real discipline score computations:
+  3346→  1. Plan Adherence: % of closedTrades with strategy field set
+  3347→  2. Risk Management: % of closedTrades with stopLoss set
+  3348→  3. Emotional Control: average mood score from journalEntries
+  3349→  4. Patience: exponential curve based on average trade duration from journalEntries
+  3350→  5. Consistency: inverse exponential of daily P&L standard deviation from closedTrades
+  3351→  6. Recovery: win rate of trades following 2+ consecutive losses from closedTrades
+  3352→  7. Win Rate: overall win rate from closedTrades
+  3353→- Computed mood timeline sessions by grouping journalEntries by date, mapping mood, getting daily P&L from closedTrades on same date, and using journal notes
+  3354→- Computed emotion stats by mapping 5 moods into 4 categories (Confident=great+good, Cautious=neutral, Anxious=bad, Tilted=terrible) with per-category win rates
+  3355→- Computed streak data (current win/loss, best win, worst loss) by sorting closedTrades by closedAt and scanning for consecutive sequences
+  3356→- Wrapped all 4 computed data blocks in useMemo with [closedTrades, journalEntries] dependencies
+  3357→- Added empty states: MoodTimeline shows 'No journal entries yet' message, EmotionImpactChart shows 'No emotion data yet' message, StreakDisplay shows 'No streak data yet' message
+  3358→- Made EmotionImpactChart insight text dynamic: references best/worst emotion categories and their actual win rates from the data
+  3359→- Made MoodTimeline session count label dynamic ('Last N Sessions' instead of hardcoded 'Last 8 Sessions')
+  3360→- Removed unused getGaugeStroke helper function
+  3361→- Preserved all visual structure: glass-card-premium, glass-card, framer-motion animations (containerVariants, itemVariants), gauge SVG, timeline circles, hover cards, streak grid
+  3362→- Preserved all sub-component names: DisciplineGauge, MoodTimeline, EmotionImpactChart, StreakDisplay
+  3363→- Preserved all existing Lucide icon imports and their usage in sub-components
+  3364→
+  3365→Stage Summary:
+  3366→- TradingPsychologyPanel.tsx fully rewired from seeded mock data to live Zustand store data
+  3367→- All discipline scores computed from real closedTrades and journalEntries
+  3368→- Zero lint errors, clean compilation, dev server running without issues
+  3369→- Empty states provided for all 4 sections when data is unavailable
+  3370→- Dynamic insight text in EmotionImpactChart reflects actual best/worst emotion performance
+  3371→---
+  3372→Task ID: 10-d
+  3373→Agent: full-stack-developer (subagent)
+  3374→Task: Create Social Trading Leaderboard
+  3375→
+  3376→Work Log:
+  3377→- Read worklog.md, types.ts, trading-store.ts, WatchlistPanel.tsx (sparkline pattern), avatar.tsx, select.tsx for context
+  3378→- Created /src/components/trading/SocialTradingLeaderboard.tsx as standalone 'use client' component
+  3379→- Generated 20 mock Indonesian-sounding traders (Andi S., Rina W., Budi P., Sari M., Dedi K., Lina H., Hendra T., Dewi A., Agus R., Nurul F., Wahyu B., Fitri C., Eko J., Maya D., Rudi N., Yuli S., Joko M., Ani P., Toni W., Ratna K.)
+  3380→- Each trader has: rank, name, avatar (colored circle with initials via Avatar/AvatarFallback), total P&L, win rate, total trades, best streak, strategy (one of 7 from types.ts), risk level, weekly change, equity sparkline
+  3381→- Implemented 3 time tabs: Overall, Weekly, Monthly — each generates different mock data via seeded random
+  3382→- User ("Anda" / "You") is always rank #8 with stats derived from actual store data (closedTrades, balance, totalPnl via individual selectors), highlighted with emerald border/background
+  3383→- Top 3 Podium cards with special layout (2nd-1st-3rd order), trophy/crown/medal icons, gold (#F59E0B), silver (#94A3B8), bronze (#CD7F32) colors, larger PodiumSparkline with gradient fill, scale+glow animation
+  3384→- Trader Detail: clicking a row expands to show daily P&L bar chart (last 7 days), top pairs traded, strategy distribution, Follow button (persisted to localStorage)
+  3385→- Search input filters by name, risk level filter (All/Conservative/Moderate/Aggressive), strategy filter (all 7 strategies)
+  3386→- Stats Summary Bar: Total traders, Average win rate, Best performer P&L, Your rank
+  3387→- Uses glass-card-premium class, dark theme, framer-motion staggered list entry, PodiumCard glow animations
+  3388→- SVG polyline sparklines (MiniSparkline + PodiumSparkline with gradient fill) following existing pattern
+  3389→- All required Lucide icons imported: Trophy, Crown, Medal, Search, Filter, Users, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Star, Eye, UserPlus, UserCheck
+  3390→- shadcn/ui components used: Input, Button, Select/SelectContent/SelectItem/SelectTrigger/SelectValue, Badge, Separator, Avatar/AvatarFallback
+  3391→- Text-xs, text-muted-foreground, font-mono for numbers, color-coded P&L (emerald/red), rank badges
+  3392→- Export as default, zero lint errors confirmed
+  3393→
+  3394→Stage Summary:
+  3395→- SocialTradingLeaderboard.tsx created with all 10 requirements fulfilled
+  3396→- 20 mock Indonesian traders with seeded deterministic data per time period
+  3397→- User rank #8 with live store data integration (closedTrades, balance, totalPnl)
+  3398→- Podium cards with gold/silver/bronze styling and glow effects
+  3399→- Expandable rows with daily P&L bars, top pairs, strategy distribution, Follow (localStorage)
+  3400→- Search + risk + strategy filters, stats summary bar, staggered framer-motion animations
+  3401→- Zero lint errors, clean compilation
+  3402→
+  3403→---
+  3404→Task ID: 10-e
+  3405→Agent: full-stack-developer (subagent)
+  3406→Task: Implement code splitting with dynamic imports for tab views
+  3407→
+  3408→Work Log:
+  3409→- Read /src/app/page.tsx to understand current static import structure (10 view components + 5 utility components)
+  3410→- Created ViewSkeleton component with animated pulse loading state (metric cards + content area)
+  3411→- Added `import dynamic from next/dynamic` at top of file
+  3412→- Replaced 10 static imports (DashboardView, TradingView, AnalysisView, IndicatorsView, NewsView, RiskView, BacktestingView, TradeJournalView, PerformanceAnalyticsView, SettingsView) with next/dynamic calls using { loading: () => <ViewSkeleton />, ssr: false }
+  3413→- Kept 5 always-needed components as static imports (Sidebar, QuickTradePanel, KeyboardShortcutsHelp, OnboardingTour, Footer)
+  3414→- ErrorLogsView left inline (defined in same file, no import change needed)
+  3415→- renderView() switch statement unchanged — works identically with dynamic components
+  3416→- Ran lint: zero errors
+  3417→- Dev server compiles and runs successfully
+  3418→
+  3419→Stage Summary:
+  3420→- All 10 tab view components now lazy-loaded via next/dynamic with ssr: false
+  3421→- Shared ViewSkeleton provides consistent loading state across all views
+  3422→- Initial bundle size reduced by splitting 10 heavy view components into separate chunks
+  3423→- No behavioral changes — app functions identically from user perspective
+  3424→
+  3425→---
+  3426→Task ID: 10-f
+  3427→Agent: full-stack-developer (subagent)
+  3428→Task: Wire CandlestickPatternRecognition to live priceHistory
+  3429→
+  3430→Work Log:
+  3431→- Read existing worklog, trading-store.ts, types.ts, and the full CandlestickPatternRecognition.tsx (821 lines)
+  3432→- Removed the 80-line `generateMockCandles()` function that produced hardcoded EURUSD candles
+  3433→- Added imports: `useState` from React, `useTradingStore`, `Symbol`, `SYMBOLS`, `SYMBOL_INFO` from types, and shadcn `Select` components
+  3434→- Added `useState<Symbol>('EURUSD')` for local symbol selection and `useTradingStore((s) => s.priceHistory)` for live data
+  3435→- Added a shadcn Select dropdown in the header to switch between EURUSD/USDJPY/GBPUSD/XAUUSD
+  3436→- Replaced `generateMockCandles()` with `priceHistory[selectedSymbol] ?? []` — patterns auto-recompute via `useMemo` whenever new ticks arrive (500ms)
+  3437→- Added empty state UI when no candle data exists for the selected symbol
+  3438→- Made price grid step dynamic based on price range (supports forex pairs and XAUUSD)
+  3439→- Made price padding proportional to the visible range (5% of range on each side)
+  3440→- Made SVG symbol label dynamic using `SYMBOL_INFO[selectedSymbol].name`
+  3441→- Made `toFixed()` calls use the symbol's actual `digits` from `SYMBOL_INFO` instead of hardcoded 5
+  3442→- Passed `symbolLabel` and `digits` as new props to `CandlestickChartSVG`
+  3443→- Preserved ALL pattern detection logic exactly (Doji, Hammer, Inverted Hammer, Spinning Top, Bullish/Bearish Engulfing, Morning/Evening Star)
+  3444→- Preserved ALL visual components, styling, animations, layout, reliability badges, and the DetectedPattern interface
+  3445→- Removed unused `patternLabelColor` helper (was unused in original too, but ESLint now catches it)
+  3446→- ESLint passes with zero errors
+  3447→
+  3448→Stage Summary:
+  3449→- CandlestickPatternRecognition now shows live candle data from the Zustand store instead of mock data
+  3450→- Symbol selector allows switching between all 4 pairs; patterns recompute in real-time as ticks arrive
+  3451→- Dynamic grid/label/digit handling supports both forex pairs and XAUUSD
+  3452→
+  3453→---
+  3454→Task ID: R10-Main
+  3455→Agent: Main (Coordination + Integration + Implementation)
+  3456→Task: Implement all recommended features from analysis
+  3457→
+  3458→Work Log:
+  3459→- Implemented 6 major improvements via parallel subagents:
+  3460→  - 10-a: TradingRulesEngine (if-then automation)
+  3461→  - 10-b: Wire PerformanceScorecard to live closedTrades
+  3462→  - 10-c: Wire TradingPsychologyPanel to live journal/closedTrades
+  3463→  - 10-d: SocialTradingLeaderboard (20 Indonesian traders)
+  3464→  - 10-e: Code splitting with next/dynamic for 10 tab views
+  3465→  - 10-f: Wire CandlestickPatternRecognition to live priceHistory
+  3466→- Integrated TradingRulesEngine into SettingsView (new "Rules" tab)
+  3467→- Integrated SocialTradingLeaderboard into AnalysisView (bottom section)
+  3468→- Fixed AnalysisView syntax error (missing parenthesis)
+  3469→- Verified: bun run lint zero errors
+  3470→- Git commit: 17a8a9f
+  3471→- Pushed to https://github.com/teekar2312/finexfx.git (main branch)
+  3472→
+  3473→Stage Summary:
+  3474→- **2 new features**: TradingRulesEngine, SocialTradingLeaderboard
+  3475→- **3 components wired to live data**: PerformanceScorecard, TradingPsychologyPanel, CandlestickPatternRecognition
+  3476→- **Code splitting**: 10 tab views use next/dynamic with loading skeletons
+  3477→- **8 files modified**, 3098 insertions, 647 deletions
+  3478→- **Total component count**: 40 (was 38)
+  3479→- **Total feature count**: 79 (was 73)
+  3480→
+  3481→---
+  3482→## Project Status (Updated After Round 10)
+  3483→
+  3484→### Current State
+  3485→- Production-ready forex trading dashboard with 11 tabs + floating trade panel + onboarding tour
+  3486→- Dark glass-morphism theme with 70+ CSS animation/utility classes
+  3487→- Real-time price simulation for 4 pairs (EURUSD, USDJPY, GBPUSD, XAUUSD)
+  3488→- 30 technical indicators, 7 AI strategies, 4 market conditions
+  3489→- Complete risk management, backtesting, journal, performance analytics
+  3490→- Multi-timeframe analysis, signal detail modals, order book depth, market sentiment
+  3491→- Watchlist, activity feed, keyboard shortcuts, trade export CSV
+  3492→- Advanced Order Types, Session Overlap Scanner, Economic Calendar
+  3493→- Correlation Matrix, Trade History Table, Position Size Calculator
+  3494→- Drawdown Chart, Enhanced Alert Panel, Onboarding Tour, Trade Replay
+  3495→- **NEW: Trading Rules Engine** (10 conditions, 6 actions, 8 templates, live evaluation)
+  3496→- **NEW: Social Trading Leaderboard** (20 Indonesian traders, podium, follow system)
+  3497→- **NEW: Live Data Wiring** (PerformanceScorecard, TradingPsychologyPanel, CandlestickPatternRecognition now use real store data)
+  3498→- **NEW: Code Splitting** (10 tab views lazy-loaded with next/dynamic)
+  3499→
+  3500→### All Completed Features (Rounds 1-10, 79 items)
+  3501→1-73. (All Round 1-9 features preserved)
+  3502→74. ✅ **Trading Rules Engine** - If-then automation with 10 conditions, 6 actions, 8 templates, localStorage
+  3503→75. ✅ **Social Trading Leaderboard** - 20 Indonesian traders, podium, expandable rows, follow system
+  3504→76. ✅ **PerformanceScorecard Live Data** - Replaced mock with real closedTrades
+  3505→77. ✅ **TradingPsychologyPanel Live Data** - Replaced mock with real journal + trades
+  3506→78. ✅ **CandlestickPatternRecognition Live Data** - Replaced mock with live priceHistory + symbol selector
+  3507→79. ✅ **Code Splitting** - 10 tab views use next/dynamic with loading skeletons
+  3508→
+  3509→### Remaining Recommendations
+  3510→1. Customizable Dashboard Layout (drag-and-drop)
+  3511→2. Multi-language Support (i18n)
+  3512→3. PWA / Mobile Push Notifications
+  3513→4. Email/SMS Notification Delivery
+  3514→5. MT5 Platform Integration
+  3515→6. Real API Integration (Finnhub, MARKETAUX)
+  3516→7. ML Model Integration (beyond simulated AI)
+  3517→8. React Error Boundaries per tab
+  3518→9. aria-live regions for price/P&L updates
+  3519→10. Loading skeletons for all views
+  3520→

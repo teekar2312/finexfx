@@ -1,0 +1,891 @@
+     1→'use client';
+     2→
+     3→import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+     4→import { useTradingStore } from '@/store/trading-store';
+     5→import { useShallow } from 'zustand/react/shallow';
+     6→import { SYMBOLS, SYMBOL_INFO, BROKER_CONFIG, type TradeDirection } from '@/lib/types';
+     7→
+     8→import { Button } from '@/components/ui/button';
+     9→import { Input } from '@/components/ui/input';
+    10→import { Label } from '@/components/ui/label';
+    11→import { Switch } from '@/components/ui/switch';
+    12→import { Badge } from '@/components/ui/badge';
+    13→import { Separator } from '@/components/ui/separator';
+    14→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+    15→import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+    16→import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+    17→import { motion, AnimatePresence } from 'framer-motion';
+    18→import { ArrowUpRight, ArrowDownRight, X, Square, AlertTriangle, History, Target, Shield, ArrowUp, ArrowDown, Timer, Activity } from 'lucide-react';
+    19→import PriceChart from './PriceChart';
+    20→import OrderBookDepth from './OrderBookDepth';
+    21→import MarketSentiment from './MarketSentiment';
+    22→import TradeExportButton from './TradeExportButton';
+    23→import AdvancedOrderTypes from './AdvancedOrderTypes';
+    24→import TradeHistoryTable from './TradeHistoryTable';
+    25→import { TradeExecutionModal } from './TradeExecutionModal';
+    26→import type { TradeExecutionContext } from './TradeExecutionModal';
+    27→
+    28→export default function TradingView() {
+    29→  const {
+    30→    selectedSymbol, prices, priceHistory,
+    31→    openTrades, closedTrades, isConnected, riskSettings,
+    32→  } = useTradingStore(
+    33→    useShallow((s) => ({
+    34→      selectedSymbol: s.selectedSymbol, prices: s.prices, priceHistory: s.priceHistory,
+    35→      openTrades: s.openTrades, closedTrades: s.closedTrades, isConnected: s.isConnected, riskSettings: s.riskSettings,
+    36→    }))
+    37→  );
+    38→  const setSelectedSymbol = useTradingStore((s) => s.setSelectedSymbol);
+    39→  const addTrade = useTradingStore((s) => s.addTrade);
+    40→  const closeTrade = useTradingStore((s) => s.closeTrade);
+    41→  const updateTrade = useTradingStore((s) => s.updateTrade);
+    42→  const addNotification = useTradingStore((s) => s.addNotification);
+    43→
+    44→  const [lotSize, setLotSize] = useState('0.01');
+    45→  const [stopLoss, setStopLoss] = useState(riskSettings.stopLossPips.toString());
+    46→  const [takeProfit, setTakeProfit] = useState(riskSettings.takeProfitPips.toString());
+    47→  const [oneClickMode, setOneClickMode] = useState(false);
+    48→  const [confirmClose, setConfirmClose] = useState<string | null>(null);
+    49→  const prevPriceRef = useRef<Record<string, number>>({});
+    50→  const [priceFlash, setPriceFlash] = useState<Record<string, 'up' | 'down' | null>>({});
+    51→  const [tradeModalOpen, setTradeModalOpen] = useState(false);
+    52→  const [pendingTrade, setPendingTrade] = useState<TradeExecutionContext | null>(null);
+    53→
+    54→  const price = prices[selectedSymbol];
+    55→  const chartData = priceHistory[selectedSymbol] || [];
+    56→
+    57→  useEffect(() => {
+    58→    if (price) {
+    59→      const prev = prevPriceRef.current[selectedSymbol];
+    60→      if (prev !== undefined && price.bid !== prev) {
+    61→        setPriceFlash(state => ({ ...state, [selectedSymbol]: price.bid > prev ? 'up' : 'down' }));
+    62→        const timer = setTimeout(() => {
+    63→          setPriceFlash(state => ({ ...state, [selectedSymbol]: null }));
+    64→        }, 500);
+    65→        return () => clearTimeout(timer);
+    66→      }
+    67→      prevPriceRef.current[selectedSymbol] = price.bid;
+    68→    }
+    69→  }, [price, selectedSymbol]);
+    70→
+    71→  const executeTrade = useCallback((direction: TradeDirection) => {
+    72→    if (!price || !isConnected) return;
+    73→    const lots = parseFloat(lotSize);
+    74→    if (isNaN(lots) || lots < BROKER_CONFIG.minLotSize || lots > BROKER_CONFIG.maxLotSize) return;
+    75→    const entryPrice = direction === 'BUY' ? price.ask : price.bid;
+    76→    const slPips = parseFloat(stopLoss) || 0;
+    77→    const tpPips = parseFloat(takeProfit) || 0;
+    78→    const pipSize = SYMBOL_INFO[selectedSymbol].pipSize;
+    79→    const trade = {
+    80→      id: `trade-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+    81→      symbol: selectedSymbol,
+    82→      direction,
+    83→      lotSize: lots,
+    84→      entryPrice,
+    85→      currentPrice: entryPrice,
+    86→      stopLoss: slPips > 0 ? (direction === 'BUY' ? entryPrice - slPips * pipSize : entryPrice + slPips * pipSize) : undefined,
+    87→      takeProfit: tpPips > 0 ? (direction === 'BUY' ? entryPrice + tpPips * pipSize : entryPrice - tpPips * pipSize) : undefined,
+    88→      isTrailingStop: false,
+    89→      trailingStop: undefined,
+    90→      pips: 0,
+    91→      profit: 0,
+    92→      commission: BROKER_CONFIG.commission * lots,
+    93→      spread: price.spread,
+    94→      swap: 0,
+    95→      status: 'open' as const,
+    96→      openedAt: new Date().toISOString(),
+    97→    };
+    98→    addTrade(trade);
+    99→  }, [price, isConnected, lotSize, stopLoss, takeProfit, selectedSymbol, addTrade]);
+   100→
+   101→  const handleOpenTrade = useCallback((direction: TradeDirection) => {
+   102→    if (!price || !isConnected) {
+   103→      addNotification({ type: 'error', title: 'Cannot Trade', message: 'Not connected to price feed' });
+   104→      return;
+   105→    }
+   106→    const lots = parseFloat(lotSize);
+   107→    if (isNaN(lots) || lots < BROKER_CONFIG.minLotSize || lots > BROKER_CONFIG.maxLotSize) {
+   108→      addNotification({ type: 'error', title: 'Invalid Lot Size', message: `Must be between ${BROKER_CONFIG.minLotSize} and ${BROKER_CONFIG.maxLotSize}` });
+   109→      return;
+   110→    }
+   111→    if (oneClickMode) {
+   112→      executeTrade(direction);
+   113→      return;
+   114→    }
+   115→    const entryPrice = direction === 'BUY' ? price.ask : price.bid;
+   116→    const slPips = parseFloat(stopLoss) || 0;
+   117→    const tpPips = parseFloat(takeProfit) || 0;
+   118→    const pipSize = SYMBOL_INFO[selectedSymbol].pipSize;
+   119→    const slPrice = slPips > 0 ? (direction === 'BUY' ? entryPrice - slPips * pipSize : entryPrice + slPips * pipSize) : entryPrice;
+   120→    const tpPrice = tpPips > 0 ? (direction === 'BUY' ? entryPrice + tpPips * pipSize : entryPrice - tpPips * pipSize) : entryPrice;
+   121→    const pipValue = SYMBOL_INFO[selectedSymbol].category === 'forex' ? 10 * lots : 100 * lots;
+   122→    const contractSize = SYMBOL_INFO[selectedSymbol].category === 'forex' ? 100000 : 100;
+   123→    const currentPrice = selectedSymbol === 'USDJPY' ? 1 / price.bid : price.bid;
+   124→    const margin = (contractSize * lots * currentPrice) / BROKER_CONFIG.leverage;
+   125→    const balance = useTradingStore.getState().balance;
+   126→    const riskAmount = slPips * pipValue;
+   127→    const potentialProfit = tpPips * pipValue;
+   128→    const rrRatio = riskAmount > 0 && potentialProfit > 0 ? `1:${(potentialProfit / riskAmount).toFixed(1)}` : tpPips > 0 && slPips > 0 ? `1:${(tpPips / slPips).toFixed(1)}` : 'N/A';
+   129→    setPendingTrade({
+   130→      symbol: SYMBOL_INFO[selectedSymbol].name,
+   131→      direction,
+   132→      lotSize: lots,
+   133→      entryPrice,
+   134→      stopLoss: slPrice,
+   135→      takeProfit: tpPrice,
+   136→      riskAmount,
+   137→      potentialProfit,
+   138→      riskRewardRatio: rrRatio,
+   139→      spread: parseFloat((price.spread / pipSize).toFixed(1)),
+   140→      commission: BROKER_CONFIG.commission * lots,
+   141→      accountBalance: balance,
+   142→      marginRequired: margin,
+   143→      freeMargin: balance - margin,
+   144→    });
+   145→    setTradeModalOpen(true);
+   146→  }, [price, isConnected, lotSize, stopLoss, takeProfit, selectedSymbol, oneClickMode, addNotification, executeTrade]);
+   147→
+   148→  const handleModalConfirm = useCallback(() => {
+   149→    if (pendingTrade) {
+   150→      executeTrade(pendingTrade.direction as TradeDirection);
+   151→      setTradeModalOpen(false);
+   152→      setPendingTrade(null);
+   153→    }
+   154→  }, [pendingTrade, executeTrade]);
+   155→
+   156→  const handleToggleTrailing = (tradeId: string, enabled: boolean) => {
+   157→    updateTrade(tradeId, { isTrailingStop: enabled, trailingStop: enabled ? riskSettings.stopLossPips : undefined });
+   158→  };
+   159→
+   160→  // (c) Calculated order metrics
+   161→  const orderMetrics = useMemo(() => {
+   162→    const lots = parseFloat(lotSize) || 0;
+   163→    const slPips = parseFloat(stopLoss) || 0;
+   164→    const tpPips = parseFloat(takeProfit) || 0;
+   165→    const pipValue = SYMBOL_INFO[selectedSymbol].category === 'forex' ? 10 * lots : 100 * lots;
+   166→    const pipSize = SYMBOL_INFO[selectedSymbol].pipSize;
+   167→
+   168→    // Margin = (contractSize * lots * price) / leverage
+   169→    const contractSize = SYMBOL_INFO[selectedSymbol].category === 'forex' ? 100000 : 100;
+   170→    const currentPrice = price ? (selectedSymbol === 'USDJPY' ? 1 / price.bid : price.bid) : 1;
+   171→    const margin = (contractSize * lots * currentPrice) / BROKER_CONFIG.leverage;
+   172→
+   173→    const riskAmount = slPips * pipValue;
+   174→    const potentialProfit = tpPips * pipValue;
+   175→
+   176→    return { margin, riskAmount, potentialProfit, pipValue };
+   177→  }, [lotSize, stopLoss, takeProfit, selectedSymbol, price]);
+   178→
+   179→  // (a) History stats
+   180→  const historyStats = useMemo(() => {
+   181→    if (closedTrades.length === 0) return null;
+   182→    const wins = closedTrades.filter(t => t.profit > 0);
+   183→    const losses = closedTrades.filter(t => t.profit <= 0);
+   184→    const winRate = (wins.length / closedTrades.length) * 100;
+   185→    const totalPnl = closedTrades.reduce((s, t) => s + t.profit, 0);
+   186→    const bestTrade = closedTrades.reduce((best, t) => t.profit > best.profit ? t : best, closedTrades[0]);
+   187→    const worstTrade = closedTrades.reduce((worst, t) => t.profit < worst.profit ? t : worst, closedTrades[0]);
+   188→    return { totalTrades: closedTrades.length, winRate, totalPnl, bestTrade, worstTrade };
+   189→  }, [closedTrades]);
+   190→
+   191→  function formatDuration(openedAt: string, closedAt?: string) {
+   192→    const start = new Date(openedAt).getTime();
+   193→    const end = (closedAt ? new Date(closedAt) : new Date()).getTime();
+   194→    const diffMin = Math.floor((end - start) / 60000);
+   195→    if (diffMin < 1) return '<1m';
+   196→    if (diffMin < 60) return `${diffMin}m`;
+   197→    const hr = Math.floor(diffMin / 60);
+   198→    const min = diffMin % 60;
+   199→    if (hr < 24) return `${hr}h ${min}m`;
+   200→    const days = Math.floor(hr / 24);
+   201→    const remHr = hr % 24;
+   202→    return `${days}d ${remHr}h`;
+   203→  }
+   204→
+   205→  // Generate sparkline SVG polyline points for a symbol
+   206→  const getSparklinePoints = useCallback((sym: string): string => {
+   207→    const history = priceHistory[sym];
+   208→    if (!history || history.length < 2) return '';
+   209→    const pts = history.slice(-12);
+   210→    const min = Math.min(...pts.map(p => p.close));
+   211→    const max = Math.max(...pts.map(p => p.close));
+   212→    const range = max - min || 1;
+   213→    return pts.map((p, i) => `${(i / 11) * 36},${20 - ((p.close - min) / range) * 18}`).join(' ');
+   214→  }, [priceHistory]);
+   215→
+   216→  // Quick lot sizes
+   217→  const quickLots = [0.01, 0.05, 0.1, 0.5, 1.0];
+   218→
+   219→  return (
+   220→    <TooltipProvider delayDuration={0}>
+   221→      <div className="p-4 pb-10 md:pb-4 space-y-4">
+   222→        {/* Symbol Selector - Pill style with sparklines */}
+   223→        <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+   224→          {SYMBOLS.map((sym) => {
+   225→            const isActive = sym === selectedSymbol;
+   226→            const p = prices[sym];
+   227→            const sparkline = getSparklinePoints(sym);
+   228→            return (
+   229→              <button
+   230→                key={sym}
+   231→                onClick={() => setSelectedSymbol(sym)}
+   232→                className={`flex-shrink-0 py-2.5 px-3 rounded-full text-sm font-medium transition-all min-w-[120px] card-hover scale-click flex items-center gap-2.5 border ${
+   233→                  isActive
+   234→                    ? 'text-emerald-400 border-emerald-500/30 pill-active-glow symbol-pill-active inset-highlight'
+   235→                    : 'bg-card/80 border-border/60 text-muted-foreground hover:text-foreground hover:border-border'
+   236→                }`}
+   237→              >
+   238→                <div className="flex flex-col items-start gap-0.5">
+   239→                  <div className="flex items-center gap-1.5">
+   240→                    {p && <div className={`direction-dot ${p.change >= 0 ? 'direction-dot-up' : 'direction-dot-down'}`} />}
+   241→                    <span className="text-xs font-bold tracking-tight">{SYMBOL_INFO[sym].name}</span>
+   242→                    {p && (
+   243→                      <span className="text-[9px] text-muted-foreground font-normal tabular-nums">
+   244→                        {p.spread.toFixed(1)}p
+   245→                      </span>
+   246→                    )}
+   247→                  </div>
+   248→                  {p && (
+   249→                    <div className={`text-[11px] tabular-nums font-medium ${p.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   250→                      {p.bid.toFixed(SYMBOL_INFO[sym].digits)}
+   251→                    </div>
+   252→                  )}
+   253→                </div>
+   254→                {sparkline && (
+   255→                  <svg viewBox="0 0 36 20" className="w-9 h-5 flex-shrink-0" preserveAspectRatio="none">
+   256→                    <polyline
+   257→                      points={sparkline}
+   258→                      fill="none"
+   259→                      stroke={p && p.change >= 0 ? '#10b981' : '#ef4444'}
+   260→                      strokeWidth="1.5"
+   261→                      strokeLinecap="round"
+   262→                      strokeLinejoin="round"
+   263→                      opacity={isActive ? 1 : 0.6}
+   264→                    />
+   265→                  </svg>
+   266→                )}
+   267→              </button>
+   268→            );
+   269→          })}
+   270→        </div>
+   271→
+   272→        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+   273→          {/* Chart */}
+   274→          <div className="lg:col-span-3 space-y-4">
+   275→            <div className="chart-glow rounded-xl">
+   276→              <div className="glass-card-premium rounded-xl card-hover-lift border-border/40 chart-inner-glow">
+   277→                <div className="p-0">
+   278→                  <PriceChart
+   279→                    data={chartData}
+   280→                    symbol={selectedSymbol}
+   281→                    bid={price?.bid}
+   282→                    ask={price?.ask}
+   283→                    height={300}
+   284→                  />
+   285→                </div>
+   286→              </div>
+   287→            </div>
+   288→
+   289→            {/* (a) Tabbed Positions / History */}
+   290→            <div className="glass-card-premium rounded-xl card-hover-lift">
+   291→              <Tabs defaultValue="open" className="w-full">
+   292→                <div className="flex items-center gap-2 mb-3 pb-0 pt-3 px-4">
+   293→                  <div className="flex items-center justify-between gap-2">
+   294→                    <TabsList className="h-8 glass-card-premium border-0 shadow-none gap-0.5 p-1">
+   295→                      <TabsTrigger value="open" className="text-xs h-6 rounded-lg data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_12px_rgba(16,185,129,0.2),inset_0_1px_0_rgba(16,185,129,0.1)]">
+   296→                        Open ({openTrades.length})
+   297→                      </TabsTrigger>
+   298→                      <TabsTrigger value="history" className="text-xs h-6 rounded-lg data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-400 data-[state=active]:shadow-[0_0_12px_rgba(16,185,129,0.2),inset_0_1px_0_rgba(16,185,129,0.1)]">
+   299→                        History ({closedTrades.length})
+   300→                      </TabsTrigger>
+   301→                      <TabsTrigger value="advanced" className="text-xs h-6 rounded-lg data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-400 data-[state=active]:shadow-[0_0_12px_rgba(245,158,11,0.2),inset_0_1px_0_rgba(245,158,11,0.1)]">
+   302→                        Advanced
+   303→                      </TabsTrigger>
+   304→                    </TabsList>
+   305→                    <TradeExportButton />
+   306→                  </div>
+   307→                </div>
+   308→
+   309→                <TabsContent value="open" className="mt-0">
+   310→                  <div className="px-4 pb-3">
+   311→                    {openTrades.length === 0 ? (
+   312→                      <div className="text-center py-6 text-muted-foreground text-sm">
+   313→                        No open positions. Use the panel to place a trade.
+   314→                      </div>
+   315→                    ) : (
+   316→                      <div className="overflow-x-auto">
+   317→                        <Table>
+   318→                          <TableHeader>
+   319→                            <TableRow className="border-border hover:bg-transparent">
+   320→                              <TableHead className="text-[10px] h-8" aria-sort="none">Symbol</TableHead>
+   321→                              <TableHead className="text-[10px] h-8" aria-sort="none">Dir</TableHead>
+   322→                              <TableHead className="text-[10px] h-8 text-right" aria-sort="none">Lots</TableHead>
+   323→                              <TableHead className="text-[10px] h-8 text-right" aria-sort="none">Entry</TableHead>
+   324→                              <TableHead className="text-[10px] h-8 text-right">SL</TableHead>
+   325→                              <TableHead className="text-[10px] h-8 text-right">TP</TableHead>
+   326→                              <TableHead className="text-[10px] h-8 text-right" aria-sort="none">Pips</TableHead>
+   327→                              <TableHead className="text-[10px] h-8 text-right" aria-sort="none">P&L</TableHead>
+   328→                              <TableHead className="text-[10px] h-8" aria-sort="none">Time</TableHead>
+   329→                              <TableHead className="text-[10px] h-8 text-center">Trail</TableHead>
+   330→                              <TableHead className="text-[10px] h-8 text-center">Action</TableHead>
+   331→                            </TableRow>
+   332→                          </TableHeader>
+   333→                          <TableBody>
+   334→                            {openTrades.map((trade) => {
+   335→                              const maxProfit = Math.max(...openTrades.map(t => Math.abs(t.profit)), 1);
+   336→                              return (
+   337→                              <TableRow key={trade.id} className={`border-border compact-row table-row-hover ${trade.direction === 'BUY' ? 'trade-row-buy' : 'trade-row-sell'}`}>
+   338→                                <TableCell className="text-xs font-medium">{trade.symbol}</TableCell>
+   339→                                <TableCell>
+   340→                                  <div className={`flex items-center gap-1 text-xs font-bold ${trade.direction === 'BUY' ? 'text-emerald-500' : 'text-red-500'}`}>
+   341→                                    {trade.direction === 'BUY' ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+   342→                                    {trade.direction}
+   343→                                  </div>
+   344→                                </TableCell>
+   345→                                <TableCell className="text-xs text-right tabular-nums">{trade.lotSize}</TableCell>
+   346→                                <TableCell className="text-xs text-right tabular-nums">{trade.entryPrice.toFixed(SYMBOL_INFO[trade.symbol].digits)}</TableCell>
+   347→                                <TableCell className="text-xs text-right tabular-nums text-red-400">
+   348→                                  {trade.stopLoss?.toFixed(SYMBOL_INFO[trade.symbol].digits) || '—'}
+   349→                                </TableCell>
+   350→                                <TableCell className="text-xs text-right tabular-nums text-emerald-400">
+   351→                                  {trade.takeProfit?.toFixed(SYMBOL_INFO[trade.symbol].digits) || '—'}
+   352→                                </TableCell>
+   353→                                <TableCell className={`text-xs text-right tabular-nums font-semibold ${trade.pips >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   354→                                  {trade.pips >= 0 ? '+' : ''}{trade.pips.toFixed(1)}
+   355→                                </TableCell>
+   356→                                <TableCell className="text-right">
+   357→                                  <div className={`text-sm font-bold tabular-nums ${trade.profit >= 0 ? 'gradient-text-profit' : 'gradient-text-loss'}`}>
+   358→                                    {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
+   359→                                  </div>
+   360→                                  <div className="pnl-bar-track mt-0.5">
+   361→                                    <div
+   362→                                      className={`pnl-bar-fill-premium ${trade.profit >= 0 ? 'profit' : 'loss'}`}
+   363→                                      style={{ width: `${Math.min((Math.abs(trade.profit) / maxProfit) * 100, 100)}%` }}
+   364→                                    />
+   365→                                  </div>
+   366→                                </TableCell>
+   367→                                <TableCell className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+   368→                                  <div className="flex items-center gap-1">
+   369→                                    <Timer className="h-2.5 w-2.5 opacity-50" />
+   370→                                    {formatDuration(trade.openedAt)}
+   371→                                  </div>
+   372→                                </TableCell>
+   373→                                <TableCell className="text-center">
+   374→                                  {trade.isTrailingStop ? (
+   375→                                    <Tooltip>
+   376→                                      <TooltipTrigger>
+   377→                                        <div className="trail-animate inline-flex">
+   378→                                          <Activity className="h-3.5 w-3.5 text-emerald-500" />
+   379→                                        </div>
+   380→                                      </TooltipTrigger>
+   381→                                      <TooltipContent className="text-[10px]">Trailing {trade.trailingStop} pips</TooltipContent>
+   382→                                    </Tooltip>
+   383→                                  ) : (
+   384→                                    <Switch
+   385→                                      checked={trade.isTrailingStop}
+   386→                                      onCheckedChange={(checked) => handleToggleTrailing(trade.id, checked)}
+   387→                                      className="scale-75 data-[state=checked]:bg-emerald-600"
+   388→                                    />
+   389→                                  )}
+   390→                                </TableCell>
+   391→                                <TableCell className="text-center">
+   392→                                  <AnimatePresence>
+   393→                                    {confirmClose === trade.id ? (
+   394→                                      <motion.div
+   395→                                        initial={{ opacity: 0, scale: 0.8 }}
+   396→                                        animate={{ opacity: 1, scale: 1 }}
+   397→                                        exit={{ opacity: 0, scale: 0.8 }}
+   398→                                        className="flex items-center gap-1"
+   399→                                      >
+   400→                                        <Button
+   401→                                          size="sm"
+   402→                                          variant="destructive"
+   403→                                          className="h-6 px-2 text-[10px]"
+   404→                                          onClick={() => { closeTrade(trade.id); setConfirmClose(null); }}
+   405→                                        >
+   406→                                          Confirm
+   407→                                        </Button>
+   408→                                        <Button
+   409→                                          size="sm"
+   410→                                          variant="ghost"
+   411→                                          className="h-6 px-2 text-[10px]"
+   412→                                          onClick={() => setConfirmClose(null)}
+   413→                                        >
+   414→                                          <X className="h-3 w-3" />
+   415→                                        </Button>
+   416→                                      </motion.div>
+   417→                                    ) : (
+   418→                                      <Button
+   419→                                        size="sm"
+   420→                                        variant="ghost"
+   421→                                        className="h-6 px-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/15 transition-colors duration-200"
+   422→                                        onClick={() => setConfirmClose(trade.id)}
+   423→                                      >
+   424→                                        <Square className="h-3 w-3" />
+   425→                                      </Button>
+   426→                                    )}
+   427→                                  </AnimatePresence>
+   428→                                </TableCell>
+   429→                              </TableRow>
+   430→                              );
+   431→                            })}
+   432→                          </TableBody>
+   433→                        </Table>
+   434→                      </div>
+   435→                    )}
+   436→                  </div>
+   437→                </TabsContent>
+   438→
+   439→                <TabsContent value="history" className="mt-0">
+   440→                  <div className="px-4 pb-3">
+   441→                    {closedTrades.length === 0 ? (
+   442→                      <div className="text-center py-10 text-muted-foreground">
+   443→                        <History className="h-8 w-8 mx-auto mb-2 opacity-30" />
+   444→                        <p className="text-sm">No trade history yet</p>
+   445→                        <p className="text-[11px] mt-1 opacity-60">Closed trades will appear here</p>
+   446→                      </div>
+   447→                    ) : (
+   448→                      <>
+   449→                        {/* Summary Stats + Win/Loss Ratio Bar + Avg Comparison */}
+   450→                        {historyStats && (() => {
+   451→                          const wins = closedTrades.filter(t => t.profit > 0);
+   452→                          const losses = closedTrades.filter(t => t.profit <= 0);
+   453→                          const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.profit, 0) / wins.length : 0;
+   454→                          const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.profit, 0) / losses.length) : 0;
+   455→                          const maxAvg = Math.max(avgWin, avgLoss, 1);
+   456→                          return (
+   457→                            <>
+   458→                            <div className="grid grid-cols-5 gap-2 mb-3">
+   459→                              <div className="text-center p-2 rounded-lg stat-card-premium">
+   460→                                <div className="text-[10px] text-muted-foreground uppercase">Trades</div>
+   461→                                <div className="text-sm font-bold tabular-nums count-up">{historyStats.totalTrades}</div>
+   462→                              </div>
+   463→                              <div className="text-center p-2 rounded-lg stat-card-premium">
+   464→                                <div className="text-[10px] text-muted-foreground uppercase">Win Rate</div>
+   465→                                <div className={`text-sm font-bold tabular-nums ${historyStats.winRate >= 50 ? 'neon-text-emerald' : 'neon-text-red'}`}>
+   466→                                  {historyStats.winRate.toFixed(0)}%
+   467→                                </div>
+   468→                              </div>
+   469→                              <div className={`text-center p-2 rounded-lg stat-card-premium ${historyStats.totalPnl >= 0 ? 'glow-pulse-emerald' : 'glow-pulse-red'}`}>
+   470→                                <div className="text-[10px] text-muted-foreground uppercase">Total P&L</div>
+   471→                                <div className={`text-sm font-bold tabular-nums ${historyStats.totalPnl >= 0 ? 'neon-text-emerald' : 'neon-text-red'}`}>
+   472→                                  {historyStats.totalPnl >= 0 ? '+' : ''}${historyStats.totalPnl.toFixed(2)}
+   473→                                </div>
+   474→                              </div>
+   475→                              <div className="text-center p-2 rounded-lg stat-card-premium">
+   476→                                <div className="text-[10px] text-muted-foreground uppercase">Best</div>
+   477→                                <div className="text-sm font-bold tabular-nums neon-text-emerald">
+   478→                                  +${historyStats.bestTrade.profit.toFixed(2)}
+   479→                                </div>
+   480→                              </div>
+   481→                              <div className="text-center p-2 rounded-lg stat-card-premium">
+   482→                                <div className="text-[10px] text-muted-foreground uppercase">Worst</div>
+   483→                                <div className="text-sm font-bold tabular-nums neon-text-red">
+   484→                                  ${historyStats.worstTrade.profit.toFixed(2)}
+   485→                                </div>
+   486→                              </div>
+   487→                            </div>
+   488→                            {/* Win/Loss Ratio Visual Bar */}
+   489→                            <div className="mb-3">
+   490→                              <div className="flex items-center justify-between text-[10px] mb-1.5">
+   491→                                <span className="text-emerald-500 font-medium">{wins.length} Wins</span>
+   492→                                <span className="text-muted-foreground">{historyStats.winRate.toFixed(0)}%</span>
+   493→                                <span className="text-red-500 font-medium">{losses.length} Losses</span>
+   494→                              </div>
+   495→                              <div className="winloss-bar-premium">
+   496→                                <div
+   497→                                  className="bg-gradient-to-r from-emerald-600 to-emerald-400 animate-progress"
+   498→                                  style={{ width: `${historyStats.winRate}%` }}
+   499→                                />
+   500→                                <div
+   501→                                  className="bg-gradient-to-r from-red-400 to-red-600 animate-progress"
+   502→                                  style={{ width: `${100 - historyStats.winRate}%` }}
+   503→                                />
+   504→                              </div>
+   505→                            </div>
+   506→                            {/* Avg Win vs Avg Loss Comparison */}
+   507→                            <div className="mb-3 space-y-1.5">
+   508→                              <div className="flex items-center gap-2">
+   509→                                <span className="text-[10px] text-emerald-500 w-12 shrink-0">Avg Win</span>
+   510→                                <div className="flex-1 avg-bar-premium overflow-hidden">
+   511→                                  <div
+   512→                                    className="bg-gradient-to-r from-emerald-600 to-emerald-400 animate-progress"
+   513→                                    style={{ width: `${(avgWin / maxAvg) * 100}%` }}
+   514→                                  />
+   515→                                </div>
+   516→                                <span className="text-[10px] text-emerald-500 tabular-nums font-medium w-16 text-right">
+   517→                                  +${avgWin.toFixed(2)}
+   518→                                </span>
+   519→                              </div>
+   520→                              <div className="flex items-center gap-2">
+   521→                                <span className="text-[10px] text-red-500 w-12 shrink-0">Avg Loss</span>
+   522→                                <div className="flex-1 avg-bar-premium overflow-hidden">
+   523→                                  <div
+   524→                                    className="bg-gradient-to-r from-red-400 to-red-600 animate-progress"
+   525→                                    style={{ width: `${(avgLoss / maxAvg) * 100}%` }}
+   526→                                  />
+   527→                                </div>
+   528→                                <span className="text-[10px] text-red-500 tabular-nums font-medium w-16 text-right">
+   529→                                  -${avgLoss.toFixed(2)}
+   530→                                </span>
+   531→                              </div>
+   532→                            </div>
+   533→                            </>
+   534→                          );
+   535→                        })()}
+   536→                        <div className="overflow-x-auto">
+   537→                          <Table>
+   538→                            <TableHeader>
+   539→                              <TableRow className="border-border hover:bg-transparent">
+   540→                                <TableHead className="text-[10px] h-7">Symbol</TableHead>
+   541→                                <TableHead className="text-[10px] h-7">Dir</TableHead>
+   542→                                <TableHead className="text-[10px] h-7 text-right">Lots</TableHead>
+   543→                                <TableHead className="text-[10px] h-7 text-right">Entry</TableHead>
+   544→                                <TableHead className="text-[10px] h-7 text-right">Close</TableHead>
+   545→                                <TableHead className="text-[10px] h-7 text-right">Pips</TableHead>
+   546→                                <TableHead className="text-[10px] h-7 text-right">P&L</TableHead>
+   547→                                <TableHead className="text-[10px] h-7">Duration</TableHead>
+   548→                                <TableHead className="text-[10px] h-7">Strategy</TableHead>
+   549→                              </TableRow>
+   550→                            </TableHeader>
+   551→                            <TableBody>
+   552→                              {closedTrades.map((trade) => (
+   553→                                <TableRow key={trade.id} className={`border-border compact-row table-row-hover ${trade.direction === 'BUY' ? 'trade-row-buy' : 'trade-row-sell'}`}>
+   554→                                  <TableCell className="text-xs font-medium">{trade.symbol}</TableCell>
+   555→                                  <TableCell>
+   556→                                    <div className={`flex items-center gap-1 text-[11px] font-bold ${trade.direction === 'BUY' ? 'text-emerald-500' : 'text-red-500'}`}>
+   557→                                      {trade.direction === 'BUY' ? <ArrowUpRight className="h-2.5 w-2.5" /> : <ArrowDownRight className="h-2.5 w-2.5" />}
+   558→                                      {trade.direction}
+   559→                                    </div>
+   560→                                  </TableCell>
+   561→                                  <TableCell className="text-[11px] text-right tabular-nums">{trade.lotSize}</TableCell>
+   562→                                  <TableCell className="text-[11px] text-right tabular-nums">{trade.entryPrice.toFixed(SYMBOL_INFO[trade.symbol].digits)}</TableCell>
+   563→                                  <TableCell className="text-[11px] text-right tabular-nums">{trade.currentPrice.toFixed(SYMBOL_INFO[trade.symbol].digits)}</TableCell>
+   564→                                  <TableCell className={`text-[11px] text-right tabular-nums font-semibold ${trade.pips >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+   565→                                    {trade.pips >= 0 ? '+' : ''}{trade.pips.toFixed(1)}
+   566→                                  </TableCell>
+   567→                                  <TableCell className={`text-sm text-right tabular-nums font-bold ${trade.profit >= 0 ? 'gradient-text-profit' : 'gradient-text-loss'}`}>
+   568→                                    {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
+   569→                                  </TableCell>
+   570→                                  <TableCell className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+   571→                                    <div className="flex items-center gap-1">
+   572→                                      <Timer className="h-2.5 w-2.5 opacity-40" />
+   573→                                      {formatDuration(trade.openedAt, trade.closedAt)}
+   574→                                    </div>
+   575→                                  </TableCell>
+   576→                                  <TableCell className="text-[10px] text-muted-foreground">
+   577→                                    {trade.strategy || '—'}
+   578→                                  </TableCell>
+   579→                                </TableRow>
+   580→                              ))}
+   581→                            </TableBody>
+   582→                          </Table>
+   583→                        </div>
+   584→                      </>
+   585→                    )}
+   586→                  </div>
+   587→                </TabsContent>
+   588→                <TabsContent value="advanced" className="mt-0">
+   589→                  <div className="px-4 pb-3">
+   590→                    <AdvancedOrderTypes />
+   591→                  </div>
+   592→                </TabsContent>
+   593→              </Tabs>
+   594→            </div>
+   595→          </div>
+   596→
+   597→          {/* Trading Panel */}
+   598→          <div className="space-y-4">
+   599→            {/* (b) Better Price Display Card */}
+   600→            <div className="glass-card-premium rounded-xl card-hover-lift">
+   601→              <div className="p-4 space-y-3">
+   602→                <div className="text-center">
+   603→                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-medium">{SYMBOL_INFO[selectedSymbol].name}</div>
+   604→                  {price ? (
+   605→                    <>
+   606→                      <div className={`text-2xl md:text-3xl font-bold tabular-nums count-up ${priceFlash[selectedSymbol] === 'up' ? 'flash-green' : priceFlash[selectedSymbol] === 'down' ? 'flash-red' : ''}`}>
+   607→                        {price.bid.toFixed(SYMBOL_INFO[selectedSymbol].digits)}
+   608→                      </div>
+   609→                      <div className={`text-xs tabular-nums flex items-center justify-center gap-1 mt-0.5 ${price.change >= 0 ? 'neon-text-emerald' : 'neon-text-red'}`}>
+   610→                        {price.change >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+   611→                        <span className="font-medium">{price.change >= 0 ? '+' : ''}{price.change.toFixed(SYMBOL_INFO[selectedSymbol].digits)}</span>
+   612→                        <span>({price.change >= 0 ? '+' : ''}{price.changePercent.toFixed(3)}%)</span>
+   613→                      </div>
+   614→                    </>
+   615→                  ) : (
+   616→                    <div className="text-lg text-muted-foreground">—</div>
+   617→                  )}
+   618→                </div>
+   619→
+   620→                <div className="grid grid-cols-2 gap-2">
+   621→                  <div className="text-center p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+   622→                    <div className="text-[10px] text-emerald-500/70 uppercase font-medium">Bid</div>
+   623→                    <div className="text-2xl md:text-3xl font-bold text-emerald-500 tabular-nums">
+   624→                      {price ? price.bid.toFixed(SYMBOL_INFO[selectedSymbol].digits) : '—'}
+   625→                    </div>
+   626→                  </div>
+   627→                  <div className="text-center p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+   628→                    <div className="text-[10px] text-red-500/70 uppercase font-medium">Ask</div>
+   629→                    <div className="text-2xl md:text-3xl font-bold text-red-500 tabular-nums">
+   630→                      {price ? price.ask.toFixed(SYMBOL_INFO[selectedSymbol].digits) : '—'}
+   631→                    </div>
+   632→                  </div>
+   633→                </div>
+   634→
+   635→                {/* High/Low for the day + range bar */}
+   636→                {price && (
+   637→                  <div className="space-y-1.5">
+   638→                    <div className="flex items-center justify-between text-[10px] tabular-nums">
+   639→                      <span className="text-red-400 font-medium">L: {price.low.toFixed(SYMBOL_INFO[selectedSymbol].digits)}</span>
+   640→                      <span className="text-muted-foreground">Daily Range</span>
+   641→                      <span className="text-emerald-400 font-medium">H: {price.high.toFixed(SYMBOL_INFO[selectedSymbol].digits)}</span>
+   642→                    </div>
+   643→                    <div className="relative h-2.5 w-full rounded-full bg-slate-800 overflow-hidden">
+   644→                      <div
+   645→                        className="absolute top-0 h-full w-1 bg-foreground rounded-sm shadow-[0_0_6px_rgba(255,255,255,0.5)]"
+   646→                        style={{
+   647→                          left: `${price.high !== price.low ? ((price.bid - price.low) / (price.high - price.low)) * 100 : 50}%`,
+   648→                          transform: 'translateX(-50%)',
+   649→                        }}
+   650→                      />
+   651→                      <div
+   652→                        className="absolute top-0 h-full bg-gradient-to-r from-red-500/30 via-slate-600/30 to-emerald-500/30"
+   653→                        style={{ left: '0%', width: '100%' }}
+   654→                      />
+   655→                    </div>
+   656→                    <div className="text-center">
+   657→                      <span className="text-[10px] text-muted-foreground">Spread: </span>
+   658→                      <span className="text-[10px] font-medium tabular-nums">{price.spread.toFixed(1)} pips</span>
+   659→                    </div>
+   660→                  </div>
+   661→                )}
+   662→              </div>
+   663→            </div>
+   664→
+   665→            {/* (c) Better Order Panel */}
+   666→            <div className={`order-panel-premium rounded-xl card-hover ${oneClickMode ? 'pulsing-border-amber' : ''}`}>
+   667→              <div className="p-5 pb-0 pt-4 px-5">
+   668→                <div className="section-header-accent">
+   669→                  <h3 className="text-sm font-semibold">New Order</h3>
+   670→                </div>
+   671→              </div>
+   672→              <div className="px-5 pb-5 pt-3 space-y-3">
+   673→                <div>
+   674→                  <Label className="text-[11px] text-muted-foreground font-medium">Lot Size</Label>
+   675→                  <div className="flex flex-wrap gap-2 mt-1.5 mb-1.5">
+   676→                    {quickLots.map((lot) => (
+   677→                      <button
+   678→                        key={lot}
+   679→                        onClick={() => setLotSize(lot.toString())}
+   680→                        className={`lot-chip-premium text-[10px] px-3 py-1.5 border ${
+   681→                          parseFloat(lotSize) === lot
+   682→                            ? 'active'
+   683→                            : 'border-border/60 text-muted-foreground'
+   684→                        } tabular-nums`}
+   685→                      >
+   686→                        {lot}
+   687→                      </button>
+   688→                    ))}
+   689→                  </div>
+   690→                  <Input
+   691→                    type="number"
+   692→                    value={lotSize}
+   693→                    onChange={(e) => setLotSize(e.target.value)}
+   694→                    step="0.01"
+   695→                    min={BROKER_CONFIG.minLotSize}
+   696→                    max={BROKER_CONFIG.maxLotSize}
+   697→                    className="h-9 text-sm tabular-nums"
+   698→                  />
+   699→                </div>
+   700→                <div className="grid grid-cols-2 gap-2">
+   701→                  <div>
+   702→                    <div className="flex items-center justify-between mb-1">
+   703→                      <Label className="text-[11px] text-muted-foreground font-medium">SL (pips)</Label>
+   704→                      <span className="text-[9px] text-muted-foreground tabular-nums">
+   705→                        ${orderMetrics.riskAmount.toFixed(2)}
+   706→                      </span>
+   707→                    </div>
+   708→                    <Input
+   709→                      type="number"
+   710→                      value={stopLoss}
+   711→                      onChange={(e) => setStopLoss(e.target.value)}
+   712→                      step="1"
+   713→                      min="0"
+   714→                      className="h-9 text-sm tabular-nums"
+   715→                    />
+   716→                  </div>
+   717→                  <div>
+   718→                    <div className="flex items-center justify-between mb-1">
+   719→                      <Label className="text-[11px] text-muted-foreground font-medium">TP (pips)</Label>
+   720→                      <span className="text-[9px] text-muted-foreground tabular-nums">
+   721→                        ${orderMetrics.potentialProfit.toFixed(2)}
+   722→                      </span>
+   723→                    </div>
+   724→                    <Input
+   725→                      type="number"
+   726→                      value={takeProfit}
+   727→                      onChange={(e) => setTakeProfit(e.target.value)}
+   728→                      step="1"
+   729→                      min="0"
+   730→                      className="h-9 text-sm tabular-nums"
+   731→                    />
+   732→                  </div>
+   733→                </div>
+   734→
+   735→                {/* Risk:Reward Ratio */}
+   736→                {(() => {
+   737→                  const slPips = parseFloat(stopLoss) || 0;
+   738→                  const tpPips = parseFloat(takeProfit) || 0;
+   739→                  const rr = slPips > 0 && tpPips > 0 ? (tpPips / slPips).toFixed(1) : null;
+   740→                  return rr ? (
+   741→                    <div className="flex items-center justify-center gap-2 py-1.5 px-2 rounded-lg bg-slate-800/30 border border-border/30">
+   742→                      <Target className="h-3 w-3 text-muted-foreground" />
+   743→                      <span className="text-[10px] text-muted-foreground">Risk:Reward</span>
+   744→                      <span className={`text-xs font-bold tabular-nums ${parseFloat(rr) >= 2 ? 'text-emerald-500' : parseFloat(rr) >= 1 ? 'text-amber-500' : 'text-red-500'}`}>
+   745→                        1:{rr}
+   746→                      </span>
+   747→                    </div>
+   748→                  ) : null;
+   749→                })()}
+   750→
+   751→                {/* Calculated Margin / Risk / Profit */}
+   752→                <div className="space-y-1.5 p-2.5 rounded-lg bg-slate-800/30 border border-border/50">
+   753→                  <div className="flex justify-between text-[11px]">
+   754→                    <span className="text-muted-foreground flex items-center gap-1">
+   755→                      <Shield className="h-3 w-3" /> Calculated Margin
+   756→                    </span>
+   757→                    <span className="font-medium tabular-nums text-amber-500">${orderMetrics.margin.toFixed(2)}</span>
+   758→                  </div>
+   759→                  <div className="flex justify-between text-[11px]">
+   760→                    <span className="text-label flex items-center gap-1">
+   761→                      <AlertTriangle className="h-3 w-3" /> Risk Amount
+   762→                    </span>
+   763→                    <span className={`font-bold tabular-nums ${orderMetrics.riskAmount > 0 ? 'neon-text-red' : 'text-muted-foreground'}`}>
+   764→                      ${orderMetrics.riskAmount.toFixed(2)}
+   765→                    </span>
+   766→                  </div>
+   767→                  <div className="flex justify-between text-[11px]">
+   768→                    <span className="text-label flex items-center gap-1">
+   769→                      <Target className="h-3 w-3" /> Potential Profit
+   770→                    </span>
+   771→                    <span className={`font-bold tabular-nums ${orderMetrics.potentialProfit > 0 ? 'neon-text-emerald' : 'text-muted-foreground'}`}>
+   772→                      +${orderMetrics.potentialProfit.toFixed(2)}
+   773→                    </span>
+   774→                  </div>
+   775→                </div>
+   776→
+   777→                <Separator className="opacity-50" />
+   778→
+   779→                {oneClickMode ? (
+   780→                  <div className="space-y-1.5">
+   781→                    <div className="flex items-center gap-1.5 text-[10px] text-amber-500 font-medium">
+   782→                      <AlertTriangle className="h-3 w-3" />
+   783→                      One-Click Trading Active
+   784→                    </div>
+   785→                    <div className="grid grid-cols-2 gap-2">
+   786→                      <Button
+   787→                        className="gradient-buy-btn trade-btn-premium card-press text-white h-12 font-bold text-base rounded-xl"
+   788→                        onClick={() => handleOpenTrade('BUY')}
+   789→                        disabled={!isConnected}
+   790→                      >
+   791→                        <ArrowUpRight className="h-5 w-5 mr-1" />
+   792→                        BUY
+   793→                      </Button>
+   794→                      <Button
+   795→                        className="gradient-sell-btn trade-btn-premium card-press text-white h-12 font-bold text-base rounded-xl"
+   796→                        onClick={() => handleOpenTrade('SELL')}
+   797→                        disabled={!isConnected}
+   798→                      >
+   799→                        <ArrowDownRight className="h-5 w-5 mr-1" />
+   800→                        SELL
+   801→                      </Button>
+   802→                    </div>
+   803→                  </div>
+   804→                ) : (
+   805→                  <div className="grid grid-cols-2 gap-2">
+   806→                    <Button
+   807→                      className="gradient-buy-btn trade-btn-premium card-press text-white h-12 font-bold text-base rounded-xl"
+   808→                      onClick={() => handleOpenTrade('BUY')}
+   809→                      disabled={!isConnected}
+   810→                    >
+   811→                      <ArrowUpRight className="h-5 w-5 mr-1" />
+   812→                      BUY
+   813→                    </Button>
+   814→                    <Button
+   815→                      className="gradient-sell-btn trade-btn-premium card-press text-white h-12 font-bold text-base rounded-xl"
+   816→                      onClick={() => handleOpenTrade('SELL')}
+   817→                      disabled={!isConnected}
+   818→                    >
+   819→                      <ArrowDownRight className="h-5 w-5 mr-1" />
+   820→                      SELL
+   821→                    </Button>
+   822→                  </div>
+   823→                )}
+   824→
+   825→                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-800/20 border border-border/30">
+   826→                  <div className="flex items-center gap-2">
+   827→                    <Label className="text-[11px] text-muted-foreground font-medium">One-Click Trading</Label>
+   828→                    {oneClickMode && (
+   829→                      <Badge className="text-[9px] px-1.5 py-0 bg-amber-500/20 text-amber-400 border-amber-500/30 badge-pulse badge-glow-amber">
+   830→                        LIVE
+   831→                      </Badge>
+   832→                    )}
+   833→                  </div>
+   834→                  <Switch
+   835→                    checked={oneClickMode}
+   836→                    onCheckedChange={setOneClickMode}
+   837→                    className="data-[state=checked]:bg-amber-600"
+   838→                  />
+   839→                </div>
+   840→              </div>
+   841→            </div>
+   842→
+   843→            {/* Market Info */}
+   844→            <div className="glass-card-premium rounded-xl card-hover-lift">
+   845→              <div className="p-3 space-y-1.5">
+   846→                <div className="flex justify-between text-[11px]">
+   847→                  <span className="text-muted-foreground">Leverage</span>
+   848→                  <span className="font-medium">1:{BROKER_CONFIG.leverage}</span>
+   849→                </div>
+   850→                <div className="flex justify-between text-[11px]">
+   851→                  <span className="text-muted-foreground">Commission</span>
+   852→                  <span className="font-medium">${BROKER_CONFIG.commission}/lot</span>
+   853→                </div>
+   854→                <div className="flex justify-between text-[11px]">
+   855→                  <span className="text-muted-foreground">Margin Call</span>
+   856→                  <span className="font-medium">{BROKER_CONFIG.marginCall}%</span>
+   857→                </div>
+   858→                <div className="flex justify-between text-[11px]">
+   859→                  <span className="text-muted-foreground">Stop Out</span>
+   860→                  <span className="font-medium text-red-500">{BROKER_CONFIG.stopOut}%</span>
+   861→                </div>
+   862→              </div>
+   863→            </div>
+   864→          </div>
+   865→        </div>
+   866→
+   867→        {/* Order Book & Market Sentiment */}
+   868→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   869→          <OrderBookDepth
+   870→            symbol={selectedSymbol}
+   871→            bid={price?.bid ?? SYMBOL_INFO[selectedSymbol].pipSize}
+   872→            ask={price?.ask ?? SYMBOL_INFO[selectedSymbol].pipSize * 2}
+   873→          />
+   874→          <MarketSentiment />
+   875→        </div>
+   876→
+   877→        {/* Advanced Trade History Table */}
+   878→        <TradeHistoryTable />
+   879→      </div>
+   880→
+   881→      {/* Trade Execution Confirmation Modal */}
+   882→      <TradeExecutionModal
+   883→        open={tradeModalOpen}
+   884→        onOpenChange={(open) => { if (!open) { setTradeModalOpen(false); setPendingTrade(null); } }}
+   885→        context={pendingTrade ?? undefined}
+   886→        onConfirm={handleModalConfirm}
+   887→      />
+   888→    </TooltipProvider>
+   889→  );
+   890→};
+   891→
