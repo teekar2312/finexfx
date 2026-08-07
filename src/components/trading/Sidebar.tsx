@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useTradingStore, type TabId } from '@/store/trading-store';
 import { useShallow } from 'zustand/react/shallow';
 import { BROKER_CONFIG, TRADING_SESSIONS } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from 'next-themes';
 import {
   BarChart3,
   BookOpen,
@@ -21,6 +22,8 @@ import {
   TriangleAlert,
   Zap,
   X,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -86,6 +89,8 @@ export default function Sidebar() {
   const setAutoTrading = useTradingStore((s) => s.setAutoTrading);
 
   const isMobile = useIsMobile();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
   const unresolvedErrors = errorLogs.filter(e => !e.resolved).length;
   const effectiveOpen = isMobile ? true : sidebarOpen;
 
@@ -321,6 +326,43 @@ export default function Sidebar() {
             </div>
           ) : (
             collapsedAutoToggle
+          )}
+        </div>
+
+        {/* Theme Toggle */}
+        <div className="px-3 py-2">
+          {effectiveOpen ? (
+            <div className="flex items-center justify-between px-2 min-h-[44px]">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Theme</span>
+              </div>
+              <button
+                onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+                aria-label={resolvedTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-accent transition-all duration-200 text-muted-foreground hover:text-foreground"
+              >
+                {mounted && (resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />)}
+                {!mounted && <div className="h-4 w-4" />}
+              </button>
+            </div>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+                    aria-label={resolvedTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                    className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-accent transition-all duration-200 text-muted-foreground hover:text-foreground"
+                  >
+                    {mounted && (resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />)}
+                    {!mounted && <div className="h-4 w-4" />}
+                  </button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs">
+                {mounted ? (resolvedTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode') : 'Toggle Theme'}
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
 

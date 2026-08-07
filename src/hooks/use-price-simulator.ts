@@ -166,6 +166,14 @@ export function usePriceSimulator() {
 
   useEffect(() => {
     const store = useTradingStore.getState();
+
+    // If live price feed is active, skip the simulator
+    const unsubMode = useTradingStore.subscribe((s) => s.priceFeedMode);
+    const currentMode = useTradingStore.getState().priceFeedMode;
+    if (currentMode === 'live') {
+      return;
+    }
+
     store.setConnected(true);
 
     // Initialize candle buffers with historical data

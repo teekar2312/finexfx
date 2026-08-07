@@ -13,6 +13,7 @@ import Footer from '@/components/trading/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { usePriceSimulator } from '@/hooks/use-price-simulator';
+import { useLivePriceFeed } from '@/hooks/use-live-price-feed';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 
@@ -325,6 +326,9 @@ export default function TradingDashboard() {
 
   // Initialize price simulator (replaces WebSocket)
   usePriceSimulator();
+
+  // Connect to live price feed when in live mode
+  useLivePriceFeed();
 
   // Keyboard shortcuts
   useKeyboardShortcuts({ showShortcutsHelp, setShowShortcutsHelp });

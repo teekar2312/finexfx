@@ -2217,3 +2217,466 @@
   animation: pulse-dot-keyframes 1.5s ease-in-out infinite;
 }
 
+/* ============================================
+   LIGHT THEME OVERRIDES (:not(.dark))
+   ============================================ */
+
+/* Shimmer loading — use dark shimmer in light mode */
+:not(.dark) .shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.04) 50%, transparent 100%);
+}
+
+/* Card hover lift */
+:not(.dark) .card-hover:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Glass card interactive hover */
+:not(.dark) .glass-card-interactive:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Dot pattern — light dots on white */
+:not(.dark) .stat-card-pattern::before {
+  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+}
+
+/* Stat card glow hover */
+:not(.dark) .stat-card-glow:hover {
+  box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.04), 0 8px 25px rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Action button glass shimmer */
+:not(.dark) .action-btn-glass::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0));
+}
+
+/* Mesh gradient — subtle pastel in light mode */
+:not(.dark) .mesh-gradient-bg {
+  background: linear-gradient(135deg, rgba(16,185,129,0.03), rgba(6,182,212,0.04), rgba(139,92,246,0.02), rgba(16,185,129,0.03));
+}
+
+/* Tooltip enhanced arrow */
+:not(.dark) .tooltip-enhanced::after {
+  border-right: 1px solid rgba(0,0,0,0.08);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+/* Glass card premium */
+:not(.dark) .glass-card-premium {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.06);
+}
+
+/* Parallax hover */
+:not(.dark) .parallax-hover:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Scroll horizontal thumb */
+:not(.dark) .scroll-horizontal::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+:not(.dark) .scroll-horizontal::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Skeleton shimmer */
+:not(.dark) .skeleton-shimmer {
+  background: linear-gradient(90deg, rgba(0,0,0,0.03) 25%, rgba(0,0,0,0.06) 50%, rgba(0,0,0,0.03) 75%);
+}
+
+/* Grid pattern */
+:not(.dark) .grid-pattern {
+  background-image:
+    linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+}
+
+/* Elevated card */
+:not(.dark) .elevated-card {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 4px 8px rgba(0, 0, 0, 0.04),
+    0 8px 16px rgba(0, 0, 0, 0.03);
+}
+:not(.dark) .elevated-card:hover {
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.06),
+    0 8px 16px rgba(0, 0, 0, 0.08),
+    0 16px 32px rgba(0, 0, 0, 0.06);
+}
+
+/* Metric compact */
+:not(.dark) .metric-compact {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+:not(.dark) .metric-compact:hover {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Symbol pill active */
+:not(.dark) .symbol-pill-active {
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Lot chip premium active */
+:not(.dark) .lot-chip-premium.active {
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.15), 0 0 4px rgba(16, 185, 129, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* Trade button premium inner shadow */
+:not(.dark) .trade-btn-premium::after {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Tab pills container */
+:not(.dark) .tab-pills-container {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Tab pill text colors */
+:not(.dark) .tab-pill {
+  color: rgba(100, 116, 139, 0.8);
+}
+:not(.dark) .tab-pill:hover {
+  color: rgba(15, 23, 42, 0.9);
+}
+
+/* Order panel premium */
+:not(.dark) .order-panel-premium {
+  background: rgba(255, 255, 255, 0.8);
+}
+:not(.dark) .order-panel-premium::before {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(0, 0, 0, 0.02), rgba(16, 185, 129, 0.06));
+}
+
+/* P&L bar track */
+:not(.dark) .pnl-bar-track {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Win/loss bar */
+:not(.dark) .winloss-bar {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Chart inner glow */
+:not(.dark) .chart-inner-glow::before {
+  box-shadow: inset 0 0 30px rgba(16, 185, 129, 0.02), inset 0 0 60px rgba(0, 0, 0, 0.03);
+}
+
+/* Chart toggle container */
+:not(.dark) .chart-toggle-container {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Chart toggle button text colors */
+:not(.dark) .chart-toggle-btn {
+  color: rgba(100, 116, 139, 0.6);
+}
+:not(.dark) .chart-toggle-btn:hover {
+  color: rgba(15, 23, 42, 0.8);
+}
+
+/* Avg bar premium */
+:not(.dark) .avg-bar-premium {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* Stat card premium */
+:not(.dark) .stat-card-premium {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+:not(.dark) .stat-card-premium:hover {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+/* Card hover lift */
+:not(.dark) .card-hover-lift:hover {
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+/* Stat card micro hover */
+:not(.dark) .stat-card-micro:hover {
+  background: rgba(241, 245, 249, 0.8);
+}
+
+/* Table row hover */
+:not(.dark) .table-row-hover:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* Glass input */
+:not(.dark) .glass-input {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* Scrollbar thin */
+:not(.dark) .scrollbar-thin {
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+:not(.dark) .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+:not(.dark) .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Glass divider */
+:not(.dark) .glass-divider {
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.08), transparent);
+}
+
+/* Footer session bar */
+:not(.dark) .footer-session-bar {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Footer spread badge */
+:not(.dark) .footer-spread-badge {
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Risk bar premium overlay */
+:not(.dark) .risk-bar-premium::after {
+  background: linear-gradient(to bottom, rgba(255,255,255,0.3), transparent);
+}
+
+/* Risk rule card */
+:not(.dark) .risk-rule-card {
+  border: 1px solid rgba(0,0,0,0.06);
+}
+:not(.dark) .risk-rule-card:hover {
+  border-color: rgba(0,0,0,0.1);
+}
+
+/* Risk calc result */
+:not(.dark) .risk-calc-result {
+  box-shadow: 0 0 20px rgba(16,185,129,0.05), inset 0 1px 0 rgba(255,255,255,0.8);
+}
+
+/* Risk input premium */
+:not(.dark) .risk-input-premium {
+  background: rgba(0,0,0,0.02);
+  border: 1px solid rgba(0,0,0,0.1);
+}
+:not(.dark) .risk-input-premium:focus {
+  background: rgba(255,255,255,0.9);
+  border-color: rgba(16,185,129,0.4);
+  box-shadow: 0 0 0 2px rgba(16,185,129,0.1), 0 0 12px rgba(16,185,129,0.05);
+}
+
+/* Glass card glow */
+:not(.dark) .glass-card-glow {
+  background: rgba(255,255,255,0.7);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+:not(.dark) .glass-card-glow:hover {
+  border-color: rgba(16,185,129,0.25);
+  box-shadow: 0 0 20px rgba(16,185,129,0.04), 0 4px 16px rgba(0,0,0,0.06);
+}
+
+/* Shimmer subtle */
+:not(.dark) .shimmer-subtle {
+  background: linear-gradient(90deg, transparent 30%, rgba(0,0,0,0.03) 50%, transparent 70%);
+}
+
+/* Glass divider vertical */
+:not(.dark) .glass-divider-v {
+  background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.1), transparent);
+}
+
+/* Metric card animated */
+:not(.dark) .metric-card-animated {
+  background: rgba(255,255,255,0.7);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+:not(.dark) .metric-card-animated:hover {
+  border-color: rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+/* Tab pill group */
+:not(.dark) .tab-pill-group {
+  background: rgba(0,0,0,0.03);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+/* Tab pill text (round 9 version) */
+:not(.dark) .tab-pill {
+  color: rgba(100, 116, 139, 0.7);
+}
+:not(.dark) .tab-pill:hover {
+  color: rgba(15, 23, 42, 0.85);
+}
+:not(.dark) .tab-pill-active {
+  background: rgba(16,185,129,0.1);
+  color: #059669;
+  box-shadow: 0 0 12px rgba(16,185,129,0.08);
+}
+
+/* Input glass premium */
+:not(.dark) .input-glass-premium {
+  background: rgba(255,255,255,0.8);
+  border: 1px solid rgba(0,0,0,0.1);
+  color: #0f172a;
+}
+:not(.dark) .input-glass-premium:focus {
+  background: rgba(255,255,255,0.95);
+  border-color: rgba(16,185,129,0.4);
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.06);
+}
+:not(.dark) .input-glass-premium::placeholder {
+  color: rgba(0,0,0,0.35);
+}
+
+/* Icon btn glass */
+:not(.dark) .icon-btn-glass {
+  background: rgba(0,0,0,0.03);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+:not(.dark) .icon-btn-glass:hover {
+  background: rgba(0,0,0,0.06);
+  border-color: rgba(0,0,0,0.1);
+  box-shadow: 0 0 8px rgba(16,185,129,0.1);
+}
+
+/* Card lift hover */
+:not(.dark) .card-lift:hover {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.06);
+}
+
+/* Progress ring bg */
+:not(.dark) .progress-ring-bg {
+  stroke: rgba(0,0,0,0.08);
+}
+
+/* Text muted dim */
+:not(.dark) .text-muted-dim {
+  color: rgba(0,0,0,0.25);
+}
+
+/* Text label */
+:not(.dark) .text-label {
+  color: rgba(0,0,0,0.4);
+}
+
+/* Inset highlight */
+:not(.dark) .inset-highlight::after {
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.06), transparent);
+}
+
+/* Range slider track */
+:not(.dark) .range-slider-track {
+  background: rgba(0,0,0,0.1);
+}
+:not(.dark) .range-slider-track::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 14px rgba(16,185,129,0.4);
+}
+:not(.dark) .range-slider-track::-moz-range-thumb {
+  box-shadow: 0 0 8px rgba(16,185,129,0.3);
+}
+
+/* Toggle premium */
+:not(.dark) .toggle-premium {
+  background: rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.12);
+}
+:not(.dark) .toggle-premium::after {
+  background: rgba(0,0,0,0.4);
+}
+:not(.dark) .toggle-premium.active {
+  background: rgba(16,185,129,0.2);
+  border-color: rgba(16,185,129,0.4);
+}
+:not(.dark) .toggle-premium.active::after {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16,185,129,0.4);
+}
+
+/* Price tick */
+:not(.dark) .price-tick::before {
+  background: rgba(0,0,0,0.15);
+}
+
+/* Stat icon accent */
+:not(.dark) .stat-icon-accent {
+  background: rgba(0,0,0,0.02);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+:not(.dark) .stat-icon-accent:hover {
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.1);
+}
+
+/* Glass tag */
+:not(.dark) .glass-tag {
+  background: rgba(0,0,0,0.03);
+  border: 1px solid rgba(0,0,0,0.08);
+}
+:not(.dark) .glass-tag:hover {
+  background: rgba(0,0,0,0.06);
+  border-color: rgba(0,0,0,0.15);
+}
+
+/* Winloss bar premium */
+:not(.dark) .winloss-bar-premium {
+  background: rgba(0,0,0,0.04);
+}
+
+/* Custom scrollbar */
+:not(.dark) .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+}
+:not(.dark) .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Neon text glow — subtler in light mode */
+:not(.dark) .neon-text-emerald {
+  text-shadow: 0 0 8px rgba(16,185,129,0.3);
+}
+:not(.dark) .neon-text-amber {
+  text-shadow: 0 0 8px rgba(245,158,11,0.3);
+}
+:not(.dark) .neon-text-red {
+  text-shadow: 0 0 8px rgba(239,68,68,0.3);
+}
+
+/* Chart glow — softer in light mode */
+:not(.dark) .chart-glow::before {
+  background: radial-gradient(ellipse at center, rgba(16, 185, 129, 0.03), transparent 70%);
+}
+
+/* Sidebar nav active — lighter glow in light mode */
+:not(.dark) .sidebar-nav-active {
+  box-shadow: -3px 0 8px -1px rgba(16, 185, 129, 0.15), inset 4px 0 12px -4px rgba(16, 185, 129, 0.04);
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.04), transparent) !important;
+}
+
+/* Focus ring — adjusted for light */
+:not(.dark) *:focus-visible {
+  outline: 2px solid rgba(16, 185, 129, 0.4);
+}
+
+/* Light scrollbar for non-dark */
+:not(.dark) ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+

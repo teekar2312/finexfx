@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Shield, Bell, Server, TriangleAlert, Plus, RefreshCw, Trash2, Wifi, WifiOff, Globe, HardDrive, CheckCircle, AlertCircle, Info, Filter, Zap, DollarSign, Activity, Clock, Target, Volume2, Cpu } from 'lucide-react';
+import { Shield, Bell, Server, TriangleAlert, Plus, RefreshCw, Trash2, Wifi, WifiOff, Globe, HardDrive, CheckCircle, AlertCircle, Info, Filter, Zap, DollarSign, Activity, Clock, Target, Volume2, Cpu, Radio } from 'lucide-react';
 import TradingRulesEngine from './TradingRulesEngine';
 import { setSoundEnabled } from '@/lib/sounds';
 import { SYMBOLS, type Symbol } from '@/lib/types';
@@ -25,10 +25,12 @@ export default function SettingsView() {
   const {
     accountType, balance, equity, margin, dailyPnl, totalPnl, isConnected, isAutoTrading,
     priceAlerts, errorLogs, notifications, closedTrades, openTrades,
+    priceFeedMode, connectionStatus, brokerConfig,
   } = useTradingStore(
     useShallow((s) => ({
       accountType: s.accountType, balance: s.balance, equity: s.equity, margin: s.margin, dailyPnl: s.dailyPnl, totalPnl: s.totalPnl, isConnected: s.isConnected, isAutoTrading: s.isAutoTrading,
       priceAlerts: s.priceAlerts, errorLogs: s.errorLogs, notifications: s.notifications, closedTrades: s.closedTrades, openTrades: s.openTrades,
+      priceFeedMode: s.priceFeedMode, connectionStatus: s.connectionStatus, brokerConfig: s.brokerConfig,
     }))
   );
   const addPriceAlert = useTradingStore((s) => s.addPriceAlert);
@@ -36,6 +38,8 @@ export default function SettingsView() {
   const togglePriceAlert = useTradingStore((s) => s.togglePriceAlert);
   const clearResolvedLogs = useTradingStore((s) => s.clearResolvedLogs);
   const addNotification = useTradingStore((s) => s.addNotification);
+  const setPriceFeedMode = useTradingStore((s) => s.setPriceFeedMode);
+  const setBrokerConfig = useTradingStore((s) => s.setBrokerConfig);
 
   const [emailNotif, setEmailNotif] = useState(true);
   const [pushNotif, setPushNotif] = useState(true);
@@ -252,6 +256,90 @@ export default function SettingsView() {
             </div>
           </div>
 
+          {/* Trading Mode: Demo / Live */}
+          <div className="glass-card-premium rounded-xl card-hover-lift">
+            <div className="pb-2 pt-3 px-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Radio className="h-4 w-4 text-primary" />
+                  <div className="section-title-accent text-sm font-semibold">Trading Mode</div>
+                </div>
+                <Badge className={`text-[10px] ${priceFeedMode === 'live' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 badge-glow-emerald' : 'bg-slate-500/10 text-slate-400 border-slate-500/30'}`}>
+                  {priceFeedMode === 'live' ? '● LIVE FEED' : '● SIMULATED'}
+                </Badge>
+              </div>
+            </div>
+            <div className="px-4 pb-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button
+                  onClick={() => setPriceFeedMode('simulated')}
+                  className={`p-3 rounded-lg border card-hover cursor-pointer transition-colors text-left ${priceFeedMode === 'simulated' ? 'border-primary/50 bg-primary/5' : 'border-border bg-accent/30'}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`w-2.5 h-2.5 rounded-full ${priceFeedMode === 'simulated' ? 'bg-primary' : 'bg-slate-500'}`} />
+                    <span className="text-xs font-semibold">Simulated Prices</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed ml-[18px]">
+                    Client-side price simulator with realistic random-walk generation. No server connection required. Ideal for testing strategies.
+                  </p>
+                </button>
+                <button
+                  onClick={() => setPriceFeedMode('live')}
+                  className={`p-3 rounded-lg border card-hover cursor-pointer transition-colors text-left ${priceFeedMode === 'live' ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-border bg-accent/30'}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`w-2.5 h-2.5 rounded-full ${priceFeedMode === 'live' ? 'bg-emerald-500' : 'bg-slate-500'}`} />
+                    <span className="text-xs font-semibold">Live Price Feed</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed ml-[18px]">
+                    Real-time prices via WebSocket from the price-feed service. Requires the mini-service running on port {brokerConfig.wsPort}.
+                  </p>
+                </button>
+              </div>
+
+              {/* Live feed configuration */}
+              {priceFeedMode === 'live' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2"
+                >
+                  <div className="glass-card rounded-lg p-3 border border-border">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">WebSocket Configuration</div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-muted-foreground block mb-1">WebSocket Port</label>
+                        <input
+                          type="number"
+                          value={brokerConfig.wsPort}
+                          onChange={(e) => setBrokerConfig({ wsPort: parseInt(e.target.value) || 3001 })}
+                          className="w-full h-8 px-2 text-xs rounded-md bg-background border border-input focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground block mb-1">Broker API URL (optional)</label>
+                        <input
+                          type="text"
+                          value={brokerConfig.brokerUrl}
+                          onChange={(e) => setBrokerConfig({ brokerUrl: e.target.value })}
+                          placeholder="https://broker-api.example.com"
+                          className="w-full h-8 px-2 text-xs rounded-md bg-background border border-input focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-emerald-500 pulse-dot' : connectionStatus === 'connecting' ? 'bg-amber-500 animate-pulse' : connectionStatus === 'error' ? 'bg-red-500' : 'bg-slate-500'}`} />
+                    <span className="text-[10px] text-muted-foreground">
+                      Status: <span className={connectionStatus === 'connected' ? 'text-emerald-500' : connectionStatus === 'error' ? 'text-red-500' : ''}>{connectionStatus.charAt(0).toUpperCase() + connectionStatus.slice(1)}</span>
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </div>
+
           {/* Server Status */}
           <div className="glass-card-premium rounded-xl card-hover-lift">
             <div className="pb-2 pt-3 px-4">
@@ -270,7 +358,7 @@ export default function SettingsView() {
                   <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`} />
                   <div>
                     <div className="text-[10px] text-muted-foreground">Price Feed</div>
-                    <div className="text-xs font-medium">{isConnected ? 'Live' : 'Offline'}</div>
+                    <div className="text-xs font-medium">{priceFeedMode === 'live' ? 'Live (WS)' : 'Simulated'}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

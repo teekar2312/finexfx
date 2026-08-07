@@ -119,6 +119,16 @@ interface TradingState {
   // Connection
   isConnected: boolean;
   setConnected: (connected: boolean) => void;
+  connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
+  setConnectionStatus: (status: 'disconnected' | 'connecting' | 'connected' | 'error') => void;
+  priceFeedMode: 'simulated' | 'live';
+  setPriceFeedMode: (mode: 'simulated' | 'live') => void;
+  brokerConfig: {
+    brokerUrl: string;
+    priceFeedUrl: string;
+    wsPort: number;
+  };
+  setBrokerConfig: (config: Partial<{ brokerUrl: string; priceFeedUrl: string; wsPort: number }>) => void;
 
   // Notifications
   notifications: Array<{ id: string; type: 'success' | 'error' | 'warning' | 'info'; title: string; message: string; timestamp: number }>;
@@ -351,7 +361,17 @@ export const useTradingStore = create<TradingState>((set, get) => ({
 
   // Connection
   isConnected: false,
-  setConnected: (connected) => set({ isConnected: connected }),
+  setConnected: (connected) => set({ isConnected: connected, connectionStatus: connected ? 'connected' : 'disconnected' }),
+  connectionStatus: 'disconnected' as const,
+  setConnectionStatus: (status) => set({ connectionStatus: status, isConnected: status === 'connected' }),
+  priceFeedMode: 'simulated' as const,
+  setPriceFeedMode: (mode) => set({ priceFeedMode: mode }),
+  brokerConfig: {
+    brokerUrl: '',
+    priceFeedUrl: '',
+    wsPort: 3001,
+  },
+  setBrokerConfig: (config) => set({ brokerConfig: { ...get().brokerConfig, ...config } }),
 
   // Notifications
   notifications: [],

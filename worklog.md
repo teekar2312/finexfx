@@ -3700,3 +3700,24 @@ Stage Summary:
 - Complete VS Code on Windows 11 setup guide
 - .vscode/ workspace configs created (5 files)
 - Pushed to https://github.com/teekar2312/finexfx.git
+
+---
+Task ID: theme-support
+Agent: frontend-styling-expert
+Task: Add full light theme support with toggle button
+
+Work Log:
+- Read and analyzed 2,219-line globals.css to catalog all hardcoded dark colors
+- Updated layout.tsx: removed hardcoded `className="dark"` from `<html>`, changed `enableSystem={false}` to `enableSystem={true}`
+- Added comprehensive `:not(.dark)` light theme override block (~460 lines) covering 60+ custom CSS classes
+- Key mappings: dark bg rgba(17,24,39) → white glass rgba(255,255,255,0.7-0.9), dark borders rgba(255,255,255,0.04-0.12) → light borders rgba(0,0,0,0.06-0.12), heavy shadows rgba(0,0,0,0.3) → subtle rgba(0,0,0,0.06-0.08)
+- Special handling: mesh-gradient-bg uses subtle pastel, dot-pattern uses dark dots, neon glows reduced in light
+- Added theme toggle button to Sidebar.tsx with Sun/Moon icons using useTheme() and useSyncExternalStore
+- Verified chart-1 through chart-5 identical in :root and .dark
+- Lint passes cleanly
+
+Stage Summary:
+- Full light/dark theme toggle operational via sidebar button and system preference
+- 60+ custom utility classes have light mode overrides
+- Dark theme completely unchanged; default remains dark
+- Only layout.tsx and Sidebar.tsx modified

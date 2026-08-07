@@ -1,275 +1,373 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// ForexPro Price Feed WebSocket Service (Port 3003)
+// Production-grade real-time market data simulation with Socket.IO
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import { PriceEngine } from './engine/price-engine';
+import { IndicatorEngine } from './engine/indicator-engine';
+import { SignalEngine } from './engine/signal-engine';
+import { CandleEngine } from './engine/candle-engine';
+import { SessionManager } from './engine/session-manager';
+import { AlertManager } from './engine/alert-manager';
+import { OrderBookSimulator } from './engine/order-book';
+import type { SymbolConfig, PriceTick, TradingSignal, MarketCondition, ServerStats } from './types';
 
 const PORT = 3003;
+
+// ── HTTP + Socket.IO Server ─────────────────────────────────────────────────
 const httpServer = createServer();
+
 const io = new Server(httpServer, {
   // DO NOT change the path, it is used by Caddy to forward the request to the correct port
   path: '/',
   cors: { origin: '*' },
   pingTimeout: 60000,
   pingInterval: 25000,
+  maxHttpBufferSize: 50 * 1024 * 1024,
+  serveClient: false,
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`Price feed service running on port ${PORT}`);
-});
-
-interface SymbolState {
-  bid: number;
-  ask: number;
-  basePrice: number;
-  high: number;
-  low: number;
-  prevClose: number;
-}
-
-const symbols: Record<string, SymbolState> = {
-  EURUSD: { bid: 1.08420, ask: 1.08430, basePrice: 1.08425, high: 1.08450, low: 1.08400, prevClose: 1.08380 },
-  USDJPY: { bid: 157.320, ask: 157.330, basePrice: 157.325, high: 157.500, low: 157.200, prevClose: 157.280 },
-  GBPUSD: { bid: 1.27150, ask: 1.27160, basePrice: 1.27155, high: 1.27200, low: 1.27100, prevClose: 1.27080 },
-  XAUUSD: { bid: 3285.50, ask: 3286.00, basePrice: 3285.75, high: 3290.00, low: 3280.00, prevClose: 3282.50 },
+// ── Symbol Configuration ────────────────────────────────────────────────────
+const SYMBOL_CONFIGS: Record<string, SymbolConfig> = {
+  EURUSD: {
+    name: 'EUR/USD',
+    pipSize: 0.0001,
+    digits: 5,
+    basePrice: 1.08425,
+    prevClose: 1.08380,
+    volatility: 0.00008,
+    baseSpreadPips: 0.8,
+    maxSpreadPips: 3.5,
+    minSpreadPips: 0.4,
+    category: 'forex',
+    baseCurrency: 'EUR',
+    quoteCurrency: 'USD',
+    lotSize: 100000,
+    tickValue: 10,
+  },
+  USDJPY: {
+    name: 'USD/JPY',
+    pipSize: 0.01,
+    digits: 3,
+    basePrice: 157.325,
+    prevClose: 157.280,
+    volatility: 0.05,
+    baseSpreadPips: 1.0,
+    maxSpreadPips: 4.0,
+    minSpreadPips: 0.5,
+    category: 'forex',
+    baseCurrency: 'USD',
+    quoteCurrency: 'JPY',
+    lotSize: 100000,
+    tickValue: 6.5,
+  },
+  GBPUSD: {
+    name: 'GBP/USD',
+    pipSize: 0.0001,
+    digits: 5,
+    basePrice: 1.27155,
+    prevClose: 1.27080,
+    volatility: 0.00010,
+    baseSpreadPips: 1.2,
+    maxSpreadPips: 4.5,
+    minSpreadPips: 0.6,
+    category: 'forex',
+    baseCurrency: 'GBP',
+    quoteCurrency: 'USD',
+    lotSize: 100000,
+    tickValue: 10,
+  },
+  XAUUSD: {
+    name: 'XAU/USD',
+    pipSize: 0.01,
+    digits: 2,
+    basePrice: 3285.75,
+    prevClose: 3282.50,
+    volatility: 0.80,
+    baseSpreadPips: 3.0,
+    maxSpreadPips: 15.0,
+    minSpreadPips: 1.5,
+    category: 'metal',
+    baseCurrency: 'XAU',
+    quoteCurrency: 'USD',
+    lotSize: 100,
+    tickValue: 1,
+  },
 };
 
-const pipSizes: Record<string, number> = {
-  EURUSD: 0.0001,
-  USDJPY: 0.01,
-  GBPUSD: 0.0001,
-  XAUUSD: 0.01,
-};
+const SYMBOLS = Object.keys(SYMBOL_CONFIGS);
 
-const volatilities: Record<string, number> = {
-  EURUSD: 0.00008,
-  USDJPY: 0.05,
-  GBPUSD: 0.00010,
-  XAUUSD: 0.80,
-};
+// ── Engine Initialization (order matters to avoid circular deps) ───────────────
+const priceEngine = new PriceEngine(SYMBOL_CONFIGS);
+const candleEngine = new CandleEngine(SYMBOL_CONFIGS, priceEngine);
+const indicatorEngine = new IndicatorEngine(SYMBOL_CONFIGS, priceEngine);
+indicatorEngine.setCandleEngine(candleEngine);
+const signalEngine = new SignalEngine(SYMBOL_CONFIGS, priceEngine, indicatorEngine);
+const sessionManager = new SessionManager();
+const alertManager = new AlertManager(priceEngine);
+const orderBook = new OrderBookSimulator(SYMBOL_CONFIGS, priceEngine);
 
-function randomWalk(current: number, volatility: number): number {
-  const change = (Math.random() - 0.49) * volatility * 2;
-  return current + change;
-}
+// ── Server Stats ────────────────────────────────────────────────────────────
+const startTime = Date.now();
+let tickCount = 0;
+let candlesGenerated = 0;
+let signalsGenerated = 0;
+let totalConnections = 0;
+let disconnections = 0;
 
-function generateTick(sym: string): object {
-  const s = symbols[sym];
-  const pip = pipSizes[sym];
-  const vol = volatilities[sym];
-
-  const newBid = randomWalk(s.bid, vol);
-  const spread = (0.5 + Math.random() * 1.5) * pip;
-  const newAsk = newBid + spread;
-
-  s.bid = newBid;
-  s.ask = newAsk;
-  s.high = Math.max(s.high, newAsk);
-  s.low = Math.min(s.low, newBid);
-
-  const mid = (newBid + newAsk) / 2;
-  const change = mid - s.prevClose;
-  const changePercent = (change / s.prevClose) * 100;
-
+function getStats(): ServerStats {
   return {
-    symbol: sym,
-    bid: parseFloat(newBid.toFixed(sym === 'XAUUSD' ? 2 : sym === 'USDJPY' ? 3 : 5)),
-    ask: parseFloat(newAsk.toFixed(sym === 'XAUUSD' ? 2 : sym === 'USDJPY' ? 3 : 5)),
-    spread: parseFloat((spread / pip).toFixed(1)),
-    change: parseFloat(change.toFixed(sym === 'XAUUSD' ? 2 : sym === 'USDJPY' ? 3 : 5)),
-    changePercent: parseFloat(changePercent.toFixed(4)),
-    high: parseFloat(s.high.toFixed(sym === 'XAUUSD' ? 2 : sym === 'USDJPY' ? 3 : 5)),
-    low: parseFloat(s.low.toFixed(sym === 'XAUUSD' ? 2 : sym === 'USDJPY' ? 3 : 5)),
-    timestamp: Date.now(),
+    uptime: Date.now() - startTime,
+    connectedClients: io.sockets.sockets.size,
+    totalConnections,
+    disconnections,
+    tickCount,
+    candlesGenerated,
+    signalsGenerated,
+    symbols: SYMBOLS,
+    session: sessionManager.getCurrentSession(),
   };
 }
 
-function generateCandles(sym: string, count: number): object[] {
-  const s = symbols[sym];
-  const pip = pipSizes[sym];
-  const vol = volatilities[sym];
-  const now = Date.now();
-  const candles = [];
-
-  let price = s.prevClose - (Math.random() * vol * 50);
-  for (let i = count - 1; i >= 0; i--) {
-    const open = price;
-    const close = randomWalk(open, vol * 3);
-    const high = Math.max(open, close) + Math.random() * vol * 2;
-    const low = Math.min(open, close) - Math.random() * vol * 2;
-    const volume = Math.floor(1000 + Math.random() * 5000);
-
-    candles.push({
-      time: now - i * 60000,
-      open: parseFloat(open.toFixed(sym === 'XAUUSD' ? 2 : sym === 'USDJPY' ? 3 : 5)),
-      high: parseFloat(high.toFixed(sym === 'XAUUSD' ? 2 : sym === 'USDJPY' ? 3 : 5)),
-      low: parseFloat(low.toFixed(sym === 'XAUUSD' ? 2 : sym === 'USDJPY' ? 3 : 5)),
-      close: parseFloat(close.toFixed(sym === 'XAUUSD' ? 2 : sym === 'USDJPY' ? 3 : 5)),
-      volume,
-    });
-    price = close;
-  }
-  return candles;
-}
-
-// 生成指标数据
-function generateIndicators(sym: string): Record<string, number | string> {
-  const s = symbols[sym];
-  const mid = (s.bid + s.ask) / 2;
-  const rsi = 35 + Math.random() * 30;
-  const macd = (Math.random() - 0.5) * 0.001;
-  const macdSignal = macd + (Math.random() - 0.5) * 0.0005;
-  const stochK = 20 + Math.random() * 60;
-  const stochD = stochK + (Math.random() - 0.5) * 10;
-  const atr = volatilities[sym] * (15 + Math.random() * 10);
-  const cci = (Math.random() - 0.5) * 200;
-  const mfi = 30 + Math.random() * 40;
-  const williamsR = -(Math.random() * 80);
-
-  return {
-    RSI_14: parseFloat(rsi.toFixed(2)),
-    MACD_12_26_9: parseFloat(macd.toFixed(sym === 'XAUUSD' ? 2 : 5)),
-    MACD_Signal: parseFloat(macdSignal.toFixed(sym === 'XAUUSD' ? 2 : 5)),
-    MACD_Histogram: parseFloat((macd - macdSignal).toFixed(sym === 'XAUUSD' ? 2 : 5)),
-    Stochastic_K: parseFloat(stochK.toFixed(2)),
-    Stochastic_D: parseFloat(stochD.toFixed(2)),
-    ATR_14: parseFloat(atr.toFixed(sym === 'XAUUSD' ? 2 : 5)),
-    Bollinger_Upper: parseFloat((mid + atr * 2).toFixed(sym === 'XAUUSD' ? 2 : 5)),
-    Bollinger_Middle: parseFloat(mid.toFixed(sym === 'XAUUSD' ? 2 : 5)),
-    Bollinger_Lower: parseFloat((mid - atr * 2).toFixed(sym === 'XAUUSD' ? 2 : 5)),
-    CCI_20: parseFloat(cci.toFixed(2)),
-    MFI_14: parseFloat(mfi.toFixed(2)),
-    Williams_R: parseFloat(williamsR.toFixed(2)),
-    EMA_9: parseFloat((mid + (Math.random() - 0.5) * vol * 5).toFixed(sym === 'XAUUSD' ? 2 : 5)),
-    EMA_21: parseFloat((mid + (Math.random() - 0.5) * vol * 10).toFixed(sym === 'XAUUSD' ? 2 : 5)),
-    SMA_50: parseFloat((mid + (Math.random() - 0.5) * vol * 20).toFixed(sym === 'XAUUSD' ? 2 : 5)),
-    SuperTrend: parseFloat((mid + (Math.random() - 0.5) * vol * 8).toFixed(sym === 'XAUUSD' ? 2 : 5)),
-    OBV: Math.floor(Math.random() * 100000),
-    Volume: Math.floor(1000 + Math.random() * 5000),
-  Momentum: parseFloat(((Math.random() - 0.5) * vol * 10).toFixed(sym === 'XAUUSD' ? 2 : 5)),
-    ROC_12: parseFloat(((Math.random() - 0.5) * 2).toFixed(4)),
-    TSI: parseFloat(((Math.random() - 0.5) * 50).toFixed(2)),
-  };
-}
-
-function detectMarketCondition(sym: string): string {
-  const s = symbols[sym];
-  const range = s.high - s.low;
-  const vol = volatilities[sym];
-  const rangeRatio = range / (vol * 30);
-  const trendBias = Math.random();
-
-  if (rangeRatio < 5) {
-    return trendBias > 0.6 ? 'trending' : 'low_volatility';
-  } else if (rangeRatio > 20) {
-    return 'high_volatility';
-  } else {
-    return trendBias > 0.5 ? 'trending' : 'range_bound';
-  }
-}
-
-function generateSignal(sym: string): object {
-  const s = symbols[sym];
-  const mid = (s.bid + s.ask) / 2;
-  const pip = pipSizes[sym];
-  const condition = detectMarketCondition(sym) as string;
-  const strategies = ['MA_Ribbon', 'Momentum_Scalping', 'Pivot_Points', 'EMA_Crossover', 'RMI_Trend_Sync', 'Linear_Regression', 'EMA_RSI_Filter'];
-  const strategy = strategies[Math.floor(Math.random() * strategies.length)];
-  const direction = Math.random() > 0.5 ? 'BUY' : 'SELL';
-  const confidence = 55 + Math.random() * 40;
-  const slPips = 5 + Math.random() * 10;
-  const tpPips = slPips * 1.5;
-
-  const analysis = `AI Analysis for ${sym}:
-
-Market Condition: ${condition}
-Strategy: ${strategy}
-Confidence: ${confidence.toFixed(1)}%
-
-Key Factors:
-- Central Bank Policy: ${Math.random() > 0.5 ? 'Hawkish stance detected, supporting ' + (direction === 'BUY' ? 'upward' : 'downward') + ' momentum' : 'Dovish signals with potential for rate cuts'}
-- Economic Data: NFP approaching with ${Math.random() > 0.5 ? 'strong' : 'mixed'} labor market signals
-- CPI Trend: ${Math.random() > 0.5 ? 'Inflation easing, supporting risk-on sentiment' : 'Sticky inflation may trigger policy tightening'}
-- Geopolitical: ${Math.random() > 0.7 ? 'Elevated risk aversion due to geopolitical tensions' : 'Stable geopolitical environment'}
-- Market Sentiment: ${confidence > 70 ? 'Strong bullish/bearish conviction' : 'Mixed signals, exercise caution'}
-- Commodity Impact: ${sym === 'XAUUSD' ? 'Gold responding to USD strength and safe-haven demand' : 'Commodity prices ' + (Math.random() > 0.5 ? 'supporting' : 'weighing on') + ' currency movement'}`;
-
-  return {
-    id: `sig-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    symbol: sym,
-    direction,
-    confidence: parseFloat(confidence.toFixed(1)),
-    strategy,
-    marketCondition: condition,
-    entryPrice: parseFloat(mid.toFixed(sym === 'XAUUSD' ? 2 : sym === 'USDJPY' ? 3 : 5)),
-    stopLoss: parseFloat((direction === 'BUY' ? mid - slPips * pip : mid + slPips * pip).toFixed(sym === 'XAUUSD' ? 2 : sym === 'USDJPY' ? 3 : 5)),
-    takeProfit: parseFloat((direction === 'BUY' ? mid + tpPips * pip : mid - tpPips * pip).toFixed(sym === 'XAUUSD' ? 2 : sym === 'USDJPY' ? 3 : 5)),
-    riskReward: 1.5,
-    aiAnalysis: analysis,
-    isExecuted: false,
-    createdAt: new Date().toISOString(),
-  };
-}
-
+// ── Socket Connection Handler ──────────────────────────────────────────────
 io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
+  totalConnections++;
+  console.log(`[CONNECT] ${socket.id} (total: ${io.sockets.sockets.size})`);
 
-  // Send initial state for all symbols
-  const initialState = Object.keys(symbols).map(sym => generateTick(sym));
-  socket.emit('prices', initialState);
-
-  // Send initial candles for each symbol
-  Object.keys(symbols).forEach(sym => {
-    socket.emit(`candles:${sym}`, generateCandles(sym, 100));
-    socket.emit(`indicators:${sym}`, generateIndicators(sym));
-    socket.emit('signal', generateSignal(sym));
+  // ── Send initial handshake ──────────────────────────────────────────────
+  socket.emit('connected', {
+    serverTime: Date.now(),
+    sessionId: process.pid,
+    symbols: SYMBOLS,
+    session: sessionManager.getCurrentSession(),
+    stats: getStats(),
   });
 
-  // Subscribe to specific symbol
+  // ── Initial state burst: prices for all symbols ─────────────────────────
+  const initialPrices = priceEngine.getAllTicks();
+  socket.emit('prices', initialPrices);
+
+  // ── Initial candles for all symbols (100 candles each) ──────────────────
+  for (const sym of SYMBOLS) {
+    const candles = candleEngine.getHistory(sym, 100);
+    socket.emit(`candles:${sym}`, candles);
+    socket.emit(`indicators:${sym}`, indicatorEngine.getIndicators(sym));
+    socket.emit('signal', signalEngine.generateSignal(sym));
+    socket.emit(`orderbook:${sym}`, orderBook.getSnapshot(sym));
+  }
+
+  // ── Initial market conditions ───────────────────────────────────────────
+  const conditions: Record<string, MarketCondition> = {};
+  for (const sym of SYMBOLS) {
+    conditions[sym] = priceEngine.getMarketCondition(sym);
+  }
+  socket.emit('marketConditions', conditions);
+
+  // ── Subscribe to a specific symbol ─────────────────────────────────────
   socket.on('subscribe', (symbol: string) => {
+    if (!SYMBOLS.includes(symbol)) {
+      socket.emit('error', { code: 'INVALID_SYMBOL', message: `Unknown symbol: ${symbol}` });
+      return;
+    }
     socket.join(symbol);
+    // Send current state for this symbol immediately
+    socket.emit(`candles:${symbol}`, candleEngine.getHistory(symbol, 100));
+    socket.emit(`indicators:${symbol}`, indicatorEngine.getIndicators(symbol));
+    socket.emit(`orderbook:${symbol}`, orderBook.getSnapshot(symbol));
+    console.log(`[SUB] ${socket.id} -> ${symbol}`);
   });
 
+  // ── Unsubscribe from a symbol ───────────────────────────────────────────
   socket.on('unsubscribe', (symbol: string) => {
     socket.leave(symbol);
+    console.log(`[UNSUB] ${socket.id} <- ${symbol}`);
   });
 
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
+  // ── Request historical candles on demand ────────────────────────────────
+  socket.on('request:candles', (data: { symbol: string; count?: number; timeframe?: string }) => {
+    const { symbol, count = 200, timeframe = 'M1' } = data;
+    if (!SYMBOLS.includes(symbol)) {
+      socket.emit('error', { code: 'INVALID_SYMBOL', message: `Unknown symbol: ${symbol}` });
+      return;
+    }
+    const candles = candleEngine.getHistory(symbol, Math.min(count, 500));
+    socket.emit(`candles:${symbol}`, candles);
+  });
+
+  // ── Request indicators for a symbol ─────────────────────────────────────
+  socket.on('request:indicators', (symbol: string) => {
+    if (!SYMBOLS.includes(symbol)) {
+      socket.emit('error', { code: 'INVALID_SYMBOL', message: `Unknown symbol: ${symbol}` });
+      return;
+    }
+    socket.emit(`indicators:${symbol}`, indicatorEngine.getIndicators(symbol));
+  });
+
+  // ── Request order book snapshot ─────────────────────────────────────────
+  socket.on('request:orderbook', (symbol: string) => {
+    if (!SYMBOLS.includes(symbol)) {
+      socket.emit('error', { code: 'INVALID_SYMBOL', message: `Unknown symbol: ${symbol}` });
+      return;
+    }
+    socket.emit(`orderbook:${symbol}`, orderBook.getSnapshot(symbol));
+  });
+
+  // ── Request server stats ────────────────────────────────────────────────
+  socket.on('request:stats', () => {
+    socket.emit('stats', getStats());
+  });
+
+  // ── Price alert registration (server-side) ──────────────────────────────
+  socket.on('alert:add', (data: { symbol: string; condition: 'above' | 'below'; price: number; message?: string }) => {
+    const alertId = alertManager.addAlert({
+      ...data,
+      callback: (triggeredAlert) => {
+        socket.emit('alert:triggered', triggeredAlert);
+      },
+    });
+    socket.emit('alert:added', { id: alertId, symbol: data.symbol, condition: data.condition, price: data.price });
+  });
+
+  socket.on('alert:remove', (alertId: string) => {
+    alertManager.removeAlert(alertId);
+    socket.emit('alert:removed', { id: alertId });
+  });
+
+  socket.on('alert:list', () => {
+    socket.emit('alert:list', alertManager.getAlerts());
+  });
+
+  // ── Disconnect ──────────────────────────────────────────────────────────
+  socket.on('disconnect', (reason) => {
+    disconnections++;
+    alertManager.removeAllForSocket(socket.id);
+    console.log(`[DISCONNECT] ${socket.id} reason=${reason} (total: ${io.sockets.sockets.size})`);
   });
 });
 
-// Broadcast ticks every 500ms
+// ── Tick Broadcast (500ms) ──────────────────────────────────────────────────
+const TICK_INTERVAL_MS = 500;
 setInterval(() => {
-  const ticks = Object.keys(symbols).map(sym => generateTick(sym));
+  const session = sessionManager.getCurrentSession();
+  const volatilityMultiplier = sessionManager.getVolatilityMultiplier();
+  const spreadMultiplier = sessionManager.getSpreadMultiplier();
+
+  const ticks = priceEngine.generateAllTicks(volatilityMultiplier, spreadMultiplier);
+  tickCount += ticks.length;
+
+  // Broadcast to all clients
   io.emit('prices', ticks);
-}, 500);
 
-// Broadcast candles every 5 seconds
-setInterval(() => {
-  Object.keys(symbols).forEach(sym => {
-    io.to(sym).emit(`candles:${sym}`, [generateCandles(sym, 1)[0]]);
-  });
-  // Also broadcast to all for main chart
-  const mainSym = Object.keys(symbols)[0];
-  io.emit(`candles:${mainSym}`, generateCandles(mainSym, 100));
-}, 5000);
+  // Update order book
+  for (const sym of SYMBOLS) {
+    orderBook.update(sym);
+    // Broadcast order book to subscribed rooms only
+    const snapshot = orderBook.getSnapshot(sym);
+    io.to(sym).emit(`orderbook:${sym}`, snapshot);
+  }
 
-// Broadcast indicators every 3 seconds
-setInterval(() => {
-  Object.keys(symbols).forEach(sym => {
-    io.emit(`indicators:${sym}`, generateIndicators(sym));
-  });
-}, 3000);
+  // Check price alerts
+  alertManager.checkAlerts(ticks);
+}, TICK_INTERVAL_MS);
 
-// Broadcast signals every 30 seconds
+// ── Candle Broadcast (5s) ───────────────────────────────────────────────────
+const CANDLE_INTERVAL_MS = 5000;
 setInterval(() => {
- const sym = Object.keys(symbols)[Math.floor(Math.random() * Object.keys(symbols).length)];
-  io.emit('signal', generateSignal(sym));
-}, 30000);
+  for (const sym of SYMBOLS) {
+    // Generate a new candle and append
+    const newCandle = candleEngine.generateNextCandle(sym);
+    if (newCandle) {
+      candlesGenerated++;
+      // Send single new candle to subscribed rooms
+      io.to(sym).emit(`candles:${sym}`, [newCandle]);
+      // Also send full history to all (for main chart defaulting to EURUSD)
+      if (sym === SYMBOLS[0]) {
+        io.emit(`candles:${sym}`, candleEngine.getHistory(sym, 100));
+      }
+    }
+  }
+}, CANDLE_INTERVAL_MS);
 
-// Broadcast market conditions every 10 seconds
+// ── Indicator Broadcast (3s) ────────────────────────────────────────────────
+const INDICATOR_INTERVAL_MS = 3000;
 setInterval(() => {
-  const conditions: Record<string, string> = {};
-  Object.keys(symbols).forEach(sym => {
-    conditions[sym] = detectMarketCondition(sym);
-  });
+  for (const sym of SYMBOLS) {
+    const indicators = indicatorEngine.calculateIndicators(sym);
+    io.emit(`indicators:${sym}`, indicators);
+  }
+}, INDICATOR_INTERVAL_MS);
+
+// ── Signal Broadcast (30s) ─────────────────────────────────────────────────
+const SIGNAL_INTERVAL_MS = 30000;
+setInterval(() => {
+  const sym = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+  const signal = signalEngine.generateSignal(sym);
+  signalsGenerated++;
+  io.emit('signal', signal);
+}, SIGNAL_INTERVAL_MS);
+
+// ── Market Conditions Broadcast (10s) ──────────────────────────────────────
+const CONDITION_INTERVAL_MS = 10000;
+setInterval(() => {
+  const conditions: Record<string, MarketCondition> = {};
+  for (const sym of SYMBOLS) {
+    conditions[sym] = priceEngine.getMarketCondition(sym);
+  }
   io.emit('marketConditions', conditions);
-}, 10000);
+}, CONDITION_INTERVAL_MS);
+
+// ── Server Stats Broadcast (60s) ───────────────────────────────────────────
+const STATS_INTERVAL_MS = 60000;
+setInterval(() => {
+  io.emit('stats', getStats());
+}, STATS_INTERVAL_MS);
+
+// ── Session Transition Events (1s check) ───────────────────────────────────
+let lastSessionName = '';
+setInterval(() => {
+  const session = sessionManager.getCurrentSession();
+  if (session.name !== lastSessionName) {
+    console.log(`[SESSION] ${lastSessionName || 'none'} -> ${session.name} (volatility x${session.volatilityMultiplier.toFixed(2)})`);
+    io.emit('session:change', session);
+    lastSessionName = session.name;
+  }
+}, 1000);
+
+// ── Start Server ────────────────────────────────────────────────────────────
+httpServer.listen(PORT, () => {
+  console.log('═══════════════════════════════════════════════════════════════');
+  console.log(`  ForexPro Price Feed Service`);
+  console.log(`  Port: ${PORT}`);
+  console.log(`  Symbols: ${SYMBOLS.join(', ')}`);
+  console.log(`  Session: ${sessionManager.getCurrentSession().name}`);
+  console.log(`  Tick rate: ${1000 / TICK_INTERVAL_MS} Hz`);
+  console.log(`  Stats: available via socket event 'request:stats'`);
+  console.log('═══════════════════════════════════════════════════════════════');
+});
+
+// ── Graceful Shutdown ──────────────────────────────────────────────────────
+process.on('SIGTERM', () => {
+  console.log('[SHUTDOWN] SIGTERM received, closing server...');
+  io.close();
+  httpServer.close(() => process.exit(0));
+  setTimeout(() => process.exit(1), 5000);
+});
+
+process.on('SIGINT', () => {
+  console.log('[SHUTDOWN] SIGINT received, closing server...');
+  io.close();
+  httpServer.close(() => process.exit(0));
+  setTimeout(() => process.exit(1), 5000);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] Unhandled rejection:', reason);
+});
+
+export { io, priceEngine, candleEngine, indicatorEngine, signalEngine, sessionManager };
