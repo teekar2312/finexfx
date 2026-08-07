@@ -2198,3 +2198,45 @@
   border-color: rgba(255,255,255,0.1);
 }
 
+/* ── Custom scrollbar (used in scrollable containers) ── */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Pulse dot border animation (connection badges) ── */
+.pulse-dot-border {
+  position: relative;
+}
+.pulse-dot-border::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 1px solid currentColor;
+  opacity: 0;
+  animation: pulse-dot-border-anim 2s ease-in-out infinite;
+}
+@keyframes pulse-dot-border-anim {
+  0%, 100% { opacity: 0; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.02); }
+}
+
+/* ── Pulse dot animation (breaking news indicator) ── */
+@keyframes pulse-dot-keyframes {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.8); }
+}
+.pulse-dot-anim {
+  animation: pulse-dot-keyframes 1.5s ease-in-out infinite;
+}
+

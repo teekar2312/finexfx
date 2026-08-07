@@ -203,16 +203,6 @@ export default function NewsView() {
             exit={{ opacity: 0, y: -10 }}
             className="relative overflow-hidden rounded-lg bg-red-500/10 border border-red-500/30 shimmer-border-red"
           >
-            {/* CSS animations for marquee and pulse */}
-            <style dangerouslySetInnerHTML={{ __html: `
-              @keyframes pulse-dot {
-                0%, 100% { opacity: 1; transform: scale(1); }
-                50% { opacity: 0.3; transform: scale(0.8); }
-              }
-              .pulse-dot-anim {
-                animation: pulse-dot 1.5s ease-in-out infinite;
-              }
-            ` }} />
             <div className="flex items-center gap-3 p-3">
               <div className="flex items-center gap-2 flex-shrink-0">
                 {/* Pulsing red dot */}

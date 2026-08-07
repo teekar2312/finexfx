@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { PriceTick, Trade, TradingSignal, NewsItem, EconomicEvent, RiskSettings, BacktestResult, Symbol, MarketCondition, IndicatorConfig } from '@/lib/types';
-import { SYMBOLS, BROKER_CONFIG } from '@/lib/types';
+import { SYMBOLS } from '@/lib/types';
 import { playSound } from '@/lib/sounds';
 
 // Trade Journal types
@@ -109,6 +109,7 @@ interface TradingState {
   errorLogs: Array<{ id: string; level: string; source: string; message: string; timestamp: string; resolved: boolean }>;
   addErrorLog: (log: any) => void;
   clearResolvedLogs: () => void;
+  resolveErrorLog: (id: string) => void;
 
   // Position Sizing
   suggestedLotSize: number;
