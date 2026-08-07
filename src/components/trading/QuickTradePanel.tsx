@@ -139,6 +139,7 @@ export default function QuickTradePanel() {
                 <span className="text-[11px] font-semibold text-zinc-300 tracking-wide uppercase">Quick Trade</span>
                 <button
                   onClick={() => setIsOpen(false)}
+                  aria-label="Close quick trade panel"
                   className="p-0.5 rounded-md hover:bg-white/10 transition-colors text-zinc-500 hover:text-zinc-300"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -245,6 +246,7 @@ export default function QuickTradePanel() {
                     whileTap={{ scale: 0.95 }}
                     onClick={() => handleOpenTrade('BUY')}
                     disabled={!isConnected}
+                    aria-label="Buy"
                     className="h-8 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[11px] font-bold tracking-wider flex items-center justify-center gap-1 transition-colors"
                   >
                     <ArrowUpRight className="w-3.5 h-3.5" />
@@ -254,6 +256,7 @@ export default function QuickTradePanel() {
                     whileTap={{ scale: 0.95 }}
                     onClick={() => handleOpenTrade('SELL')}
                     disabled={!isConnected}
+                    aria-label="Sell"
                     className="h-8 rounded-md bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[11px] font-bold tracking-wider flex items-center justify-center gap-1 transition-colors"
                   >
                     <ArrowDownRight className="w-3.5 h-3.5" />
@@ -302,8 +305,8 @@ export default function QuickTradePanel() {
                               </span>
                               <button
                                 onClick={() => closeTrade(trade.id)}
+                                aria-label="Close trade"
                                 className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-white/10 transition-all text-zinc-500 hover:text-zinc-300"
-                                title="Close trade"
                               >
                                 <X className="w-3 h-3" />
                               </button>

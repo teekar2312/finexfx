@@ -311,7 +311,7 @@ export default function TradingDashboard() {
       <div className="flex-1 flex flex-col overflow-hidden"
         style={isMobile ? {} : { marginLeft: sidebarWidth }}
       >
-        <main className="flex-1 overflow-y-auto relative">
+        <main role="main" className="flex-1 overflow-y-auto relative">
           {/* Top gradient border line */}
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent z-10" />
           <div className="min-h-full pb-10 md:pb-0 mesh-gradient-bg">

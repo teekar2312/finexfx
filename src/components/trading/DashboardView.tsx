@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTradingStore } from '@/store/trading-store';
 import { useShallow } from 'zustand/react/shallow';
 import { SYMBOLS, SYMBOL_INFO, BROKER_CONFIG, TRADING_SESSIONS, MARKET_CONDITION_CONFIG, type Symbol, type MarketCondition } from '@/lib/types';
@@ -16,6 +16,17 @@ import ActivityFeed from './ActivityFeed';
 import SessionOverlapScanner from './SessionOverlapScanner';
 import MarketHeatmap from './MarketHeatmap';
 import TradingPsychologyPanel from './TradingPsychologyPanel';
+
+// Deterministic pseudo-random number generator (stable across renders)
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+const SPARKLINE_SEED = 42;
 
 function getConditionIcon(condition: MarketCondition) {
   switch (condition) {
@@ -145,10 +156,11 @@ export default function DashboardView() {
   }, [closedTrades]);
 
   const totalPnlData = useMemo(() => {
+    const rand = seededRandom(SPARKLINE_SEED + 1);
     const points: { v: number }[] = [];
     let val = 0;
     for (let i = 0; i < 20; i++) {
-      val += (Math.random() - 0.45) * 15;
+      val += (rand() - 0.45) * 15;
       points.push({ v: val });
     }
     points.push({ v: totalPnl });
@@ -156,10 +168,11 @@ export default function DashboardView() {
   }, [totalPnl]);
 
   const dailyPnlData = useMemo(() => {
+    const rand = seededRandom(SPARKLINE_SEED + 2);
     const points: { v: number }[] = [];
     let val = 0;
     for (let i = 0; i < 20; i++) {
-      val += (Math.random() - 0.48) * 5;
+      val += (rand() - 0.48) * 5;
       points.push({ v: val });
     }
     points.push({ v: dailyPnl });
@@ -167,10 +180,11 @@ export default function DashboardView() {
   }, [dailyPnl]);
 
   const balanceSparkData = useMemo(() => {
+    const rand = seededRandom(SPARKLINE_SEED + 3);
     const points: { v: number }[] = [];
-    let val = balance - balance * 0.02 * Math.random();
+    let val = balance - balance * 0.02 * rand();
     for (let i = 0; i < 15; i++) {
-      val += (Math.random() - 0.47) * balance * 0.005;
+      val += (rand() - 0.47) * balance * 0.005;
       points.push({ v: val });
     }
     points.push({ v: balance });
@@ -178,11 +192,12 @@ export default function DashboardView() {
   }, [balance]);
 
   const equitySparkData = useMemo(() => {
+    const rand = seededRandom(SPARKLINE_SEED + 4);
     const points: { v: number }[] = [];
     const base = equity >= balance ? balance : balance * 0.98;
     let val = base;
     for (let i = 0; i < 15; i++) {
-      val += (Math.random() - 0.48) * base * 0.004;
+      val += (rand() - 0.48) * base * 0.004;
       points.push({ v: val });
     }
     points.push({ v: equity });
@@ -190,11 +205,12 @@ export default function DashboardView() {
   }, [equity, balance]);
 
   const freeMarginSparkData = useMemo(() => {
+    const rand = seededRandom(SPARKLINE_SEED + 5);
     const points: { v: number }[] = [];
     const base = freeMargin * 1.1;
     let val = base;
     for (let i = 0; i < 15; i++) {
-      val += (Math.random() - 0.5) * freeMargin * 0.006;
+      val += (rand() - 0.5) * freeMargin * 0.006;
       points.push({ v: val });
     }
     points.push({ v: freeMargin });
@@ -203,12 +219,13 @@ export default function DashboardView() {
 
   // P&L Calendar mock data
   const calendarPnlData = useMemo(() => {
+    const rand = seededRandom(SPARKLINE_SEED + 6);
     const data = [];
     const today = new Date();
     for (let i = 27; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
-      const pnl = (Math.random() - 0.47) * balance * 0.03;
+      const pnl = (rand() - 0.47) * balance * 0.03;
       data.push({
         date,
         day: date.getDate(),
@@ -456,10 +473,10 @@ export default function DashboardView() {
             const ringColor = ringValue >= 0.6 ? '#10b981' : ringValue >= 0.4 ? '#f59e0b' : '#ef4444';
             const ringCircumference = 2 * Math.PI * 14;
             const ringDashoffset = ringCircumference * (1 - ringValue);
-            const changeVal = metric.label === 'Win Rate' ? (Math.random() * 6 - 2).toFixed(1)
-              : metric.label === 'Profit Factor' ? (Math.random() * 0.4 - 0.15).toFixed(2)
-              : metric.label === "Today's Trades" ? `+${(Math.random() * 2 + 1).toFixed(0)}`
-              : (Math.random() * 8 - 3).toFixed(1);
+            const changeVal = metric.label === 'Win Rate' ? (perfMetrics.winRate > 50 ? '+' : '') + (perfMetrics.winRate - 50).toFixed(1)
+              : metric.label === 'Profit Factor' ? (perfMetrics.profitFactor > 1 ? '+' : '') + (perfMetrics.profitFactor - 1).toFixed(2)
+              : metric.label === "Today's Trades" ? `+${todayTradeCount}`
+              : ((perfMetrics.avgWin / (perfMetrics.avgLoss || 1)) > 1 ? '+' : '') + (perfMetrics.avgWin / (perfMetrics.avgLoss || 1) - 1).toFixed(1);
             const changePositive = parseFloat(changeVal) >= 0;
             return (
             <motion.div

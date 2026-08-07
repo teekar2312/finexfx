@@ -2831,3 +2831,23 @@ Stage Summary:
 - **Estimated 80% render reduction** from Zustand selector migration alone
 - **All previous bugs remain fixed** (P&L formula, closeTrade, trade counting, SL/TP)
 - Remaining optimizations: React.memo wrapping, code splitting, WatchlistPanel layout prop removal, PriceChart tooltip stabilization, CSS transition:all cleanup
+
+---
+Task ID: 2e
+Agent: Accessibility
+Task: Add aria-labels and ARIA roles to trading components
+
+Work Log:
+- **Sidebar.tsx**: Added `role="tablist"` to the `<nav>` container; added `role="tab"` and `aria-selected={isActive}` to each tab button; added `aria-label={item.label}` to all tab buttons (serves icon-only compact mode); added `aria-label="Close navigation"` to the mobile close Button; added dynamic `aria-label` (Collapse/Expand sidebar) to the desktop collapse button.
+- **Footer.tsx**: Added `role="contentinfo"` to the `<footer>` element; added `aria-label="Connection status"` to the connection indicator div (LIVE/OFF dot).
+- **QuickTradePanel.tsx**: Added `aria-label="Close quick trade panel"` to the icon-only close button in the panel header; added `aria-label="Buy"` and `aria-label="Sell"` to the BUY/SELL motion buttons; added `aria-label="Close trade"` to the icon-only close-trade buttons in the open positions mini-list; verified all form inputs (Lot Size, SL, TP) already have visible `<label>` elements.
+- **TradingView.tsx**: Added `aria-sort="none"` to 8 sortable column headers in the open trades table (Symbol, Dir, Lots, Entry, Pips, P&L, Time). SL, TP, Trail, and Action columns were left without aria-sort as they are not typical sort targets.
+- **page.tsx**: Added `role="main"` to the `<main>` element.
+- **WatchlistPanel.tsx**: Fixed two pre-existing syntax bugs (missing `memo()` closing paren on ConditionBadge, mismatched `motion.button` closing tag that should be `motion.div`).
+- `bun run lint`: ZERO errors
+
+Stage Summary:
+- **5 files modified** with ARIA accessibility improvements (Sidebar, Footer, QuickTradePanel, TradingView, page.tsx)
+- **1 file fixed** for pre-existing syntax errors (WatchlistPanel)
+- All changes are minimal and non-breaking — only adding accessibility attributes
+- Lint passes with zero errors

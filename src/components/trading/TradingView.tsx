@@ -268,15 +268,15 @@ export default function TradingView() {
                         <Table>
                           <TableHeader>
                             <TableRow className="border-border hover:bg-transparent">
-                              <TableHead className="text-[10px] h-8">Symbol</TableHead>
-                              <TableHead className="text-[10px] h-8">Dir</TableHead>
-                              <TableHead className="text-[10px] h-8 text-right">Lots</TableHead>
-                              <TableHead className="text-[10px] h-8 text-right">Entry</TableHead>
+                              <TableHead className="text-[10px] h-8" aria-sort="none">Symbol</TableHead>
+                              <TableHead className="text-[10px] h-8" aria-sort="none">Dir</TableHead>
+                              <TableHead className="text-[10px] h-8 text-right" aria-sort="none">Lots</TableHead>
+                              <TableHead className="text-[10px] h-8 text-right" aria-sort="none">Entry</TableHead>
                               <TableHead className="text-[10px] h-8 text-right">SL</TableHead>
                               <TableHead className="text-[10px] h-8 text-right">TP</TableHead>
-                              <TableHead className="text-[10px] h-8 text-right">Pips</TableHead>
-                              <TableHead className="text-[10px] h-8 text-right">P&L</TableHead>
-                              <TableHead className="text-[10px] h-8">Time</TableHead>
+                              <TableHead className="text-[10px] h-8 text-right" aria-sort="none">Pips</TableHead>
+                              <TableHead className="text-[10px] h-8 text-right" aria-sort="none">P&L</TableHead>
+                              <TableHead className="text-[10px] h-8" aria-sort="none">Time</TableHead>
                               <TableHead className="text-[10px] h-8 text-center">Trail</TableHead>
                               <TableHead className="text-[10px] h-8 text-center">Action</TableHead>
                             </TableRow>

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { PriceTick, Trade, TradingSignal, NewsItem, EconomicEvent, RiskSettings, BacktestResult, Symbol, MarketCondition, IndicatorConfig } from '@/lib/types';
+import type { PriceTick, Trade, TradingSignal, NewsItem, EconomicEvent, RiskSettings, BacktestResult, Symbol, MarketCondition, IndicatorConfig, PriceHistory } from '@/lib/types';
+import { BROKER_CONFIG } from '@/lib/types';
 import { SYMBOLS, SYMBOL_INFO } from '@/lib/types';
 import { playSound } from '@/lib/sounds';
 
@@ -42,8 +43,8 @@ interface TradingState {
   setPrices: (prices: PriceTick[]) => void;
   selectedSymbol: Symbol;
   setSelectedSymbol: (sym: Symbol) => void;
-  priceHistory: Record<Symbol, { time: number; open: number; high: number; low: number; close: number; volume: number }[]>;
-  updatePriceHistory: (symbol: Symbol, candles: any[]) => void;
+  priceHistory: Record<Symbol, PriceHistory[]>;
+  updatePriceHistory: (symbol: Symbol, candles: PriceHistory[]) => void;
 
   // Market Conditions
   marketConditions: Record<string, MarketCondition>;
@@ -76,7 +77,7 @@ interface TradingState {
 
   // Alerts
   priceAlerts: Array<{ id: string; symbol: Symbol; condition: string; price: number; isActive: boolean; message?: string }>;
-  addPriceAlert: (alert: any) => void;
+  addPriceAlert: (alert: { symbol: Symbol; condition: string; price: number; isActive?: boolean; message?: string }) => void;
   removePriceAlert: (id: string) => void;
   togglePriceAlert: (id: string) => void;
 
@@ -107,7 +108,7 @@ interface TradingState {
 
   // Error Logs
   errorLogs: Array<{ id: string; level: string; source: string; message: string; timestamp: string; resolved: boolean }>;
-  addErrorLog: (log: any) => void;
+  addErrorLog: (log: { id: string; level: string; source: string; message: string; timestamp: string; resolved?: boolean }) => void;
   clearResolvedLogs: () => void;
   resolveErrorLog: (id: string) => void;
 
@@ -149,7 +150,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   },
   selectedSymbol: 'EURUSD',
   setSelectedSymbol: (sym) => set({ selectedSymbol: sym }),
-  priceHistory: {} as any,
+  priceHistory: {} as Record<Symbol, PriceHistory[]>,
   updatePriceHistory: (symbol, candles) => {
     const history = { ...get().priceHistory };
     const existing = history[symbol] ? [...history[symbol]] : [];
@@ -192,6 +193,16 @@ export const useTradingStore = create<TradingState>((set, get) => ({
     const { openTrades, riskSettings } = get();
     if (openTrades.length >= riskSettings.maxSimultaneousPositions) {
       get().addNotification({ type: 'warning', title: 'Position Limit', message: `Maximum ${riskSettings.maxSimultaneousPositions} simultaneous positions reached.` });
+      return;
+    }
+    // Daily trade limit check
+    if (get().todayTradeCount >= riskSettings.maxDailyTrades) {
+      get().addNotification({ type: 'warning', title: 'Daily Trade Limit', message: `Maximum ${riskSettings.maxDailyTrades} daily trades reached.` });
+      return;
+    }
+    // Daily risk limit check
+    if (get().todayRiskUsed >= riskSettings.dailyRiskLimit * get().balance / 100) {
+      get().addNotification({ type: 'warning', title: 'Daily Risk Limit', message: `Daily risk limit of ${riskSettings.dailyRiskLimit}% reached.` });
       return;
     }
     set({ openTrades: [...openTrades, trade], todayTradeCount: get().todayTradeCount + 1 });
@@ -263,11 +274,30 @@ export const useTradingStore = create<TradingState>((set, get) => ({
     const state = get();
     const newDailyPnl = state.dailyPnl + tradePnl;
     const newTotalPnl = state.totalPnl + tradePnl;
+    const newEquity = state.balance + newTotalPnl;
+    const newFreeMargin = newEquity - state.margin;
+
+    // Margin call / stop-out guard
+    if (newEquity <= 0) {
+      get().addNotification({ type: 'error', title: 'Account Stopped Out', message: 'Equity has reached zero. All positions closed.' });
+      // Force close all open trades
+      const openIds = state.openTrades.map(t => t.id);
+      for (const id of openIds) {
+        get().closeTrade(id);
+      }
+      return;
+    }
+
+    const marginCallLevel = state.balance * (BROKER_CONFIG.marginCall / 100);
+    if (newEquity <= marginCallLevel && newEquity > 0) {
+      get().addNotification({ type: 'warning', title: 'Margin Call Warning', message: `Equity ($${newEquity.toFixed(2)}) is at ${BROKER_CONFIG.marginCall}% margin call level.` });
+    }
+
     set({
       dailyPnl: newDailyPnl,
       totalPnl: newTotalPnl,
-      equity: state.balance + newTotalPnl,
-      freeMargin: state.balance + newTotalPnl - state.margin,
+      equity: newEquity,
+      freeMargin: newFreeMargin,
     });
   },
 
@@ -283,7 +313,23 @@ export const useTradingStore = create<TradingState>((set, get) => ({
     dailyTargetPercent: 2.0,
     maxDailyTrades: 10,
   },
-  setRiskSettings: (settings) => set({ riskSettings: { ...get().riskSettings, ...settings } }),
+  setRiskSettings: (settings) => {
+    const current = get().riskSettings;
+    const validated: RiskSettings = {
+      ...current,
+      ...settings,
+      // Enforce valid ranges
+      riskPerTrade: Math.max(0.1, Math.min(10, settings.riskPerTrade ?? current.riskPerTrade)),
+      stopLossPips: Math.max(1, Math.min(500, settings.stopLossPips ?? current.stopLossPips)),
+      takeProfitPips: Math.max(1, Math.min(1000, settings.takeProfitPips ?? current.takeProfitPips)),
+      riskRewardRatio: Math.max(0.5, Math.min(10, settings.riskRewardRatio ?? current.riskRewardRatio)),
+      maxSimultaneousPositions: Math.max(1, Math.min(BROKER_CONFIG.maxOpenPositions, settings.maxSimultaneousPositions ?? current.maxSimultaneousPositions)),
+      dailyRiskLimit: Math.max(0.5, Math.min(20, settings.dailyRiskLimit ?? current.dailyRiskLimit)),
+      dailyTargetPercent: Math.max(0.1, Math.min(20, settings.dailyTargetPercent ?? current.dailyTargetPercent)),
+      maxDailyTrades: Math.max(1, Math.min(100, settings.maxDailyTrades ?? current.maxDailyTrades)),
+    };
+    set({ riskSettings: validated });
+  },
   todayRiskUsed: 0,
   todayTradeCount: 0,
 

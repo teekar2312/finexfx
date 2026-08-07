@@ -186,6 +186,7 @@ export default function Sidebar() {
             <Button
               variant="ghost"
               size="sm"
+              aria-label="Close navigation"
               className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
               onClick={handleClose}
             >
@@ -226,7 +227,7 @@ export default function Sidebar() {
         <Separator className="opacity-50" />
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
+        <nav role="tablist" className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
             const errorCount = item.id === 'errors' ? unresolvedErrors : 0;
@@ -235,6 +236,9 @@ export default function Sidebar() {
             const button = (
               <button
                 key={item.id}
+                role="tab"
+                aria-selected={isActive}
+                aria-label={item.label}
                 onClick={() => handleNav(item.id)}
                 className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-md text-sm transition-all duration-200 relative group min-h-[44px] focus-ring
                   ${isActive
@@ -340,6 +344,7 @@ export default function Sidebar() {
           <div className="px-2 py-2 border-t border-border">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
               className="w-full flex items-center justify-center py-1.5 rounded-md hover:bg-accent transition-all duration-200 text-muted-foreground hover:text-foreground min-h-[44px]"
             >
               <ChevronLeft className={`h-4 w-4 sidebar-chevron ${!sidebarOpen ? 'sidebar-chevron-collapsed' : ''}`} />

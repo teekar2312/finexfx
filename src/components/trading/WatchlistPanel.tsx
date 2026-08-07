@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect, memo } from 'react';
 import { useTradingStore } from '@/store/trading-store';
 import { SYMBOLS, SYMBOL_INFO, MARKET_CONDITION_CONFIG, type Symbol, type MarketCondition } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { List, ArrowDownUp, Bell, ChevronDown, Filter } from 'lucide-react';
 
 // ── Sparkline SVG (last 15 points from priceHistory) ───────────────
-function MiniSparkline({ values, width = 56, height = 18 }: { values: number[]; width?: number; height?: number }) {
+const MiniSparkline = memo(function MiniSparkline({ values, width = 56, height = 18 }: { values: number[]; width?: number; height?: number }) {
   if (values.length < 2) return null;
   const pts = values.slice(-15);
   const min = Math.min(...pts);
@@ -35,20 +35,20 @@ function MiniSparkline({ values, width = 56, height = 18 }: { values: number[]; 
       />
     </svg>
   );
-}
+});
 
 // ── Market condition badge ────────────────────────────────────────────
-function ConditionBadge({ condition }: { condition: MarketCondition }) {
+const ConditionBadge = memo(function ConditionBadge({ condition }: { condition: MarketCondition }) {
   const cfg = MARKET_CONDITION_CONFIG[condition];
   return (
     <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full leading-none whitespace-nowrap ${cfg.color} bg-current/10`}>
       {cfg.label}
     </span>
   );
-}
+});
 
 // ── Price display with flash effect via key remount ───────────────────
-function PriceCell({ value, digits, timestamp, side }: { value: number; digits: number; timestamp: number; side: 'bid' | 'ask' }) {
+const PriceCell = memo(function PriceCell({ value, digits, timestamp, side }: { value: number; digits: number; timestamp: number; side: 'bid' | 'ask' }) {
   const colorClass = side === 'bid' ? 'text-emerald-400' : 'text-red-400';
   return (
     <span
@@ -58,7 +58,7 @@ function PriceCell({ value, digits, timestamp, side }: { value: number; digits: 
       {value.toFixed(digits)}
     </span>
   );
-}
+});
 
 // ── Sort options ──────────────────────────────────────────────────────
 type SortKey = 'name' | 'spread' | 'change';
@@ -224,9 +224,8 @@ export default function WatchlistPanel() {
             const isPositive = changeAmt >= 0;
 
             return (
-              <motion.button
+              <motion.div
                 key={sym}
-                layout
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -20 }}
@@ -334,7 +333,7 @@ export default function WatchlistPanel() {
                     )}
                   </div>
                 </div>
-              </motion.button>
+              </motion.div>
             );
           })}
         </AnimatePresence>

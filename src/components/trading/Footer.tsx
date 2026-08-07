@@ -171,7 +171,7 @@ export default function Footer() {
 
   return (
     <TooltipProvider>
-      <footer className="h-11 border-t border-border/60 bg-card/90 backdrop-blur-md flex items-center px-3 gap-3 text-[10px] shrink-0 z-40 relative">
+      <footer role="contentinfo" className="h-11 border-t border-border/60 bg-card/90 backdrop-blur-md flex items-center px-3 gap-3 text-[10px] shrink-0 z-40 relative">
         {/* Top gradient line */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
@@ -269,7 +269,7 @@ export default function Footer() {
         <div className="flex items-center gap-2.5 shrink-0">
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="flex items-center gap-1.5 cursor-default">
+              <div className="flex items-center gap-1.5 cursor-default" aria-label="Connection status">
                 <div className="relative">
                   <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`} />
                   {isConnected && <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-emerald-500 dot-ping" />}
