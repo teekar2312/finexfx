@@ -3721,3 +3721,28 @@ Stage Summary:
 - 60+ custom utility classes have light mode overrides
 - Dark theme completely unchanged; default remains dark
 - Only layout.tsx and Sidebar.tsx modified
+---
+Task ID: feat-theme-live-trading
+Agent: Main + 2 subagents
+Task: Add dark/light theme support and live trading infrastructure
+
+Work Log:
+- Theme: Removed hardcoded className='dark' from layout.tsx html tag
+- Theme: Changed enableSystem=false to enableSystem=true
+- Theme: Added Sun/Moon toggle button to Sidebar (useSyncExternalStore for hydration safety)
+- Theme: Added 60+ :not(.dark) CSS overrides for all custom utility classes
+- Theme: Light theme uses white backgrounds, subtle borders, soft shadows
+- Broker: Created src/lib/broker.ts with IBroker interface, DemoBroker, LiveBroker, factory
+- Store: Added connectionStatus, priceFeedMode, brokerConfig state fields
+- Settings: Added Trading Mode panel (Simulated/Live toggle) with WS config UI
+- Hook: Created use-live-price-feed.ts (Socket.IO client with auto-reconnect)
+- Simulator: Updated to skip price generation when live mode is active
+- Price Feed v2.0: Modular engine (9 files), Gaussian walk, 7 sessions, 35 indicators
+- Zero lint errors after all changes
+
+Stage Summary:
+- 20 files changed, 2,998 insertions, 235 deletions
+- Dark/light theme fully functional with toggle in sidebar
+- Live trading infrastructure: broker abstraction, WebSocket hook, settings UI
+- Price feed mini-service v2.0 with modular engine
+- Pushed as 9abb3cd
