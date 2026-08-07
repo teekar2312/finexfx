@@ -63,6 +63,7 @@ interface TradeExecutionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   context?: TradeExecutionContext;
+  onConfirm?: () => void;
 }
 
 function PriceLevelVisualization({ ctx }: { ctx: TradeExecutionContext }) {
@@ -184,7 +185,7 @@ function MetricCard({ icon: Icon, label, value, valueColor, delay }: { icon: Rea
   );
 }
 
-export function TradeExecutionModal({ open, onOpenChange, context }: TradeExecutionModalProps) {
+export function TradeExecutionModal({ open, onOpenChange, context, onConfirm }: TradeExecutionModalProps) {
   const ctx = context ?? MOCK_CONTEXT;
   const isBuy = ctx.direction === 'BUY';
   const addNotification = useTradingStore((s) => s.addNotification);
@@ -195,8 +196,9 @@ export function TradeExecutionModal({ open, onOpenChange, context }: TradeExecut
       title: `${ctx.direction} ${ctx.symbol}`,
       message: `${ctx.lotSize.toFixed(2)} lots @ ${ctx.entryPrice.toFixed(5)} | SL: ${ctx.stopLoss.toFixed(5)} | TP: ${ctx.takeProfit.toFixed(5)} | R:R ${ctx.riskRewardRatio}`,
     });
+    onConfirm?.();
     onOpenChange(false);
-  }, [ctx, addNotification, onOpenChange]);
+  }, [ctx, addNotification, onOpenChange, onConfirm]);
 
   const dirColor = isBuy ? 'emerald' : 'red';
   const dirBgClass = isBuy ? 'bg-emerald-500/10' : 'bg-red-500/10';

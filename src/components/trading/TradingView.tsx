@@ -22,6 +22,8 @@ import MarketSentiment from './MarketSentiment';
 import TradeExportButton from './TradeExportButton';
 import AdvancedOrderTypes from './AdvancedOrderTypes';
 import TradeHistoryTable from './TradeHistoryTable';
+import { TradeExecutionModal } from './TradeExecutionModal';
+import type { TradeExecutionContext } from './TradeExecutionModal';
 
 export default function TradingView() {
   const {
@@ -46,6 +48,8 @@ export default function TradingView() {
   const [confirmClose, setConfirmClose] = useState<string | null>(null);
   const prevPriceRef = useRef<Record<string, number>>({});
   const [priceFlash, setPriceFlash] = useState<Record<string, 'up' | 'down' | null>>({});
+  const [tradeModalOpen, setTradeModalOpen] = useState(false);
+  const [pendingTrade, setPendingTrade] = useState<TradeExecutionContext | null>(null);
 
   const price = prices[selectedSymbol];
   const chartData = priceHistory[selectedSymbol] || [];
@@ -64,23 +68,14 @@ export default function TradingView() {
     }
   }, [price, selectedSymbol]);
 
-  const handleOpenTrade = useCallback((direction: TradeDirection) => {
-    if (!price || !isConnected) {
-      addNotification({ type: 'error', title: 'Cannot Trade', message: 'Not connected to price feed' });
-      return;
-    }
-
+  const executeTrade = useCallback((direction: TradeDirection) => {
+    if (!price || !isConnected) return;
     const lots = parseFloat(lotSize);
-    if (isNaN(lots) || lots < BROKER_CONFIG.minLotSize || lots > BROKER_CONFIG.maxLotSize) {
-      addNotification({ type: 'error', title: 'Invalid Lot Size', message: `Must be between ${BROKER_CONFIG.minLotSize} and ${BROKER_CONFIG.maxLotSize}` });
-      return;
-    }
-
+    if (isNaN(lots) || lots < BROKER_CONFIG.minLotSize || lots > BROKER_CONFIG.maxLotSize) return;
     const entryPrice = direction === 'BUY' ? price.ask : price.bid;
     const slPips = parseFloat(stopLoss) || 0;
     const tpPips = parseFloat(takeProfit) || 0;
     const pipSize = SYMBOL_INFO[selectedSymbol].pipSize;
-
     const trade = {
       id: `trade-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
       symbol: selectedSymbol,
@@ -100,9 +95,63 @@ export default function TradingView() {
       status: 'open' as const,
       openedAt: new Date().toISOString(),
     };
-
     addTrade(trade);
-  }, [price, isConnected, lotSize, stopLoss, takeProfit, selectedSymbol, addTrade, addNotification]);
+  }, [price, isConnected, lotSize, stopLoss, takeProfit, selectedSymbol, addTrade]);
+
+  const handleOpenTrade = useCallback((direction: TradeDirection) => {
+    if (!price || !isConnected) {
+      addNotification({ type: 'error', title: 'Cannot Trade', message: 'Not connected to price feed' });
+      return;
+    }
+    const lots = parseFloat(lotSize);
+    if (isNaN(lots) || lots < BROKER_CONFIG.minLotSize || lots > BROKER_CONFIG.maxLotSize) {
+      addNotification({ type: 'error', title: 'Invalid Lot Size', message: `Must be between ${BROKER_CONFIG.minLotSize} and ${BROKER_CONFIG.maxLotSize}` });
+      return;
+    }
+    if (oneClickMode) {
+      executeTrade(direction);
+      return;
+    }
+    const entryPrice = direction === 'BUY' ? price.ask : price.bid;
+    const slPips = parseFloat(stopLoss) || 0;
+    const tpPips = parseFloat(takeProfit) || 0;
+    const pipSize = SYMBOL_INFO[selectedSymbol].pipSize;
+    const slPrice = slPips > 0 ? (direction === 'BUY' ? entryPrice - slPips * pipSize : entryPrice + slPips * pipSize) : entryPrice;
+    const tpPrice = tpPips > 0 ? (direction === 'BUY' ? entryPrice + tpPips * pipSize : entryPrice - tpPips * pipSize) : entryPrice;
+    const pipValue = SYMBOL_INFO[selectedSymbol].category === 'forex' ? 10 * lots : 100 * lots;
+    const contractSize = SYMBOL_INFO[selectedSymbol].category === 'forex' ? 100000 : 100;
+    const currentPrice = selectedSymbol === 'USDJPY' ? 1 / price.bid : price.bid;
+    const margin = (contractSize * lots * currentPrice) / BROKER_CONFIG.leverage;
+    const balance = useTradingStore.getState().balance;
+    const riskAmount = slPips * pipValue;
+    const potentialProfit = tpPips * pipValue;
+    const rrRatio = riskAmount > 0 && potentialProfit > 0 ? `1:${(potentialProfit / riskAmount).toFixed(1)}` : tpPips > 0 && slPips > 0 ? `1:${(tpPips / slPips).toFixed(1)}` : 'N/A';
+    setPendingTrade({
+      symbol: SYMBOL_INFO[selectedSymbol].name,
+      direction,
+      lotSize: lots,
+      entryPrice,
+      stopLoss: slPrice,
+      takeProfit: tpPrice,
+      riskAmount,
+      potentialProfit,
+      riskRewardRatio: rrRatio,
+      spread: parseFloat((price.spread / pipSize).toFixed(1)),
+      commission: BROKER_CONFIG.commission * lots,
+      accountBalance: balance,
+      marginRequired: margin,
+      freeMargin: balance - margin,
+    });
+    setTradeModalOpen(true);
+  }, [price, isConnected, lotSize, stopLoss, takeProfit, selectedSymbol, oneClickMode, addNotification, executeTrade]);
+
+  const handleModalConfirm = useCallback(() => {
+    if (pendingTrade) {
+      executeTrade(pendingTrade.direction as TradeDirection);
+      setTradeModalOpen(false);
+      setPendingTrade(null);
+    }
+  }, [pendingTrade, executeTrade]);
 
   const handleToggleTrailing = (tradeId: string, enabled: boolean) => {
     updateTrade(tradeId, { isTrailingStop: enabled, trailingStop: enabled ? riskSettings.stopLossPips : undefined });
@@ -828,6 +877,14 @@ export default function TradingView() {
         {/* Advanced Trade History Table */}
         <TradeHistoryTable />
       </div>
+
+      {/* Trade Execution Confirmation Modal */}
+      <TradeExecutionModal
+        open={tradeModalOpen}
+        onOpenChange={(open) => { if (!open) { setTradeModalOpen(false); setPendingTrade(null); } }}
+        context={pendingTrade ?? undefined}
+        onConfirm={handleModalConfirm}
+      />
     </TooltipProvider>
   );
 };
