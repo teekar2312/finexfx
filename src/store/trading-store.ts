@@ -234,6 +234,22 @@ export const useTradingStore = create<TradingState>((set, get) => ({
     set({ openTrades: [...openTrades, trade], todayTradeCount: get().todayTradeCount + 1 });
     playSound('trade_open');
     get().addNotification({ type: 'success', title: 'Trade Opened', message: `${trade.direction} ${trade.symbol} @ ${trade.entryPrice}` });
+    // H3: Persist trade to database (fire-and-forget)
+    fetch('/api/trades', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        symbol: trade.symbol,
+        direction: trade.direction,
+        lotSize: trade.lotSize,
+        entryPrice: trade.entryPrice,
+        stopLoss: trade.stopLoss,
+        takeProfit: trade.takeProfit,
+        strategy: trade.strategy,
+        aiConfidence: trade.aiConfidence,
+        marketCondition: trade.marketCondition,
+      }),
+    }).catch(() => { /* silent — client state is the source of truth for simulated mode */ });
   },
   updateTrade: (id, updates) => {
     set({
@@ -254,6 +270,8 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       set({ todayRiskUsed: get().todayRiskUsed + riskUsed });
       playSound('trade_close');
       get().addNotification({ type: profit >= 0 ? 'success' : 'warning', title: profit >= 0 ? 'Trade Closed (Profit)' : 'Trade Closed (Loss)', message: `${trade.symbol} ${trade.direction} closed at ${trade.currentPrice?.toFixed(SYMBOL_INFO[trade.symbol as keyof typeof SYMBOL_INFO]?.digits ?? 4)} (P&L: $${profit.toFixed(2)})` });
+      // H3: Persist close to database (fire-and-forget)
+      fetch(`/api/trades?id=${id}`, { method: 'DELETE' }).catch(() => {});
     }
   },
 

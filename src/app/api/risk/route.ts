@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { updateRiskSettingsSchema } from '@/lib/validators';
+import { requireAuth } from '@/lib/auth-guard';
 
 const DEFAULT_RISK_SETTINGS = {
   riskPerTrade: 0.5,
@@ -53,6 +54,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const { authorized, response } = await requireAuth(request);
+  if (!authorized) return response!;
+
   try {
     const body = await request.json();
 

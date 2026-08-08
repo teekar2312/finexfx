@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { createAlertSchema, toggleAlertSchema } from '@/lib/validators';
+import { requireAuth } from '@/lib/auth-guard';
 
 export async function GET() {
   try {
@@ -39,6 +40,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const { authorized, response } = await requireAuth(request);
+  if (!authorized) return response!;
+
   try {
     const body = await request.json();
 
@@ -81,6 +85,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const { authorized, response } = await requireAuth(request);
+  if (!authorized) return response!;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -126,6 +133,9 @@ export async function DELETE(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const { authorized, response } = await requireAuth(request);
+  if (!authorized) return response!;
+
   try {
     const body = await request.json();
 

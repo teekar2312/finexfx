@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { withAuth } from '@/lib/auth-guard';
+import { requireAuth } from '@/lib/auth-guard';
 import type { Symbol, TradeDirection, TradeStatus, StrategyName, MarketCondition } from '@/lib/types';
 import { SYMBOLS, SYMBOL_INFO, INDICATOR_POOL, STRATEGIES } from '@/lib/types';
 
@@ -379,7 +379,7 @@ function generateSampleBacktest(
 }
 
 export async function POST(request: Request) {
-  const { authorized, response } = await (await import('@/lib/auth-guard')).then(m => m.requireAuth(request as any));
+  const { authorized, response } = await requireAuth(request as any);
   if (!authorized) return response!;
 
   try {

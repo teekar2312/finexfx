@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import type { Symbol, StrategyName, BacktestResult } from '@/lib/types';
 import { SYMBOLS } from '@/lib/types';
 import { runBacktestSchema } from '@/lib/validators';
+import { requireAuth } from '@/lib/auth-guard';
 
 /** Seeded PRNG (mulberry32) — produces deterministic results for M3 */
 function mulberry32(seed: number): () => number {
@@ -145,6 +146,9 @@ function generateRealisticBacktest(
 }
 
 export async function POST(request: NextRequest) {
+  const { authorized, response } = await requireAuth(request);
+  if (!authorized) return response!;
+
   try {
     const body = await request.json();
 

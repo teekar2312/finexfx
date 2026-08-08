@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import type { Symbol, TradeDirection, TradeStatus } from '@/lib/types';
 import { SYMBOLS, SYMBOL_INFO } from '@/lib/types';
 import { createTradeSchema } from '@/lib/validators';
+import { requireAuth } from '@/lib/auth-guard';
 
 /** Calculate P&L in USD for a trade closed at a given price */
 function calculatePnl(trade: {
@@ -106,6 +107,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const { authorized, response } = await requireAuth(request);
+  if (!authorized) return response!;
+
   try {
     const body = await request.json();
 
@@ -214,6 +218,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const { authorized, response } = await requireAuth(request);
+  if (!authorized) return response!;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

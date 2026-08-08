@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { updateIndicatorSchema } from '@/lib/validators';
+import { requireAuth } from '@/lib/auth-guard';
 
 export async function GET() {
   try {
@@ -40,6 +41,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const { authorized, response } = await requireAuth(request);
+  if (!authorized) return response!;
+
   try {
     const body = await request.json();
 
