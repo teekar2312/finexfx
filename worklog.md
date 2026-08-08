@@ -3900,3 +3900,25 @@ Stage Summary:
   - package.json name is still generic "nextjs_tailwind_shadcn_ts"
   - Build script uses `cp -r` (not Windows-compatible)
   - db:push script uses --accept-data-loss
+
+---
+Task ID: audit-fix-all
+Agent: Main
+Task: Implement all remaining audit findings and push to repository
+
+Work Log:
+- N1: Fixed critical await-in-non-async-callback bug in use-live-price-feed.ts. Replaced with .then() pattern + error handling.
+- C2: Added requireAuth() guard to all 7 mutating API routes (trades, account, risk, backtest, alerts, indicators, signals). GET endpoints kept open for dashboard reads.
+- H3: Added bidirectional sync — addTrade() and closeTrade() in Zustand store now fire-and-forget POST/DELETE to /api/trades API.
+- M2: Verified all mutating routes already have Zod validation (was incorrectly marked as partial in verification report).
+- I1: Updated ThemeToggle component to use resolvedTheme + useSyncExternalStore. Sidebar already has full inline implementation.
+- I2: Changed skeleton bg-white/[0.02] to bg-primary/[0.02] for theme-aware rendering.
+- C3: Removed --accept-data-loss flag from db:push npm script.
+- Cleaned up seed/route.ts to use direct import instead of dynamic import for auth-guard.
+- Ran lint (clean), verified dev server (HTTP 200), committed and pushed (f612b81).
+
+Stage Summary:
+- All 27 audit findings are now fully resolved (27/27)
+- 1 regression (N1) was fixed in this session
+- 13 files changed, 143 insertions, 84 deletions
+- Pushed to repository as commit f612b81
