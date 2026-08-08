@@ -14,6 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { usePriceSimulator } from '@/hooks/use-price-simulator';
 import { useLivePriceFeed } from '@/hooks/use-live-price-feed';
+import { useSyncWithDb } from '@/hooks/use-sync-with-db';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 
@@ -22,21 +23,21 @@ function ViewSkeleton() {
     <div className="p-4 pt-5 space-y-4">
       <div className="glass-card rounded-lg p-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="h-5 w-32 bg-white/5 rounded animate-pulse" />
-          <div className="h-4 w-48 bg-white/5 rounded animate-pulse" />
+          <div className="h-5 w-32 bg-primary/5 rounded animate-pulse" />
+          <div className="h-4 w-48 bg-primary/5 rounded animate-pulse" />
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="rounded-lg p-4 bg-white/[0.02] border border-border/30">
-              <div className="h-3 w-16 bg-white/5 rounded animate-pulse mb-2" />
-              <div className="h-6 w-24 bg-white/5 rounded animate-pulse mb-1" />
-              <div className="h-3 w-20 bg-white/5 rounded animate-pulse" />
+              <div className="h-3 w-16 bg-primary/5 rounded animate-pulse mb-2" />
+              <div className="h-6 w-24 bg-primary/5 rounded animate-pulse mb-1" />
+              <div className="h-3 w-20 bg-primary/5 rounded animate-pulse" />
             </div>
           ))}
         </div>
       </div>
       <div className="glass-card rounded-lg p-6">
-        <div className="h-48 bg-white/[0.02] rounded animate-pulse" />
+        <div className="h-48 bg-primary/5 rounded animate-pulse" />
       </div>
     </div>
   );
@@ -329,6 +330,9 @@ export default function TradingDashboard() {
 
   // Connect to live price feed when in live mode
   useLivePriceFeed();
+
+  // Sync store with database on mount (H3 fix)
+  useSyncWithDb();
 
   // Keyboard shortcuts
   useKeyboardShortcuts({ showShortcutsHelp, setShowShortcutsHelp });

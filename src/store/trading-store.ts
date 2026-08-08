@@ -1,4 +1,13 @@
 import { create } from 'zustand';
+/**
+ * Central Zustand store for the FINEX Trading Dashboard.
+ *
+ * NOTE (M1): This store is intentionally kept as a single file for now.
+ * A full split into slices (usePriceStore, useTradeStore, etc.) would require
+ * updating imports across 40+ components. All selectors already use granular
+ * property selection (e.g. `s.balance`) to minimize re-renders.
+ * The split is planned for a future major refactor.
+ */
 import type { PriceTick, Trade, TradingSignal, NewsItem, EconomicEvent, RiskSettings, BacktestResult, Symbol, MarketCondition, IndicatorConfig, PriceHistory } from '@/lib/types';
 import { BROKER_CONFIG } from '@/lib/types';
 import { SYMBOLS, SYMBOL_INFO } from '@/lib/types';
@@ -93,6 +102,13 @@ interface TradingState {
   isAutoTrading: boolean;
   setAutoTrading: (auto: boolean) => void;
   updateAccountPnl: (tradePnl: number) => void;
+  // Account sync setters (for DB initialization)
+  setBalance: (v: number) => void;
+  setEquity: (v: number) => void;
+  setFreeMargin: (v: number) => void;
+  setMargin: (v: number) => void;
+  setDailyPnl: (v: number) => void;
+  setTotalPnl: (v: number) => void;
 
   // Risk
   riskSettings: RiskSettings;
@@ -280,6 +296,13 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   totalPnl: 0,
   isAutoTrading: false,
   setAutoTrading: (auto) => set({ isAutoTrading: auto }),
+  // Account sync setters (for DB initialization — H3 fix)
+  setBalance: (v) => set({ balance: v }),
+  setEquity: (v) => set({ equity: v }),
+  setFreeMargin: (v) => set({ freeMargin: v }),
+  setMargin: (v) => set({ margin: v }),
+  setDailyPnl: (v) => set({ dailyPnl: v }),
+  setTotalPnl: (v) => set({ totalPnl: v }),
   updateAccountPnl: (tradePnl) => {
     const state = get();
     const newDailyPnl = state.dailyPnl + tradePnl;

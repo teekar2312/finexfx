@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useTradingStore } from '@/store/trading-store';
-import { io, Socket } from 'socket.io-client';
 import { SYMBOLS, type Symbol, type PriceTick } from '@/lib/types';
+import type { Socket } from 'socket.io-client';
 
 /**
  * Hook to connect to the live price-feed Socket.IO mini-service (port 3003).
@@ -28,6 +28,7 @@ export function useLivePriceFeed() {
 
     setConnectionStatus('connecting');
 
+    const { io } = await import('socket.io-client');
     const socket = io('/?XTransformPort=' + wsPort, {
       transports: ['websocket', 'polling'],
       reconnection: false, // we handle reconnection ourselves

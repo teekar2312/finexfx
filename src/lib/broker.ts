@@ -319,9 +319,12 @@ export class LiveBroker implements IBroker {
   }
 
   disconnect(): void {
-    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.socket) {
-      this.socket.on('disconnect', null); // prevent auto-reconnect
+      this.socket.off('disconnect');
       this.socket.disconnect();
       this.socket = null;
     }

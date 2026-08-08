@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { Symbol, TradeDirection, TradeStatus } from '@/lib/types';
 import { SYMBOLS, SYMBOL_INFO } from '@/lib/types';
+import { createTradeSchema } from '@/lib/validators';
 
 /** Calculate P&L in USD for a trade closed at a given price */
 function calculatePnl(trade: {
@@ -107,6 +108,16 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+
+    // Zod validation
+    const parsed = createTradeSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
     const {
       symbol,
       direction,
@@ -117,21 +128,7 @@ export async function POST(request: NextRequest) {
       strategy,
       aiConfidence,
       marketCondition,
-    } = body;
-
-    if (!SYMBOLS.includes(symbol)) {
-      return NextResponse.json(
-        { error: `Invalid symbol: ${symbol}` },
-        { status: 400 }
-      );
-    }
-
-    if (!['BUY', 'SELL'].includes(direction)) {
-      return NextResponse.json(
-        { error: 'Direction must be BUY or SELL' },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     // Get account
     const account = await db.tradingAccount.findFirst({

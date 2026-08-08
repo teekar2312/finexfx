@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { Symbol, StrategyName, BacktestResult } from '@/lib/types';
 import { SYMBOLS } from '@/lib/types';
+import { runBacktestSchema } from '@/lib/validators';
+
+/** Seeded PRNG (mulberry32) — produces deterministic results for M3 */
+function mulberry32(seed: number): () => number {
+  return function () {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 interface BacktestTradeEntry {
   trade: number;
@@ -22,17 +33,21 @@ function generateRealisticBacktest(
   startDate: string,
   endDate: string
 ): BacktestResult & { trades: BacktestTradeEntry[]; startDate: string; endDate: string } {
+  // Deterministic seed from strategy+symbol (M3)
+  const seed = strategy.split('').reduce((a, c) => a + c.charCodeAt(0), 0) + symbol.charCodeAt(0);
+  const rand = mulberry32(seed);
+
   const initialBalance = 10000;
-  const totalTrades = Math.floor(Math.random() * 151) + 50; // 50-200 trades
+  const totalTrades = Math.floor(rand() * 151) + 50; // 50-200 trades
 
   // Realistic parameters: 55-72% win rate
-  const winRate = 0.55 + Math.random() * 0.17;
+  const winRate = 0.55 + rand() * 0.17;
   const wins = Math.round(totalTrades * winRate);
   const losses = totalTrades - wins;
 
   // Average win/loss in pips
-  const avgWinPips = 8 + Math.random() * 18; // 8-26 pips
-  const avgLossPips = 5 + Math.random() * 10; // 5-15 pips
+  const avgWinPips = 8 + rand() * 18; // 8-26 pips
+  const avgLossPips = 5 + rand() * 10; // 5-15 pips
 
   const profitFactor = (wins * avgWinPips) / (losses * avgLossPips);
   const riskReward = avgWinPips / avgLossPips;
@@ -59,13 +74,13 @@ function generateRealisticBacktest(
   let maxDrawdown = 0;
 
   for (let i = 0; i < totalTrades; i++) {
-    const isWin = i < wins ? (Math.random() < (wins - i) / (totalTrades - i + 1)) : false;
-    const direction: 'BUY' | 'SELL' = Math.random() > 0.5 ? 'BUY' : 'SELL';
-    const priceVariation = (Math.random() - 0.5) * basePrice * 0.001;
+    const isWin = i < wins ? (rand() < (wins - i) / (totalTrades - i + 1)) : false;
+    const direction: 'BUY' | 'SELL' = rand() > 0.5 ? 'BUY' : 'SELL';
+    const priceVariation = (rand() - 0.5) * basePrice * 0.001;
     const entryPrice = basePrice + priceVariation;
 
     const pipsRange = isWin ? avgWinPips : avgLossPips;
-    const pips = isWin ? pipsRange * (0.5 + Math.random()) : -(pipsRange * (0.5 + Math.random()));
+    const pips = isWin ? pipsRange * (0.5 + rand()) : -(pipsRange * (0.5 + rand()));
     const exitPrice = entryPrice + pips * pipSize * (direction === 'SELL' ? -1 : 1);
 
     const profit = pips * pipValue;
@@ -102,12 +117,12 @@ function generateRealisticBacktest(
   const avgLoss = losses > 0 ? totalLoss / losses : 0;
 
   // Sharpe ratio approximation (1.2-2.5)
-  const sharpeRatio = 1.2 + Math.random() * 1.3;
+  const sharpeRatio = 1.2 + rand() * 1.3;
 
   const finalBalance = currentEquity;
 
   return {
-    id: `bt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: `bt-${Date.now()}-${rand().toString(36).slice(2, 8)}`,
     name: `${strategy} - ${symbol}`,
     symbol,
     strategy: strategy as StrategyName,
@@ -132,21 +147,16 @@ function generateRealisticBacktest(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { strategy, symbol, startDate, endDate } = body;
 
-    if (!strategy || !symbol) {
+    const parsed = runBacktestSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Missing required fields: strategy, symbol' },
+        { error: 'Validation failed', details: parsed.error.issues },
         { status: 400 }
       );
     }
 
-    if (!SYMBOLS.includes(symbol)) {
-      return NextResponse.json(
-        { error: `Invalid symbol: ${symbol}` },
-        { status: 400 }
-      );
-    }
+    const { strategy, symbol, startDate, endDate } = parsed.data;
 
     const effectiveStartDate = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const effectiveEndDate = endDate || new Date().toISOString();

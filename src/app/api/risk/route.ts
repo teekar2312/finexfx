@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { updateRiskSettingsSchema } from '@/lib/validators';
 
 const DEFAULT_RISK_SETTINGS = {
   riskPerTrade: 0.5,
@@ -55,7 +56,14 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Validate values
+    const parsed = updateRiskSettingsSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
     const {
       riskPerTrade,
       stopLossPips,
@@ -66,22 +74,7 @@ export async function POST(request: NextRequest) {
       avoidMajorNews,
       dailyTargetPercent,
       maxDailyTrades,
-    } = body;
-
-    if (riskPerTrade !== undefined && (riskPerTrade < 0.1 || riskPerTrade > 10)) {
-      return NextResponse.json(
-        { error: 'riskPerTrade must be between 0.1 and 10' },
-        { status: 400 }
-      );
-    }
-
-    if (stopLossPips !== undefined && (stopLossPips < 1 || stopLossPips > 100)) {
-      return NextResponse.json(
-        { error: 'stopLossPips must be between 1 and 100' },
-        { status: 400 }
-      );
-    }
-
+    } = parsed.data;
     let existing = await db.riskSettings.findFirst({
       orderBy: { createdAt: 'asc' },
     });

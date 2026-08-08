@@ -2,6 +2,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
+/// NOTE (M8): SQLite does not support Decimal type.
+/// All monetary values use Float. For production with PostgreSQL,
+/// switch to `Decimal @db.Decimal(10, 2)` for precise financial calculations.
+/// Current code mitigates rounding by rounding to 2 decimal places at display time.
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")

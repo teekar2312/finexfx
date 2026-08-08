@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { updateIndicatorSchema } from '@/lib/validators';
 
 export async function GET() {
   try {
@@ -41,8 +42,16 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, name, enabled, settings } = body;
 
+    const parsed = updateIndicatorSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const { id, name, enabled, settings, category } = parsed.data;
     if (id) {
       // Update existing indicator config
       const existing = await db.indicatorConfig.findUnique({
@@ -85,7 +94,7 @@ export async function POST(request: NextRequest) {
     const newConfig = await db.indicatorConfig.create({
       data: {
         name,
-        category: body.category ?? 'trend',
+        category: category ?? 'trend',
         settings: JSON.stringify(settings ?? {}),
         isEnabled: enabled,
       },

@@ -1,194 +1,47 @@
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
 import type { NewsItem } from '@/lib/types';
 
-const FOREX_NEWS: NewsItem[] = [
+/** Fallback static news used only when DB has no items */
+const FALLBACK_NEWS: NewsItem[] = [
   {
     id: 'news-1',
     source: 'Reuters',
-    title: 'Federal Reserve Holds Rates Steady at 5.25-5.50%, Signals Potential Cut in September',
-    summary: 'The Federal Reserve kept its benchmark interest rate unchanged but indicated that inflation is cooling faster than expected, opening the door to a rate cut in the coming months. USD initially weakened against major currencies.',
+    title: 'Federal Reserve Holds Rates Steady at 5.25-5.50%',
+    summary: 'The Fed kept rates unchanged but indicated inflation is cooling faster than expected.',
     category: 'Monetary Policy',
     impact: 'high',
     currency: 'USD',
     publishedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
   },
-  {
-    id: 'news-2',
-    source: 'Bloomberg',
-    title: 'ECB Officials Push for Rate Cuts as Eurozone Inflation Falls to 2.4%',
-    summary: 'European Central Bank policymakers are increasingly confident that inflation is on track to return to target, with several board members advocating for back-to-back rate reductions through summer.',
-    category: 'Monetary Policy',
-    impact: 'high',
-    currency: 'EUR',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-  },
-  {
-    id: 'news-3',
-    source: 'FX Street',
-    title: 'GBP/USD Rally Extends Above 1.2750 as UK GDP Growth Beats Expectations',
-    summary: 'The UK economy grew 0.6% quarter-over-quarter, exceeding forecasts of 0.4%. Stronger-than-expected growth supports the Bank of England\'s gradual approach to rate cuts.',
-    category: 'Economic Data',
-    impact: 'high',
-    currency: 'GBP',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-  },
-  {
-    id: 'news-4',
-    source: 'Nikkei Asia',
-    title: 'Bank of Japan Signals Willingness to Intervene as USD/JPY Approaches 160',
-    summary: 'Japanese finance ministry officials warned they are prepared to take decisive action against excessive currency moves, reinforcing the 160 level as a key line in the sand for USD/JPY.',
-    category: 'Central Bank',
-    impact: 'high',
-    currency: 'JPY',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
-  },
-  {
-    id: 'news-5',
-    source: 'Kitco News',
-    title: 'Gold Surges to $2,400 Amid Geopolitical Tensions and Rate Cut Speculation',
-    summary: 'XAU/USD hit a new all-time high as escalating Middle East tensions combined with expectations of global rate cuts drove safe-haven demand. Central banks continue accumulating gold reserves.',
-    category: 'Commodities',
-    impact: 'high',
-    currency: 'XAU',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-  },
-  {
-    id: 'news-6',
-    source: 'CNBC',
-    title: 'US Non-Farm Payrolls Miss Expectations: 175K Jobs Added vs 243K Forecast',
-    summary: 'The US labor market showed signs of softening with job creation falling well below expectations. Wage growth also moderated to 3.9% year-over-year, reinforcing rate cut expectations.',
-    category: 'Employment',
-    impact: 'high',
-    currency: 'USD',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
-  },
-  {
-    id: 'news-7',
-    source: 'MarketWatch',
-    title: 'US CPI Comes in at 3.4% Year-over-Year, Core CPI at 3.6% — Lowest Since 2021',
-    summary: 'Consumer prices in the US rose less than expected, with the core measure showing continued disinflation. Markets now price a 78% chance of a Fed rate cut in September.',
-    category: 'Inflation',
-    impact: 'high',
-    currency: 'USD',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
-  },
-  {
-    id: 'news-8',
-    source: 'Financial Times',
-    title: 'Eurozone PMI Composite Rises to 52.3, Signaling Expansion in Manufacturing and Services',
-    summary: 'The Eurozone economy showed signs of recovery with the composite PMI rising above 50 for the second consecutive month. Germany\'s manufacturing sector led the gains with a reading of 51.8.',
-    category: 'Economic Data',
-    impact: 'medium',
-    currency: 'EUR',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 10).toISOString(),
-  },
-  {
-    id: 'news-9',
-    source: 'The Guardian',
-    title: 'UK Retail Sales Jump 1.2% Month-over-Month as Consumer Confidence Improves',
-    summary: 'British consumers increased spending in the latest period, driven by warmer weather and the start of summer sales. The figures suggest the UK consumer economy remains resilient despite elevated rates.',
-    category: 'Economic Data',
-    impact: 'medium',
-    currency: 'GBP',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
-  },
-  {
-    id: 'news-10',
-    source: 'Wall Street Journal',
-    title: 'Japan Core Machinery Orders Surge 5.6%, Beating Expectations',
-    summary: 'Japanese core machinery orders, a leading indicator of capital spending, rose sharply in the latest data release. The strong reading suggests corporate investment is gaining momentum.',
-    category: 'Economic Data',
-    impact: 'medium',
-    currency: 'JPY',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 14).toISOString(),
-  },
-  {
-    id: 'news-11',
-    source: 'ForexLive',
-    title: 'EUR/USD Breaks Above 1.0900 Resistance, Targets 1.1000',
-    summary: 'The euro surged past key resistance at 1.0900 against the dollar, driven by diverging central bank expectations. Technical analysts note the breakout was accompanied by strong volume.',
-    category: 'Technical Analysis',
-    impact: 'medium',
-    currency: 'EUR',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 16).toISOString(),
-  },
-  {
-    id: 'news-12',
-    source: 'Dow Jones',
-    title: 'US Dollar Index Drops to 3-Month Low as Rate Differentials Narrow',
-    summary: 'The DXY fell to its lowest level in three months as lower US yields reduced the dollar\'s appeal. The index broke below the 200-day moving average, suggesting further downside potential.',
-    category: 'Market Analysis',
-    impact: 'medium',
-    currency: 'USD',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(),
-  },
-  {
-    id: 'news-13',
-    source: 'Reuters',
-    title: 'German ZEW Economic Sentiment Improves Sharply to 42.5 from 28.4',
-    summary: 'The ZEW indicator of economic sentiment for Germany rose well above expectations, reflecting growing optimism about the economic outlook. The current conditions index also improved.',
-    category: 'Economic Data',
-    impact: 'medium',
-    currency: 'EUR',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 20).toISOString(),
-  },
-  {
-    id: 'news-14',
-    source: 'Bloomberg',
-    title: 'GBP/JPY Surges as BOJ Ultra-Dovish Stance Contrasts with Hawkish BOE',
-    summary: 'The British pound gained sharply against the yen as the policy divergence between the Bank of England and Bank of Japan widened. Carry trade flows intensified into GBP/JPY.',
-    category: 'Monetary Policy',
-    impact: 'medium',
-    currency: 'GBP',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 22).toISOString(),
-  },
-  {
-    id: 'news-15',
-    source: 'FX Empire',
-    title: 'Gold Consolidates Above $2,380 as Markets Await Fed Minutes',
-    summary: 'XAU/USD is holding steady at elevated levels as traders look ahead to the release of Fed meeting minutes for additional clues on the timing of interest rate cuts.',
-    category: 'Commodities',
-    impact: 'low',
-    currency: 'XAU',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-  },
-  {
-    id: 'news-16',
-    source: 'Action Forex',
-    title: 'USD/JPY Consolidates Near 157.50 Amid Tokyo Market Intervention Fears',
-    summary: 'The pair is trading in a tight range as market participants remain cautious about potential Japanese intervention. Options market data suggests elevated demand for downside protection.',
-    category: 'Market Analysis',
-    impact: 'low',
-    currency: 'JPY',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 26).toISOString(),
-  },
-  {
-    id: 'news-17',
-    source: 'Euronews',
-    title: 'Eurozone Trade Surplus Widens to €25.3B, Exports Rise 2.1%',
-    summary: 'The Eurozone recorded a larger-than-expected trade surplus as exports grew, driven by demand for manufactured goods from China and the United States.',
-    category: 'Economic Data',
-    impact: 'low',
-    currency: 'EUR',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 28).toISOString(),
-  },
-  {
-    id: 'news-18',
-    source: 'CoinDesk',
-    title: 'US 10-Year Treasury Yield Falls Below 4.2%, Boosting Risk Assets',
-    summary: 'Bond yields continued their decline as inflation data supported the case for Fed easing. Lower yields are generally positive for equities and negative for the US dollar.',
-    category: 'Bond Market',
-    impact: 'low',
-    currency: 'USD',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(),
-  },
 ];
 
 export async function GET() {
   try {
+    // M4: Read from database first (seeded data), fallback to static
+    const dbNews = await db.newsItem.findMany({
+      orderBy: { publishedAt: 'desc' },
+      take: 50,
+    });
+
+    if (dbNews.length > 0) {
+      const formatted = dbNews.map((n) => ({
+        id: n.id,
+        source: n.source,
+        title: n.title,
+        summary: n.summary ?? undefined,
+        url: n.url ?? undefined,
+        category: n.category ?? undefined,
+        impact: (n.impact as 'high' | 'medium' | 'low') ?? undefined,
+        currency: n.currency ?? undefined,
+        publishedAt: n.publishedAt?.toISOString() ?? undefined,
+      }));
+      return NextResponse.json({ news: formatted, total: formatted.length });
+    }
+
     return NextResponse.json({
-      news: FOREX_NEWS,
-      total: FOREX_NEWS.length,
+      news: FALLBACK_NEWS,
+      total: FALLBACK_NEWS.length,
     });
   } catch (error) {
     console.error('Error fetching news:', error);

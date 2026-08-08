@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { Symbol, TradeDirection, StrategyName, MarketCondition } from '@/lib/types';
+import { createSignalSchema } from '@/lib/validators';
 
 export async function GET() {
   try {
@@ -45,6 +46,15 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+
+    const parsed = createSignalSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
     const {
       symbol,
       direction,
@@ -56,20 +66,13 @@ export async function POST(request: NextRequest) {
       takeProfit,
       riskReward,
       aiAnalysis,
-    } = body;
-
-    if (!symbol || !direction || !confidence || !strategy) {
-      return NextResponse.json(
-        { error: 'Missing required fields: symbol, direction, confidence, strategy' },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     const signal = await db.tradingSignal.create({
       data: {
         symbol,
         direction,
-        confidence: Math.min(100, Math.max(0, confidence)),
+        confidence,
         strategy,
         marketCondition: marketCondition ?? 'trending',
         entryPrice: entryPrice ?? 0,

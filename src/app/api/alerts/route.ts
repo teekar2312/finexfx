@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { createAlertSchema, toggleAlertSchema } from '@/lib/validators';
 
 export async function GET() {
   try {
@@ -40,22 +41,16 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { symbol, condition, price, message } = body;
 
-    if (!symbol || !condition || price === undefined) {
+    const parsed = createAlertSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Missing required fields: symbol, condition, price' },
+        { error: 'Validation failed', details: parsed.error.issues },
         { status: 400 }
       );
     }
 
-    const validConditions = ['above', 'below', 'crosses_above', 'crosses_below'];
-    if (!validConditions.includes(condition)) {
-      return NextResponse.json(
-        { error: `Invalid condition. Must be one of: ${validConditions.join(', ')}` },
-        { status: 400 }
-      );
-    }
+    const { symbol, condition, price, message } = parsed.data;
 
     const alert = await db.priceAlert.create({
       data: {
@@ -133,15 +128,16 @@ export async function DELETE(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, isActive } = body;
 
-    if (!id) {
+    const parsed = toggleAlertSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Alert ID is required' },
+        { error: 'Validation failed', details: parsed.error.issues },
         { status: 400 }
       );
     }
 
+    const { id, isActive } = parsed.data;
     const alert = await db.priceAlert.findUnique({
       where: { id },
     });

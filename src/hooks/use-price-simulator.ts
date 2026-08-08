@@ -163,8 +163,13 @@ export function usePriceSimulator() {
   const stateRef = useRef<Record<string, SymbolState>>(JSON.parse(JSON.stringify(initialState)));
   const candleBufferRef = useRef<Record<string, PriceHistory[]>>({});
   const signalTimerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const initializedRef = useRef(false); // Guard for React StrictMode double-mount (H1)
 
   useEffect(() => {
+    // H1: StrictMode guard — skip re-initialization on double-mount
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     const store = useTradingStore.getState();
 
     // If live price feed is active, skip the simulator
@@ -364,7 +369,7 @@ export function usePriceSimulator() {
         const pips = trade.direction === 'BUY'
           ? (currentPrice - trade.entryPrice) / pipSize
           : (trade.entryPrice - currentPrice) / pipSize;
-        const profit = pips * trade.lotSize * pipMultiplier * pipSize;
+        const profit = pips * trade.lotSize * pipMultiplier * pipSize - trade.commission + trade.swap;
 
         // SL/TP auto-close check (only if SL/TP are set)
         const hitSL = trade.stopLoss != null && (

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { updateAccountSchema } from '@/lib/validators';
 
 export async function GET() {
   try {
@@ -79,7 +80,16 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { isAutoTrading, leverage, accountType } = body;
+
+    const parsed = updateAccountSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const { isAutoTrading, leverage, accountType } = parsed.data;
 
     const account = await db.tradingAccount.findFirst({
       orderBy: { createdAt: 'asc' },
